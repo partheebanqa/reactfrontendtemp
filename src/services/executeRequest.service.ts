@@ -1,5 +1,9 @@
 import { apiRequest } from '@/lib/queryClient';
-import { API_EXECUTOR, SECURITY_API_BASE } from '@/config/apiRoutes';
+import {
+  API_EXECUTOR,
+  PERFORMANCE_API_BASE,
+  SECURITY_API_BASE,
+} from '@/config/apiRoutes';
 import {
   APIRequest,
   Variable,
@@ -58,8 +62,56 @@ export interface ScanResult {
   passedChecks: number;
 }
 
+export interface PerformanceCheckResult {
+  name: string;
+  passed: boolean;
+  score: number;
+  details: string;
+  suggestions: string[];
+}
+
+export interface PerformanceAnalyzerHistoryItem {
+  analyserId: string;
+  requestId: string;
+  requestName: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  startedAt: string;
+  completedAt?: string;
+  results?: PerformanceCheckResult[];
+  overallScore?: number;
+  grade?: string;
+  recommendations?: string[];
+}
+
+export interface PerformanceAnalyzerHistoryResponse {
+  total: number;
+  page: number;
+  limit: number;
+  items: PerformanceAnalyzerHistoryItem[];
+}
+
+export interface PerformanceAnalyzerResult {
+  analyserId: string;
+  requestId: string;
+  requestName: string;
+  status: 'completed' | 'running' | 'failed';
+  startedAt: string;
+  completedAt: string;
+  results: PerformanceCheckResult[];
+  overallScore: number;
+  grade: string;
+  recommendations: string[];
+}
+
+export interface StartPerformanceAnalyzerPayload {
+  requestId: string;
+  workspaceId: string;
+  environmentId?: string;
+  enabledChecks: string[];
+}
+
 export const executeRequest = async (
-  payload: ExecuteRequestPayload
+  payload: ExecuteRequestPayload,
 ): Promise<ExecutionResponse> => {
   try {
     const response = await apiRequestWithErrorDetails(
@@ -70,7 +122,7 @@ export const executeRequest = async (
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -86,7 +138,7 @@ export const executeRequest = async (
 export const buildRequestPayload = (
   request: APIRequest,
   variables: Variable[],
-  workspaceId = '01415fe5-b282-4295-a386-267ece622c7b'
+  workspaceId = '01415fe5-b282-4295-a386-267ece622c7b',
 ): ExecuteRequestPayload => {
   const replaceVariables = (text: string | undefined): string => {
     if (!text) return '';
@@ -94,7 +146,7 @@ export const buildRequestPayload = (
     variables.forEach((variable) => {
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
       const varValue = String(
-        variable.value ?? variable.currentValue ?? variable.initialValue ?? ''
+        variable.value ?? variable.currentValue ?? variable.initialValue ?? '',
       );
       result = result.replace(regex, varValue);
     });
@@ -115,19 +167,19 @@ export const buildRequestPayload = (
     } else if (request.authorizationType === 'basic') {
       return {
         username: replaceVariables(
-          request.authUsername || request.authorization?.username || ''
+          request.authUsername || request.authorization?.username || '',
         ),
         password: replaceVariables(
-          request.authPassword || request.authorization?.password || ''
+          request.authPassword || request.authorization?.password || '',
         ),
       };
     } else if (request.authorizationType === 'apikey') {
       return {
         key: replaceVariables(
-          request.authApiKey || request.authorization?.key || ''
+          request.authApiKey || request.authorization?.key || '',
         ),
         value: replaceVariables(
-          request.authApiValue || request.authorization?.value || ''
+          request.authApiValue || request.authorization?.value || '',
         ),
         addTo:
           request.authApiLocation || request.authorization?.addTo || 'header',
@@ -201,7 +253,7 @@ export const buildRequestPayload = (
 };
 
 export const executeRequestChain = async (
-  payload: ExecutionRequestChainPayload
+  payload: ExecutionRequestChainPayload,
 ): Promise<ExecutionResponse> => {
   try {
     const response = await apiRequest('POST', `${API_EXECUTOR}/request-chain`, {
@@ -223,7 +275,7 @@ export const executeRequestChain = async (
 
 export const executeCollectionRequest = async (
   requestId: string,
-  environmentId?: string
+  environmentId?: string,
 ): Promise<ExecutionResponse> => {
   try {
     const body: Record<string, string> = { requestId };
@@ -239,7 +291,7 @@ export const executeCollectionRequest = async (
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -283,7 +335,7 @@ interface SecurityReportResponse {
 }
 
 const transformSecurityReport = (
-  report: SecurityReportResponse
+  report: SecurityReportResponse,
 ): ScanResult => {
   const summary = report.summary || {
     highRisk: 0,
@@ -339,12 +391,12 @@ const transformSecurityReport = (
 
 export const fetchScanHistory = async (
   workspaceId: string,
-  pageSize: number = 500
+  pageSize: number = 500,
 ): Promise<SecurityScanHistoryResponse> => {
   try {
     const response = await apiRequest(
       'GET',
-      `${SECURITY_API_BASE}/workspace/${workspaceId}/scans?pageSize=${pageSize}`
+      `${SECURITY_API_BASE}/workspace/${workspaceId}/scans?pageSize=${pageSize}`,
     );
 
     if (!response.ok) {
@@ -361,7 +413,7 @@ export const fetchScanHistory = async (
  * Start a new security scan
  */
 export const startSecurityScan = async (
-  requestId: string
+  requestId: string,
 ): Promise<{ scanId: string }> => {
   try {
     const response = await apiRequest(
@@ -372,7 +424,7 @@ export const startSecurityScan = async (
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -387,7 +439,7 @@ export const startSecurityScan = async (
 
 export const getSecurityScanStatus = async (
   scanId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<{
   scanId: string;
   status: 'pending' | 'scanning' | 'completed' | 'failed';
@@ -397,7 +449,7 @@ export const getSecurityScanStatus = async (
     const response = await apiRequest(
       'GET',
       `${SECURITY_API_BASE}/scan/${scanId}/status`,
-      { signal }
+      { signal },
     );
 
     if (!response.ok) {
@@ -415,12 +467,12 @@ export const getSecurityScanStatus = async (
 
 export const getSecurityReport = async (
   scanId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<SecurityReportResponse> => {
   const response = await apiRequest(
     'GET',
     `${SECURITY_API_BASE}/report?scanId=${scanId}`,
-    { signal }
+    { signal },
   );
 
   if (!response.ok) {
@@ -434,7 +486,7 @@ export const pollSecurityReport = async (
   scanId: string,
   signal?: AbortSignal,
   interval = 3000,
-  maxDuration = 120000
+  maxDuration = 120000,
 ): Promise<ScanResult> => {
   const startTime = Date.now();
 
@@ -467,7 +519,7 @@ export const pollSecurityReport = async (
             clearTimeout(timeoutId);
             reject(new Error('Scan cancelled'));
           },
-          { once: true }
+          { once: true },
         );
       }
     });
@@ -479,7 +531,7 @@ export const pollSecurityScan = async (
   onProgress?: (status: any) => void,
   signal?: AbortSignal,
   interval = 2000,
-  maxDuration = 120000
+  maxDuration = 120000,
 ): Promise<ScanResult> => {
   const startTime = Date.now();
 
@@ -493,7 +545,7 @@ export const pollSecurityScan = async (
           clearTimeout(timeoutId);
           reject(new Error('Scan cancelled'));
         },
-        { once: true }
+        { once: true },
       );
     }
   });
@@ -528,7 +580,7 @@ export const pollSecurityScan = async (
             clearTimeout(timeoutId);
             reject(new Error('Scan cancelled'));
           },
-          { once: true }
+          { once: true },
         );
       }
     });
@@ -537,11 +589,154 @@ export const pollSecurityScan = async (
 
 export const loadHistoricalScan = async (
   scanId: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
 ): Promise<ScanResult> => {
   try {
     return await pollSecurityReport(scanId, signal);
   } catch (error: any) {
     throw new Error(error.message || 'Failed to load historical scan');
+  }
+};
+
+export const startPerformanceAnalyzer = async (
+  payload: StartPerformanceAnalyzerPayload,
+): Promise<{ analyserId: string; status: string; message: string }> => {
+  try {
+    const response = await apiRequest('POST', PERFORMANCE_API_BASE, {
+      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to start performance analyzer: ${response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to start performance analyzer');
+  }
+};
+
+export const fetchPerformanceHistory = async (
+  requestId: string,
+  page: number = 1,
+  limit: number = 10,
+): Promise<PerformanceAnalyzerHistoryResponse> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${PERFORMANCE_API_BASE}/request/${requestId}?page=${page}&limit=${limit}`,
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch performance history: ${response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to fetch performance history');
+  }
+};
+
+export const getPerformanceReport = async (
+  analyserId: string,
+  signal?: AbortSignal,
+): Promise<PerformanceAnalyzerResult> => {
+  try {
+    const response = await apiRequest(
+      'GET',
+      `${PERFORMANCE_API_BASE}/${analyserId}`,
+      { signal },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch performance report: ${response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      throw new Error('Analysis cancelled');
+    }
+    throw new Error(error.message || 'Failed to fetch performance report');
+  }
+};
+
+export const pollPerformanceReport = async (
+  analyserId: string,
+  signal?: AbortSignal,
+  interval = 3000,
+  maxDuration = 120000,
+): Promise<PerformanceAnalyzerResult> => {
+  const startTime = Date.now();
+
+  // Initial delay
+  await new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(resolve, 4000);
+
+    if (signal) {
+      signal.addEventListener(
+        'abort',
+        () => {
+          clearTimeout(timeoutId);
+          reject(new Error('Analysis cancelled'));
+        },
+        { once: true },
+      );
+    }
+  });
+
+  while (true) {
+    if (signal?.aborted) {
+      throw new Error('Analysis cancelled');
+    }
+
+    if (Date.now() - startTime >= maxDuration) {
+      throw new Error('Performance analysis timed out. Please try again.');
+    }
+
+    const report = await getPerformanceReport(analyserId, signal);
+
+    if (report.status === 'completed') {
+      return report;
+    }
+
+    if (report.status === 'failed') {
+      throw new Error('Performance analysis failed');
+    }
+
+    await new Promise((resolve, reject) => {
+      const timeoutId = setTimeout(resolve, interval);
+
+      if (signal) {
+        signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Analysis cancelled'));
+          },
+          { once: true },
+        );
+      }
+    });
+  }
+};
+
+export const loadHistoricalPerformanceAnalysis = async (
+  analyserId: string,
+  signal?: AbortSignal,
+): Promise<PerformanceAnalyzerResult> => {
+  try {
+    return await getPerformanceReport(analyserId, signal);
+  } catch (error: any) {
+    throw new Error(error.message || 'Failed to load historical analysis');
   }
 };

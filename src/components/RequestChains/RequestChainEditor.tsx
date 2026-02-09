@@ -150,10 +150,10 @@ export function RequestChainEditor({
   });
 
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
-    chain?.environmentId || activeEnvironment?.id || ''
+    chain?.environmentId || activeEnvironment?.id || '',
   );
   const [environmentBaseUrl, setEnvironmentBaseUrl] = useState<string>(
-    chain?.environment?.baseUrl || activeEnvironment?.baseUrl || ''
+    chain?.environment?.baseUrl || activeEnvironment?.baseUrl || '',
   );
   const [analysisResults, setAnalysisResults] = useState<AnalyzedRequest[]>([]);
 
@@ -161,7 +161,7 @@ export function RequestChainEditor({
     if (!selectedEnvironment && activeEnvironment) {
       if (chain?.environmentId && environments.length > 0) {
         const chainEnvironment = environments.find(
-          (env) => env.id === chain.environmentId
+          (env) => env.id === chain.environmentId,
         );
         if (chainEnvironment) {
           setSelectedEnvironment(chain.environmentId);
@@ -182,7 +182,7 @@ export function RequestChainEditor({
   useEffect(() => {
     if (selectedEnvironment) {
       const selectedEnv = environments.find(
-        (env) => env.id === selectedEnvironment
+        (env) => env.id === selectedEnvironment,
       );
       if (selectedEnv) {
         setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
@@ -199,7 +199,7 @@ export function RequestChainEditor({
           if (!hasOverride) {
             const generated = generateDynamicValueById(
               d.generatorId,
-              d.parameters
+              d.parameters,
             );
             updatedOverrides.push({
               name: d.name,
@@ -209,7 +209,7 @@ export function RequestChainEditor({
         });
 
         return updatedOverrides.filter((override) =>
-          dynamicVariables.some((d) => d.name === override.name)
+          dynamicVariables.some((d) => d.name === override.name),
         );
       });
     } else {
@@ -242,7 +242,7 @@ export function RequestChainEditor({
         bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
         assertions: req.assertions || [],
         isSelected: true,
-      })
+      }),
     ),
     variables: chain?.variables || [],
     environment: chain?.environment || 'dev',
@@ -266,7 +266,7 @@ export function RequestChainEditor({
       if (raw) {
         const map: Record<string, any> = JSON.parse(raw);
         const currentRequestIds = new Set(
-          formData.chainRequests?.map((r) => r.id) || []
+          formData.chainRequests?.map((r) => r.id) || [],
         );
 
         Object.entries(map).forEach(([requestId, log]: [string, any]) => {
@@ -292,14 +292,14 @@ export function RequestChainEditor({
 
   useEffect(() => {
     const currentRequestIds = new Set(
-      formData.chainRequests?.map((r) => r.id) || []
+      formData.chainRequests?.map((r) => r.id) || [],
     );
 
     setAssertionsByRequest((prev) => {
       const filtered = Object.fromEntries(
         Object.entries(prev).filter(([requestId]) =>
-          currentRequestIds.has(requestId)
-        )
+          currentRequestIds.has(requestId),
+        ),
       );
 
       return filtered;
@@ -308,14 +308,14 @@ export function RequestChainEditor({
 
   useEffect(() => {
     const currentRequestIds = new Set(
-      formData.chainRequests?.map((r) => r.id) || []
+      formData.chainRequests?.map((r) => r.id) || [],
     );
 
     setAssertionsByRequest((prev) => {
       const filtered = Object.fromEntries(
         Object.entries(prev).filter(([requestId]) =>
-          currentRequestIds.has(requestId)
-        )
+          currentRequestIds.has(requestId),
+        ),
       );
 
       return filtered;
@@ -338,7 +338,7 @@ export function RequestChainEditor({
 
         const map: Record<string, any> = JSON.parse(raw);
         const currentRequestIds = new Set(
-          formData.chainRequests?.map((r) => r.id) || []
+          formData.chainRequests?.map((r) => r.id) || [],
         );
 
         let hasChanges = false;
@@ -400,13 +400,13 @@ export function RequestChainEditor({
       setEnvironmentBaseUrl(selectedEnv.baseUrl || '');
     }
     setActiveEnvironment?.(
-      environments.find((env) => env.id === environmentId) || null
+      environments.find((env) => env.id === environmentId) || null,
     );
   };
   const isSaveDisabled =
     !formData.name?.trim() || (formData.chainRequests?.length ?? 0) === 0;
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
@@ -419,12 +419,11 @@ export function RequestChainEditor({
     ([name, value]) => ({
       name,
       value,
-    })
+    }),
   );
 
   const [extractedVariablesByRequest, setExtractedVariablesByRequest] =
     useState<Record<string, Record<string, any>>>({});
-  console.log('extractedVariablesByRequest:', extractedVariablesByRequest);
 
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
@@ -444,18 +443,18 @@ export function RequestChainEditor({
       prefix: null,
       inputRef: null,
       cursorPosition: 0,
-    }
+    },
   );
 
   const dynamicStructured = useMemo(
     () => mapDynamicToStatic(dynamicVariables, dynamicOverrides),
-    [dynamicVariables, dynamicOverrides]
+    [dynamicVariables, dynamicOverrides],
   );
 
   const usedDynamicVariables = useMemo(() => {
     return getUsedDynamicVariablesFromRequests(
       formData.chainRequests || [],
-      dynamicStructured
+      dynamicStructured,
     );
   }, [formData.chainRequests, dynamicStructured]);
 
@@ -475,7 +474,7 @@ export function RequestChainEditor({
     if (!dynamicVar) return;
     const newValue = `${generateDynamicValueById(
       dynamicVar.generatorId,
-      dynamicVar.parameters
+      dynamicVar.parameters,
     )}`;
     updateDynamicOverride(name, newValue);
   };
@@ -485,7 +484,7 @@ export function RequestChainEditor({
     dynamicVariables.forEach((dynamicVar) => {
       const newValue = `${generateDynamicValueById(
         dynamicVar.generatorId,
-        dynamicVar.parameters
+        dynamicVar.parameters,
       )}`;
       newOverrides.push({
         name: dynamicVar.name,
@@ -504,13 +503,13 @@ export function RequestChainEditor({
       runAllButtonRef.current.classList.add(
         'ring-2',
         'ring-primary',
-        'ring-offset-2'
+        'ring-offset-2',
       );
       setTimeout(() => {
         runAllButtonRef.current?.classList.remove(
           'ring-2',
           'ring-primary',
-          'ring-offset-2'
+          'ring-offset-2',
         );
       }, 2000);
     }
@@ -564,7 +563,7 @@ export function RequestChainEditor({
       const hasSameDomain = sourceDomain && requestDomain === sourceDomain;
 
       const executionLog = executionLogs.find(
-        (log) => log.requestId === request.id
+        (log) => log.requestId === request.id,
       );
       const has401Status = executionLog?.response?.status === 401;
 
@@ -620,7 +619,7 @@ export function RequestChainEditor({
 
     if (unauthorizedCount > 0) {
       descriptionParts.push(
-        `${unauthorizedCount} with 401 Unauthorized status`
+        `${unauthorizedCount} with 401 Unauthorized status`,
       );
     }
 
@@ -638,7 +637,7 @@ export function RequestChainEditor({
     if (!formData.chainRequests) return;
 
     const targetRequestIndex = formData.chainRequests.findIndex(
-      (req) => req.id === requestId
+      (req) => req.id === requestId,
     );
 
     if (targetRequestIndex === -1) {
@@ -681,7 +680,7 @@ export function RequestChainEditor({
       if (updated.url.includes(extractedValue)) {
         updated.url = updated.url.replace(
           new RegExp(extractedValue, 'g'),
-          variablePattern
+          variablePattern,
         );
         applicationsCount++;
         applications.push('URL');
@@ -696,7 +695,7 @@ export function RequestChainEditor({
               ...param,
               value: param.value.replace(
                 new RegExp(extractedValue, 'g'),
-                variablePattern
+                variablePattern,
               ),
             };
           }
@@ -713,7 +712,7 @@ export function RequestChainEditor({
               ...header,
               value: header.value.replace(
                 new RegExp(extractedValue, 'g'),
-                variablePattern
+                variablePattern,
               ),
             };
           }
@@ -724,7 +723,7 @@ export function RequestChainEditor({
       if (updated.body && updated.body.includes(extractedValue)) {
         updated.body = updated.body.replace(
           new RegExp(extractedValue, 'g'),
-          variablePattern
+          variablePattern,
         );
         applicationsCount++;
         applications.push('body');
@@ -733,7 +732,7 @@ export function RequestChainEditor({
       if (updated.authToken && updated.authToken.includes(extractedValue)) {
         updated.authToken = updated.authToken.replace(
           new RegExp(extractedValue, 'g'),
-          variablePattern
+          variablePattern,
         );
         applicationsCount++;
         applications.push('auth token');
@@ -747,7 +746,7 @@ export function RequestChainEditor({
           ...updated.authorization,
           token: updated.authorization.token.replace(
             new RegExp(extractedValue, 'g'),
-            variablePattern
+            variablePattern,
           ),
         };
         if (!applications.includes('auth token')) {
@@ -764,7 +763,7 @@ export function RequestChainEditor({
         title: 'No Changes Made',
         description: `The value "${extractedValue.substring(
           0,
-          20
+          20,
         )}..." was not found in request #${targetRequestIndex + 1}`,
         variant: 'destructive',
       });
@@ -819,7 +818,7 @@ export function RequestChainEditor({
           <div className='space-y-3'>
             {usedDynamicVariables.map((variable) => {
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === variable.name
+                (o) => o.name === variable.name,
               );
               const displayValue =
                 currentOverride?.value ?? variable.value ?? '';
@@ -861,7 +860,7 @@ export function RequestChainEditor({
           <div className='flex flex-wrap gap-2'>
             {usedDynamicVariables.map((variable) => {
               const currentOverride = dynamicOverrides.find(
-                (o) => o.name === variable.name
+                (o) => o.name === variable.name,
               );
               const displayValue =
                 currentOverride?.value ?? variable.value ?? '';
@@ -899,7 +898,7 @@ export function RequestChainEditor({
       const regex = new RegExp(`{{${variable.name}}}`, 'g');
       result = result.replace(
         regex,
-        variable.value ?? variable.initialValue ?? ''
+        variable.value ?? variable.initialValue ?? '',
       );
     });
     return result;
@@ -907,7 +906,7 @@ export function RequestChainEditor({
 
   const processRequestWithVariables = (
     request: APIRequest,
-    variables: Variable[]
+    variables: Variable[],
   ): APIRequest => {
     let processedBody = request.body || '';
 
@@ -931,7 +930,7 @@ export function RequestChainEditor({
       } catch (e) {
         console.warn(
           '[v0] Failed to parse body for selectedVariable substitution, using string replacement:',
-          e
+          e,
         );
         processedBody = replaceVariables(processedBody, variables);
       }
@@ -966,7 +965,7 @@ export function RequestChainEditor({
             ...request.authorization,
             token: replaceVariables(
               request.authorization.token || '',
-              variables
+              variables,
             ),
           }
         : request.authorization,
@@ -988,10 +987,10 @@ export function RequestChainEditor({
 
   const getAllVariablesForRequestAtRuntime = (
     requestIndex: number,
-    currentExecutionExtractedVars: Record<string, any>
+    currentExecutionExtractedVars: Record<string, any>,
   ): Variable[] => {
     const environmentVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
+      activeEnvironment?.id,
     );
 
     const previouslyExtractedVars: Variable[] = [];
@@ -1006,8 +1005,8 @@ export function RequestChainEditor({
             typeof value === 'number'
               ? 'number'
               : typeof value === 'boolean'
-              ? 'boolean'
-              : 'string',
+                ? 'boolean'
+                : 'string',
         });
       }
     });
@@ -1023,7 +1022,7 @@ export function RequestChainEditor({
           !globalVariables.some((gv) => gv.name === ev.name) &&
           !storeVariables.some((sv) => sv.name === ev.name) &&
           !dynamicStructured.some((dv) => dv.name === ev.name) &&
-          !(formData.variables || []).some((fv) => fv.name === ev.name)
+          !(formData.variables || []).some((fv) => fv.name === ev.name),
       ),
       ...previouslyExtractedVars,
     ];
@@ -1031,7 +1030,7 @@ export function RequestChainEditor({
 
   const getAllVariablesForRequest = (requestIndex: number): Variable[] => {
     const environmentVars = getExtractVariablesByEnvironment(
-      activeEnvironment?.id
+      activeEnvironment?.id,
     );
 
     const previouslyExtractedVars: Variable[] = [];
@@ -1052,18 +1051,18 @@ export function RequestChainEditor({
                   typeof value === 'number'
                     ? 'number'
                     : typeof value === 'boolean'
-                    ? 'boolean'
-                    : 'string',
+                      ? 'boolean'
+                      : 'string',
                 description: `From: ${reqName}`,
               });
             }
-          }
+          },
         );
       }
     }
 
     const globalExtractedVars: Variable[] = Object.entries(
-      extractedVariables
+      extractedVariables,
     ).map(([name, value]) => ({
       id: `global_${name}`,
       name,
@@ -1073,8 +1072,8 @@ export function RequestChainEditor({
         typeof value === 'number'
           ? 'number'
           : typeof value === 'boolean'
-          ? 'boolean'
-          : 'string',
+            ? 'boolean'
+            : 'string',
     }));
 
     return [
@@ -1087,11 +1086,11 @@ export function RequestChainEditor({
           !previouslyExtractedVars.some((pv) => pv.name === ev.name) &&
           !globalExtractedVars.some((gv) => gv.name === ev.name) &&
           !storeVariables.some((sv) => sv.name === ev.name) &&
-          !dynamicStructured.some((dv) => dv.name === ev.name)
+          !dynamicStructured.some((dv) => dv.name === ev.name),
       ),
       ...previouslyExtractedVars,
       ...globalExtractedVars.filter(
-        (gv) => !previouslyExtractedVars.some((pv) => pv.name === gv.name)
+        (gv) => !previouslyExtractedVars.some((pv) => pv.name === gv.name),
       ),
     ];
   };
@@ -1101,7 +1100,7 @@ export function RequestChainEditor({
       formData.chainRequests || [],
       storeVariables,
       dynamicStructured,
-      extractedVariablesByRequest
+      extractedVariablesByRequest,
     );
   }, [
     formData.chainRequests,
@@ -1114,7 +1113,7 @@ export function RequestChainEditor({
     request: APIRequest,
     variables: Variable[],
     requestIndex: number,
-    requestAssertions: any[] = []
+    requestAssertions: any[] = [],
   ): Promise<ExecutionLog> => {
     if (!request.url) {
       throw new Error('Request URL is required');
@@ -1164,7 +1163,7 @@ export function RequestChainEditor({
           ? [...processedRequest.headers]
           : [];
         const authIdx = headers.findIndex(
-          (h) => h?.key?.toLowerCase() === 'authorization'
+          (h) => h?.key?.toLowerCase() === 'authorization',
         );
         const value = `Bearer ${token}`;
         if (authIdx >= 0) {
@@ -1195,7 +1194,7 @@ export function RequestChainEditor({
               value: field.value,
               enabled: field.enabled !== false,
               type: field.type || 'text',
-            })
+            }),
           );
         }
       } catch (e) {
@@ -1226,7 +1225,7 @@ export function RequestChainEditor({
           } else {
             processed.expectedValue = replaceVariables(
               processed.expectedValue,
-              variables
+              variables,
             );
           }
         }
@@ -1257,66 +1256,81 @@ export function RequestChainEditor({
       const existingAssertions =
         assertionsByRequest[request.id] || requestAssertions || [];
 
-      const responseChanged = hasResponseChanged(
-        result,
-        previousExecutionLog?.response
+      const formattedAssertionFormat = {
+        status: result?.statusCode ?? null,
+        statusText: '',
+        headers: result?.headers ?? {},
+        data: (() => {
+          try {
+            return JSON.parse(result?.body || '{}');
+          } catch {
+            return {};
+          }
+        })(),
+        responseTime: result?.metrics?.responseTime ?? 0,
+        size: result?.metrics?.bytesReceived ?? 0,
+      };
+
+      const newAssertions = await generateAssertions(
+        formattedAssertionFormat,
+        usedChainVariables.staticVars,
+        usedChainVariables.dynamicVars,
+        extractedVariablesArray,
       );
 
-      let finalAssertions = existingAssertions;
+      const assertionsMatch = (assertion1: any, assertion2: any): boolean => {
+        return (
+          assertion1.description === assertion2.description &&
+          assertion1.category === assertion2.category &&
+          assertion1.type === assertion2.type &&
+          assertion1.operator === assertion2.operator
+        );
+      };
 
-      if (existingAssertions.length === 0 || responseChanged) {
-        const formattedAssertionFormat = {
-          status: result?.statusCode ?? null,
-          statusText: '',
-          headers: result?.headers ?? {},
-          data: (() => {
-            try {
-              return JSON.parse(result?.body || '{}');
-            } catch {
-              return {};
-            }
-          })(),
-          responseTime: result?.metrics?.responseTime ?? 0,
-          size: result?.metrics?.bytesReceived ?? 0,
-        };
-
-        console.log('extractedVariablesArray11:', extractedVariablesArray);
-
-        const newAssertions = await generateAssertions(
-          formattedAssertionFormat,
-          usedChainVariables.staticVars,
-          usedChainVariables.dynamicVars,
-          extractedVariablesArray
+      const mergedAssertions = newAssertions.map((newAssertion) => {
+        const matchingExisting = existingAssertions.find((existing) =>
+          assertionsMatch(existing, newAssertion),
         );
 
-        if (responseChanged && existingAssertions.length > 0) {
-          const customAssertions = existingAssertions.filter(
-            (assertion) => assertion.isCustom === true
-          );
-
-          finalAssertions = [...newAssertions, ...customAssertions];
+        if (matchingExisting) {
+          return {
+            ...newAssertion,
+            enabled: matchingExisting.enabled ?? true,
+          };
         } else {
-          finalAssertions = newAssertions;
+          return {
+            ...newAssertion,
+            enabled: false,
+          };
         }
-      }
+      });
+
+      const customAssertions = existingAssertions.filter(
+        (assertion) =>
+          assertion.isCustom === true &&
+          !mergedAssertions.some((merged) =>
+            assertionsMatch(merged, assertion),
+          ),
+      );
+
+      const finalAssertions = [...mergedAssertions, ...customAssertions];
 
       setAssertionsByRequest((prev) => ({
         ...prev,
         [request.id]: finalAssertions,
       }));
-
       const extractedData = extractDataFromResponse(
         {
           body: result.body,
           headers: result.headers,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
         },
-        request.extractVariables || []
+        request.extractVariables || [],
       );
 
       const endTime = Date.now();
       const actualRequestHeaders = Object.fromEntries(
-        processedRequest.headers.map((h) => [h.key, h.value])
+        processedRequest.headers.map((h) => [h.key, h.value]),
       );
       const actualRequestUrl = previewUrl;
       const actualRequestBody = processedRequest.body ?? '';
@@ -1390,7 +1404,7 @@ export function RequestChainEditor({
         map[request.id] = errorLog;
         localStorage.setItem(
           'lastExecutionByRequest',
-          JSON.stringify(errorLog)
+          JSON.stringify(errorLog),
         );
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest (error):', e);
@@ -1411,7 +1425,7 @@ export function RequestChainEditor({
     }
 
     const selectedRequests = formData.chainRequests.filter(
-      (r) => r.isSelected !== false
+      (r) => r.isSelected !== false,
     );
 
     if (selectedRequests.length === 0) {
@@ -1450,7 +1464,7 @@ export function RequestChainEditor({
           !globalVariables.some((gv) => gv.name === ev.name) &&
           !storeVariables.some((sv) => sv.name === ev.name) &&
           !dynamicStructured.some((dv) => dv.name === ev.name) &&
-          !(formData.variables || []).some((fv) => fv.name === ev.name)
+          !(formData.variables || []).some((fv) => fv.name === ev.name),
       ),
     ];
 
@@ -1468,7 +1482,7 @@ export function RequestChainEditor({
         const request = syncParamsFromUrl(rawRequest);
 
         const originalIndex = formData.chainRequests.findIndex(
-          (r) => r.id === request.id
+          (r) => r.id === request.id,
         );
         setCurrentRequestIndex(originalIndex);
 
@@ -1506,7 +1520,7 @@ export function RequestChainEditor({
           }
 
           const existingLog = allLogs.find(
-            (log) => log.requestId === request.id
+            (log) => log.requestId === request.id,
           );
           let log: ExecutionLog;
 
@@ -1516,14 +1530,14 @@ export function RequestChainEditor({
             const currentAvailableVariables =
               getAllVariablesForRequestAtRuntime(
                 originalIndex,
-                allExtractedVarsInCurrentExecution
+                allExtractedVarsInCurrentExecution,
               );
 
             log = await executeSingleRequest(
               request,
               currentAvailableVariables,
               originalIndex,
-              requestAssertions
+              requestAssertions,
             );
 
             allLogs.push(log);
@@ -1538,7 +1552,7 @@ export function RequestChainEditor({
 
             Object.assign(
               allExtractedVarsInCurrentExecution,
-              log.extractedVariables
+              log.extractedVariables,
             );
             updateExtractedVariables(allExtractedVarsInCurrentExecution);
           }
@@ -1551,7 +1565,7 @@ export function RequestChainEditor({
         } catch (error) {
           const errorLog = error as ExecutionLog;
           const existingErrorIndex = allLogs.findIndex(
-            (log) => log.requestId === errorLog.requestId
+            (log) => log.requestId === errorLog.requestId,
           );
 
           if (existingErrorIndex >= 0) {
@@ -1597,7 +1611,7 @@ export function RequestChainEditor({
       setAnalysisResults(results);
 
       const successCount = allLogs.filter(
-        (log) => log.status === 'success'
+        (log) => log.status === 'success',
       ).length;
       const totalCount = allLogs.length;
 
@@ -1621,7 +1635,7 @@ export function RequestChainEditor({
 
   const handleRequestExecution = (
     requestId: string,
-    executionLog: ExecutionLog
+    executionLog: ExecutionLog,
   ) => {
     setExecutionLogs((prev) => {
       const filtered = prev.filter((log) => log.requestId !== requestId);
@@ -1643,7 +1657,7 @@ export function RequestChainEditor({
 
   const handleExtractVariableForRequest = (
     requestId: string,
-    extraction: DataExtraction
+    extraction: DataExtraction,
   ) => {
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
@@ -1660,7 +1674,7 @@ export function RequestChainEditor({
     }
 
     const isDuplicate = (request.extractVariables || []).some(
-      (existing) => (existing.variableName || existing.name) === variableName
+      (existing) => (existing.variableName || existing.name) === variableName,
     );
 
     if (isDuplicate) {
@@ -1683,7 +1697,7 @@ export function RequestChainEditor({
       normalizedExtraction,
     ];
     const updatedRequests = formData.chainRequests.map((r) =>
-      r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r
+      r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r,
     );
 
     setFormData({ ...formData, chainRequests: updatedRequests });
@@ -1692,7 +1706,7 @@ export function RequestChainEditor({
     if (log?.response) {
       const extracted = extractDataFromResponse(
         log.response,
-        updatedExtractions
+        updatedExtractions,
       );
       setExtractedVariablesByRequest((prev) => ({
         ...prev,
@@ -1708,16 +1722,16 @@ export function RequestChainEditor({
 
   const handleRemoveExtractionForRequest = (
     requestId: string,
-    variableName: string
+    variableName: string,
   ) => {
     const request = formData.chainRequests.find((r) => r.id === requestId);
     if (!request) return;
 
     const updatedExtractions = (request.extractVariables || []).filter(
-      (e) => (e.variableName || e.name) !== variableName
+      (e) => (e.variableName || e.name) !== variableName,
     );
     const updatedRequests = formData.chainRequests.map((r) =>
-      r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r
+      r.id === requestId ? { ...r, extractVariables: updatedExtractions } : r,
     );
 
     setFormData({ ...formData, chainRequests: updatedRequests });
@@ -1749,7 +1763,7 @@ export function RequestChainEditor({
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const handleCopyForRequest = async (requestId: string, value: string) => {
@@ -1786,7 +1800,7 @@ export function RequestChainEditor({
           (request, index) => ({
             ...request,
             order: index + 1,
-          })
+          }),
         );
 
         return {
@@ -1823,7 +1837,7 @@ export function RequestChainEditor({
       ...formData,
       chainRequests:
         formData.chainRequests?.map((req) =>
-          req.id === requestId ? { ...req, ...updates } : req
+          req.id === requestId ? { ...req, ...updates } : req,
         ) || [],
     });
   };
@@ -1906,7 +1920,7 @@ export function RequestChainEditor({
     try {
       setIsSaving(true);
       const originalRequestIds = new Set(
-        chain?.chainRequests?.map((r) => r.id) || []
+        chain?.chainRequests?.map((r) => r.id) || [],
       );
 
       const allStoredAssertions: Record<string, any[]> = {};
@@ -1976,13 +1990,13 @@ export function RequestChainEditor({
                 request.headers?.map((h) =>
                   h.id && !h.id.startsWith('temp_')
                     ? h
-                    : { ...h, id: undefined }
+                    : { ...h, id: undefined },
                 ) || [],
               params:
                 request.params?.map((p) =>
                   p.id && !p.id.startsWith('temp_')
                     ? p
-                    : { ...p, id: undefined }
+                    : { ...p, id: undefined },
                 ) || [],
             };
           } else {
@@ -2003,7 +2017,7 @@ export function RequestChainEditor({
       };
 
       const transformedRequests = chainDataForBackend.chainRequests.map(
-        transformRequestForSave
+        transformRequestForSave,
       );
 
       const chainData: RequestChain = {
@@ -2090,7 +2104,7 @@ export function RequestChainEditor({
               value: field.value || '',
               type: field.type || 'text',
               enabled: field.enabled !== false,
-            }))
+            })),
           );
         } else if (req.bodyRawContent && req.bodyRawContent.trim() !== '') {
           bodyType = (req.bodyType as APIRequest['bodyType']) || 'raw';
@@ -2199,14 +2213,14 @@ export function RequestChainEditor({
   function commitRequestName(index: number, nameValue: string) {
     const finalName = nameValue.trim();
     const updated = (formData.chainRequests || []).map((r, i) =>
-      i === index ? { ...r, name: finalName || r.url || r.name } : r
+      i === index ? { ...r, name: finalName || r.url || r.name } : r,
     );
     setFormData({ ...formData, chainRequests: updated });
   }
 
   const getVariablesByPrefixLocal = (
     prefix: 'D_' | 'S_',
-    requestIndex: number
+    requestIndex: number,
   ): Variable[] => {
     const allVars = getAllVariablesForRequest(requestIndex);
     return getVariablesByPrefix(allVars, prefix);
@@ -2216,8 +2230,8 @@ export function RequestChainEditor({
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     requestIndex: number,
     originalHandler?: (
-      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => void
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => void,
   ) => {
     const input = e.target;
     const value = input.value;
@@ -2263,7 +2277,7 @@ export function RequestChainEditor({
     const inputName =
       input.getAttribute('name') || input.getAttribute('data-field');
     const requestIndex = Number.parseInt(
-      input.getAttribute('data-request-index') || '-1'
+      input.getAttribute('data-request-index') || '-1',
     );
 
     if (requestIndex === -1) {
@@ -2379,8 +2393,8 @@ export function RequestChainEditor({
           {autocompleteState.prefix === 'D_'
             ? 'Dynamic Variables'
             : autocompleteState.prefix === 'S_'
-            ? 'Static Variables'
-            : 'Variables'}
+              ? 'Static Variables'
+              : 'Variables'}
         </div>
         {autocompleteState.suggestions.map((variable) => (
           <button
@@ -2401,7 +2415,7 @@ export function RequestChainEditor({
             <div className='text-xs text-gray-500 mt-1 truncate'>
               {String(variable.value || variable.initialValue || '').substring(
                 0,
-                40
+                40,
               )}
               {String(variable.value || variable.initialValue || '').length > 40
                 ? '...'
@@ -2415,7 +2429,7 @@ export function RequestChainEditor({
 
   if (editingRequestId) {
     const request = formData.chainRequests?.find(
-      (r) => r.id === editingRequestId
+      (r) => r.id === editingRequestId,
     );
 
     if (request) {
@@ -2699,7 +2713,7 @@ export function RequestChainEditor({
                           >
                             <SortableContext
                               items={(formData.chainRequests || []).map(
-                                (r) => r.id
+                                (r) => r.id,
                               )}
                               strategy={verticalListSortingStrategy}
                             >
@@ -2709,7 +2723,7 @@ export function RequestChainEditor({
                                     const executionLog =
                                       getExecutionLogForRequest(
                                         executionLogs,
-                                        request.id
+                                        request.id,
                                       );
 
                                     return (
@@ -2731,13 +2745,15 @@ export function RequestChainEditor({
                                           setFormData({
                                             ...formData,
                                             chainRequests:
-                                              formData.chainRequests?.map((r) =>
-                                                r.id === request.id
-                                                  ? {
-                                                      ...r,
-                                                      isSelected: !r.isSelected,
-                                                    }
-                                                  : r
+                                              formData.chainRequests?.map(
+                                                (r) =>
+                                                  r.id === request.id
+                                                    ? {
+                                                        ...r,
+                                                        isSelected:
+                                                          !r.isSelected,
+                                                      }
+                                                    : r,
                                               ) || [],
                                           });
                                         }}
@@ -2762,7 +2778,7 @@ export function RequestChainEditor({
                                               onUpdate={(updates) =>
                                                 updateRequest(
                                                   request.id,
-                                                  updates
+                                                  updates,
                                                 )
                                               }
                                               compact={true}
@@ -2777,11 +2793,11 @@ export function RequestChainEditor({
                                               chainId={chain?.id || ''}
                                               hideResponseExplorer={false}
                                               onRequestExecution={(
-                                                executionLog
+                                                executionLog,
                                               ) =>
                                                 handleRequestExecution(
                                                   request.id,
-                                                  executionLog
+                                                  executionLog,
                                                 )
                                               }
                                               extractedVariables={(() => {
@@ -2807,7 +2823,7 @@ export function RequestChainEditor({
                                                       varsUpToThisPoint,
                                                       extractedVariablesByRequest[
                                                         prevReqId
-                                                      ]
+                                                      ],
                                                     );
                                                   }
                                                 }
@@ -2830,17 +2846,17 @@ export function RequestChainEditor({
                                                 return assertions;
                                               })()}
                                               onAssertionsUpdate={(
-                                                assertions
+                                                assertions,
                                               ) => {
                                                 setAssertionsByRequest(
                                                   (prev) => ({
                                                     ...prev,
                                                     [request.id]: assertions,
-                                                  })
+                                                  }),
                                                 );
                                                 persistAssertionsToStorage(
                                                   request.id,
-                                                  assertions
+                                                  assertions,
                                                 );
                                               }}
                                               requestIndex={requestIndex}
@@ -2863,11 +2879,11 @@ export function RequestChainEditor({
                                                           executionLog.requestId,
                                                       }}
                                                       onExtractVariable={(
-                                                        extraction
+                                                        extraction,
                                                       ) =>
                                                         handleExtractVariableForRequest(
                                                           executionLog.requestId,
-                                                          extraction
+                                                          extraction,
                                                         )
                                                       }
                                                       extractedVariables={
@@ -2879,22 +2895,22 @@ export function RequestChainEditor({
                                                         formData.chainRequests.find(
                                                           (r) =>
                                                             r.id ===
-                                                            executionLog.requestId
+                                                            executionLog.requestId,
                                                         )?.extractVariables ||
                                                         []
                                                       }
                                                       onRemoveExtraction={(
-                                                        variableName
+                                                        variableName,
                                                       ) =>
                                                         handleRemoveExtractionForRequest(
                                                           executionLog.requestId,
-                                                          variableName
+                                                          variableName,
                                                         )
                                                       }
                                                       handleCopy={(value) =>
                                                         handleCopyForRequest(
                                                           executionLog.requestId,
-                                                          value
+                                                          value,
                                                         )
                                                       }
                                                       chainId={chain?.id ?? ''}
@@ -2936,18 +2952,18 @@ export function RequestChainEditor({
                                                         ] || []
                                                       }
                                                       onAssertionsUpdate={(
-                                                        assertions
+                                                        assertions,
                                                       ) => {
                                                         setAssertionsByRequest(
                                                           (prev) => ({
                                                             ...prev,
                                                             [executionLog.requestId]:
                                                               assertions,
-                                                          })
+                                                          }),
                                                         );
                                                         persistAssertionsToStorage(
                                                           executionLog.requestId,
-                                                          assertions
+                                                          assertions,
                                                         );
                                                       }}
                                                       variables={
@@ -2991,7 +3007,7 @@ export function RequestChainEditor({
                                                               varsUpToThisPoint,
                                                               extractedVariablesByRequest[
                                                                 reqId
-                                                              ]
+                                                              ],
                                                             );
                                                           }
                                                         }
@@ -3015,7 +3031,7 @@ export function RequestChainEditor({
                                         )}
                                       </SortableRequestItem>
                                     );
-                                  }
+                                  },
                                 )}
                               </div>
                             </SortableContext>
@@ -3059,7 +3075,7 @@ export function RequestChainEditor({
                                 (
                                 {
                                   formData.chainRequests?.filter(
-                                    (r) => r.isSelected !== false
+                                    (r) => r.isSelected !== false,
                                   ).length
                                 }{' '}
                                 / {formData.chainRequests?.length} selected )
@@ -3075,7 +3091,7 @@ export function RequestChainEditor({
                                   isExecuting ||
                                   !formData.chainRequests?.length ||
                                   formData.chainRequests?.filter(
-                                    (r) => r.isSelected !== false
+                                    (r) => r.isSelected !== false,
                                   ).length === 0
                                 }
                                 className='gap-2 bg-transparent'
@@ -3089,7 +3105,7 @@ export function RequestChainEditor({
                                   ? 'Running...'
                                   : `Run Selected (${
                                       formData.chainRequests?.filter(
-                                        (r) => r.isSelected !== false
+                                        (r) => r.isSelected !== false,
                                       ).length || 0
                                     })`}
                               </Button>
@@ -3097,7 +3113,7 @@ export function RequestChainEditor({
                               {executionLogs.length > 0 &&
                                 executionLogs.length ===
                                   formData.chainRequests?.filter(
-                                    (r) => r.isSelected !== false
+                                    (r) => r.isSelected !== false,
                                   ).length &&
                                 !isExecuting && (
                                   <Button
@@ -3248,7 +3264,7 @@ export function RequestChainEditor({
       const updatedGlobalVariables = [...prevGlobalVariables];
       Object.entries(allExtractedVars).forEach(([key, value]) => {
         const existingVarIndex = updatedGlobalVariables.findIndex(
-          (v) => v.name === key
+          (v) => v.name === key,
         );
         const newVar: Variable = {
           id:
@@ -3261,8 +3277,8 @@ export function RequestChainEditor({
             typeof value === 'number'
               ? 'number'
               : typeof value === 'boolean'
-              ? 'boolean'
-              : 'string',
+                ? 'boolean'
+                : 'string',
         };
         if (existingVarIndex >= 0) {
           updatedGlobalVariables[existingVarIndex] = newVar;

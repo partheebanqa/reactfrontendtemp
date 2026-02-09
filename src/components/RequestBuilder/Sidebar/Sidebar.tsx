@@ -132,13 +132,13 @@ const Sidebar: React.FC = () => {
   const [showRenameFolderModal, setShowRenameFolderModal] = useState(false);
   const [showDeleteFolderModal, setShowDeleteFolderModal] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [moveItemType, setMoveItemType] = useState<'request' | 'folder'>(
-    'request'
+    'request',
   );
   const [moveItemName, setMoveItemName] = useState('');
   const [showDeleteCollectionDialog, setShowDeleteCollectionDialog] =
@@ -155,14 +155,14 @@ const Sidebar: React.FC = () => {
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const [activeDragItem, setActiveDragItem] = useState<any>(null);
 
   const selectRequest = (
     req: CollectionRequest,
-    parentCollection: Collection
+    parentCollection: Collection,
   ) => {
     try {
       setResponseData(null);
@@ -319,6 +319,12 @@ const Sidebar: React.FC = () => {
     setShowMenu(null);
     setMenuPosition(null);
   };
+  const handleOpenPerformanceScanning = (request: CollectionRequest) => {
+    collectionActions.openPerformanceScanning(request);
+    setShowMenu(null);
+    setMenuPosition(null);
+  };
+
   const handleCreateCollection = () => {
     setSelectedCollection(null);
     setShowCollectionModal(true);
@@ -433,8 +439,8 @@ const Sidebar: React.FC = () => {
                 ...col,
                 preRequestId: request.id,
               }
-            : col
-        )
+            : col,
+        ),
       );
 
       toast({
@@ -465,7 +471,7 @@ const Sidebar: React.FC = () => {
           collectionActions.renameRequest(
             renameValue,
             requestId,
-            currentWorkspace?.id ?? ''
+            currentWorkspace?.id ?? '',
           );
         } else {
           await renameRequestMutation.mutateAsync({
@@ -501,7 +507,7 @@ const Sidebar: React.FC = () => {
       console.error('Failed to rename request:', error);
       showError(
         'Rename Failed',
-        'An error occurred while renaming the request name.'
+        'An error occurred while renaming the request name.',
       );
     }
   };
@@ -528,7 +534,7 @@ const Sidebar: React.FC = () => {
 
   const handleMoveRequest = async (
     targetCollectionId: string,
-    targetFolderId?: string
+    targetFolderId?: string,
   ) => {
     if (!selectedRequest?.id) return;
 
@@ -586,14 +592,14 @@ const Sidebar: React.FC = () => {
   const removeRequestAtIndexFromFolderTree = (
     folders: any[] = [],
     folderId: string,
-    index: number
+    index: number,
   ): any[] => {
     return folders.map((f: any) => {
       if (f.id === folderId) {
         return {
           ...f,
           requests: (f.requests || []).filter(
-            (_: any, i: number) => i !== index
+            (_: any, i: number) => i !== index,
           ),
         };
       }
@@ -603,7 +609,7 @@ const Sidebar: React.FC = () => {
           folders: removeRequestAtIndexFromFolderTree(
             f.folders,
             folderId,
-            index
+            index,
           ),
         };
       }
@@ -624,11 +630,11 @@ const Sidebar: React.FC = () => {
                 folders: removeRequestAtIndexFromFolderTree(
                   (col as any).folders || [],
                   selectedFolder.id,
-                  requestIndex
+                  requestIndex,
                 ),
               }
-            : col
-        )
+            : col,
+        ),
       );
     } else if (selectedCollection) {
       setCollection(
@@ -637,11 +643,11 @@ const Sidebar: React.FC = () => {
             ? {
                 ...col,
                 requests: col.requests.filter(
-                  (_, index) => index !== requestIndex
+                  (_, index) => index !== requestIndex,
                 ),
               }
-            : col
-        )
+            : col,
+        ),
       );
     }
 
@@ -678,7 +684,7 @@ const Sidebar: React.FC = () => {
   const autoRunPreRequest = async (
     collectionId: string,
     preRequestId: string,
-    collectionsData: Collection[]
+    collectionsData: Collection[],
   ) => {
     try {
       const collection = collectionsData.find((c) => c.id === collectionId);
@@ -762,7 +768,7 @@ const Sidebar: React.FC = () => {
               response?.cookies ||
               {},
           },
-          preRequest.extractVariables
+          preRequest.extractVariables,
         );
 
         Object.entries(extractedVariables).forEach(([varName, value]) => {
@@ -779,15 +785,15 @@ const Sidebar: React.FC = () => {
                 source: 'response_body', // This will be determined by extractDataFromResponse
                 path:
                   preRequest.extractVariables.find(
-                    (ev: any) => (ev.variableName || ev.name) === varName
+                    (ev: any) => (ev.variableName || ev.name) === varName,
                   )?.path || '',
-              })
+              }),
             );
 
             collectionActions.setExtractedVariable(
               collectionId,
               varName,
-              String(value)
+              String(value),
             );
 
             extractedCount++;
@@ -828,7 +834,7 @@ const Sidebar: React.FC = () => {
       if (!collection.id) return;
 
       const storageKeys = Object.keys(localStorage).filter((key) =>
-        key.startsWith(`extracted_var_${collection.id}_`)
+        key.startsWith(`extracted_var_${collection.id}_`),
       );
 
       storageKeys.forEach((key) => {
@@ -839,13 +845,13 @@ const Sidebar: React.FC = () => {
             collectionActions.setExtractedVariable(
               collection.id,
               data.name,
-              data.value
+              data.value,
             );
           }
         } catch (error) {
           console.error(
             'Error loading extracted variable from localStorage:',
-            error
+            error,
           );
         }
       });
@@ -855,7 +861,7 @@ const Sidebar: React.FC = () => {
   const handleCollectionExpand = async (collectionId: string) => {
     try {
       const collectionData = (await fetchCollectionRequests.mutateAsync(
-        collectionId
+        collectionId,
       )) as CollectionRequestsResponse;
 
       if (collectionData) {
@@ -869,12 +875,12 @@ const Sidebar: React.FC = () => {
                   requests: collectionData.requests || col.requests,
                   folders: collectionData.folders || col.folders,
                 }
-              : col
-          )
+              : col,
+          ),
         );
 
         const storageKeys = Object.keys(localStorage).filter((key) =>
-          key.startsWith(`extracted_var_${collectionId}_`)
+          key.startsWith(`extracted_var_${collectionId}_`),
         );
 
         storageKeys.forEach((key) => {
@@ -884,7 +890,7 @@ const Sidebar: React.FC = () => {
               collectionActions.setExtractedVariable(
                 collectionId,
                 data.name,
-                data.value
+                data.value,
               );
             }
           } catch (error) {
@@ -896,7 +902,7 @@ const Sidebar: React.FC = () => {
           console.log('PreRequestId found:', collectionData.preRequestId);
 
           const preRequest = collectionData.requests?.find(
-            (r: any) => r.id === collectionData.preRequestId
+            (r: any) => r.id === collectionData.preRequestId,
           );
 
           if (
@@ -906,7 +912,7 @@ const Sidebar: React.FC = () => {
           ) {
             const needsRefresh = shouldRefreshExtractedVariables(
               collectionId,
-              collectionData.preRequestId
+              collectionData.preRequestId,
             );
 
             if (needsRefresh) {
@@ -923,7 +929,7 @@ const Sidebar: React.FC = () => {
               await autoRunPreRequest(
                 collectionId,
                 collectionData.preRequestId,
-                [updatedCollection]
+                [updatedCollection],
               );
             }
           }
@@ -950,7 +956,7 @@ const Sidebar: React.FC = () => {
       .map((collection) => {
         const collectionMatches = collection.name.toLowerCase().includes(query);
         const matchingRequests = collection.requests.filter((req) =>
-          req.name?.toLowerCase().includes(query)
+          req.name?.toLowerCase().includes(query),
         );
         if (collectionMatches || matchingRequests.length > 0) {
           return {
@@ -979,7 +985,7 @@ const Sidebar: React.FC = () => {
     parentCollection: Collection;
     onClickRequest: (
       req: CollectionRequest,
-      parentCollection: Collection
+      parentCollection: Collection,
     ) => void;
     depth?: number;
   }> = ({ folder, parentCollection, onClickRequest, depth = 0 }) => {
@@ -987,7 +993,7 @@ const Sidebar: React.FC = () => {
     const sortableIds = [
       folder.id,
       ...(folder.requests || []).map(
-        (r: CollectionRequest) => r.id || `temp-${r.name}`
+        (r: CollectionRequest) => r.id || `temp-${r.name}`,
       ),
       ...(folder.folders || []).map((f: any) => f.id),
     ];
@@ -1091,7 +1097,7 @@ const Sidebar: React.FC = () => {
                         )}
                         <span
                           className={`text-xs font-medium ${getMethodColor(
-                            request.method
+                            request.method,
                           )} flex-shrink-0`}
                         >
                           {request.method}
@@ -1129,7 +1135,7 @@ const Sidebar: React.FC = () => {
                             setRequestId(request.id || '');
                             setRequestIndex(index);
                             setShowMenu(
-                              `request-${request.id || `${folder.id}-${index}`}`
+                              `request-${request.id || `${folder.id}-${index}`}`,
                             );
                           }}
                           className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1141,7 +1147,7 @@ const Sidebar: React.FC = () => {
                     </div>
                   </SortableRequest>
                 );
-              }
+              },
             )}
 
             {(folder.folders || []).map((sub: any) => (
@@ -1223,7 +1229,7 @@ const Sidebar: React.FC = () => {
                         .filter((r: any) => !r.folderId)
                         .map((r) => r.id || `temp-${r.name}`),
                       ...((collection as any).folders || []).map(
-                        (f: any) => f.id
+                        (f: any) => f.id,
                       ),
                     ];
 
@@ -1246,7 +1252,7 @@ const Sidebar: React.FC = () => {
                                 setActiveCollection(collection);
 
                                 const isExpanding = !expandedCollections.has(
-                                  collection.id
+                                  collection.id,
                                 );
 
                                 await toggleExpandedCollection(collection.id);
@@ -1287,7 +1293,7 @@ const Sidebar: React.FC = () => {
                                 </TooltipProvider>
                               </div>
 
-                              <div className='flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                              <div className='flex items-center space-x-1 relative'>
                                 {collection.preRequestId && (
                                   <TooltipContainer text='Pre-Request Auth'>
                                     <div className='p-1'>
@@ -1295,25 +1301,27 @@ const Sidebar: React.FC = () => {
                                     </div>
                                   </TooltipContainer>
                                 )}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const rect = (
-                                      e.currentTarget as HTMLButtonElement
-                                    ).getBoundingClientRect();
-                                    setMenuPosition({
-                                      top: rect.bottom,
-                                      left: rect.left,
-                                      anchorTop: rect.top,
-                                    });
-                                    setSelectedCollection(collection);
-                                    setShowMenu(collection.id);
-                                  }}
-                                  className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                  aria-label='More options'
-                                >
-                                  <MoreVertical className='h-3 w-3' />
-                                </button>
+                                <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const rect = (
+                                        e.currentTarget as HTMLButtonElement
+                                      ).getBoundingClientRect();
+                                      setMenuPosition({
+                                        top: rect.bottom,
+                                        left: rect.left,
+                                        anchorTop: rect.top,
+                                      });
+                                      setSelectedCollection(collection);
+                                      setShowMenu(collection.id);
+                                    }}
+                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                    aria-label='More options'
+                                  >
+                                    <MoreVertical className='h-3 w-3' />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1350,7 +1358,7 @@ const Sidebar: React.FC = () => {
                                           } ${
                                             isAuthRequest(
                                               request.id,
-                                              collection.id
+                                              collection.id,
                                             )
                                               ? 'border-2 border-blue-500 rounded-lg'
                                               : ''
@@ -1365,7 +1373,7 @@ const Sidebar: React.FC = () => {
                                             {/* Add auth badge before method */}
                                             {isAuthRequest(
                                               request.id,
-                                              collection.id
+                                              collection.id,
                                             ) && (
                                               <TooltipProvider>
                                                 <Tooltip>
@@ -1380,7 +1388,7 @@ const Sidebar: React.FC = () => {
                                             )}
                                             <span
                                               className={`text-xs font-medium ${getMethodColor(
-                                                request.method
+                                                request.method,
                                               )} flex-shrink-0`}
                                             >
                                               {request.method}
@@ -1416,11 +1424,11 @@ const Sidebar: React.FC = () => {
                                                 });
                                                 setSelectedRequest(request);
                                                 setSelectedCollection(
-                                                  collection
+                                                  collection,
                                                 );
                                                 setRequestId(request.id || '');
                                                 setShowMenu(
-                                                  `request-${request.id}`
+                                                  `request-${request.id}`,
                                                 );
                                               }}
                                               className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1442,7 +1450,7 @@ const Sidebar: React.FC = () => {
                                           selectRequest(req, parentCol)
                                         }
                                       />
-                                    )
+                                    ),
                                   )}
                                 </SortableContext>
                               </div>
@@ -1591,7 +1599,7 @@ const Sidebar: React.FC = () => {
                           await handleCollectionExpand(selectedCollection.id);
 
                           collectionActions.openSanitizeTestRunner(
-                            selectedCollection.id
+                            selectedCollection.id,
                           );
                         }
                         setShowMenu(null);
@@ -1643,11 +1651,11 @@ const Sidebar: React.FC = () => {
 
                               // Clear all old extracted variables for this collection
                               const storageKeys = Object.keys(
-                                localStorage
+                                localStorage,
                               ).filter((key) =>
                                 key.startsWith(
-                                  `extracted_var_${selectedCollection.id}_`
-                                )
+                                  `extracted_var_${selectedCollection.id}_`,
+                                ),
                               );
 
                               storageKeys.forEach((key) => {
@@ -1658,7 +1666,7 @@ const Sidebar: React.FC = () => {
                               await autoRunPreRequest(
                                 selectedCollection.id,
                                 selectedCollection.preRequestId,
-                                collections
+                                collections,
                               );
                             }
                             setShowMenu(null);
@@ -1767,7 +1775,21 @@ const Sidebar: React.FC = () => {
                     >
                       <Rocket className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Testing
+                        Performance Testing {''}
+                        <span className='text-xs italic text-gray-500'>
+                          (Beta)
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleOpenPerformanceScanning(selectedRequest)
+                      }
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Rocket className='h-4 w-4 mr-2' />
+                      <span>
+                        Performance Scanning {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>
@@ -1808,7 +1830,7 @@ const Sidebar: React.FC = () => {
                         onClick={() => {
                           handleCreateRequest(
                             selectedCollection,
-                            selectedFolder.id
+                            selectedFolder.id,
                           );
                           setShowMenu(null);
                           setMenuPosition(null);
@@ -1852,7 +1874,7 @@ const Sidebar: React.FC = () => {
                     </div>
                   )}
               </div>,
-              document.body
+              document.body,
             )}
 
           <AddFolderModal
@@ -1868,7 +1890,7 @@ const Sidebar: React.FC = () => {
                   parentId: selectedFolder?.id,
                 });
                 await fetchCollectionRequests.mutateAsync(
-                  selectedCollection.id
+                  selectedCollection.id,
                 );
                 toast({
                   title: 'Folder created',
@@ -1898,7 +1920,7 @@ const Sidebar: React.FC = () => {
               try {
                 await renameFolder({ folderId: selectedFolder.id, name });
                 await fetchCollectionRequests.mutateAsync(
-                  selectedCollection.id
+                  selectedCollection.id,
                 );
                 toast({
                   title: 'Folder renamed',
@@ -1927,7 +1949,7 @@ const Sidebar: React.FC = () => {
               try {
                 await deleteFolder(selectedFolder.id);
                 await fetchCollectionRequests.mutateAsync(
-                  selectedCollection.id
+                  selectedCollection.id,
                 );
                 toast({
                   title: 'Folder deleted',
@@ -2079,7 +2101,7 @@ const Sidebar: React.FC = () => {
                 <div className='flex items-center space-x-2'>
                   <span
                     className={`text-xs font-medium ${getMethodColor(
-                      activeDragItem?.request?.method
+                      activeDragItem?.request?.method,
                     )}`}
                   >
                     {activeDragItem?.request?.method}
