@@ -27,8 +27,8 @@ import Posts from "../../assests/images/Posts.gif";
 import Subscribers from "../../assests/images/Subscriberss.gif";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-
-
+import CICD from "../../assests/images/cicd.jpeg";
+import Integration from "../../assests/images/integration.jpeg";
 
 const features = [
     {
@@ -42,7 +42,7 @@ const features = [
         title: "Integration & Flow Testing",
         subtitle: "Map complex API chains automatically with our Smart Correlation Engine.",
         icon: <TestTubeDiagonal size={25} />,
-        image: Courses,
+        image: Integration,
         to: "/course-management",
     },
     {
@@ -56,7 +56,7 @@ const features = [
         title: "Continuous Execution",
         subtitle: "Plug into GitHub Actions or GitLab CI for fully automated Go/No-Go triggers on every push.",
         icon: <StepForward size={25} />,
-        image: Subscribers,
+        image: CICD,
         to: "/subscription-management",
     },
 
@@ -95,8 +95,10 @@ const ProductFeatures = () => {
         return () => clearTimeout(timeout);
     }, [userInteracted]);
 
+
+
     return (
-        <section className="w-full py-10 md:py-20 flex flex-col justify-center items-center md:px-20 px-6">
+        <section className="w-full py-10 md:py-20 flex flex-col justify-center items-center md:px-20 px-6  bg-gradient-to-b from-blue-50 to-white">
 
             <div className="text-center mb-16">
                 <motion.h2

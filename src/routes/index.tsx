@@ -50,6 +50,9 @@ import { URLEncoderDecoder } from '@/pages/URLEncoderDecoder';
 import { URLEncoder } from '@/pages/ URLEncoder';
 import FaqPage from '@/pages/FaqPage';
 import FaqPageNew from '@/pages/FaqPageNew';
+import JsonViewer from '@/pages/JsonViewer';
+import UTFEncoderDecoder from '@/pages/UTFEncoderDecoder';
+import BS64EncoderDecoder from '@/pages/BS64EncoderDecoder';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -113,8 +116,9 @@ export default function Router() {
       <Route path='/pilot-program' component={PilotProgram} />
       <Route path='/jwt-validator' component={JWTValidator} />
       <Route path='/url-encoder' component={URLEncoder} />
-      <Route path='/pilot-program' component={PilotProgram} />
-      <Route path='/pilot-program' component={PilotProgram} />
+      <Route path='/json-viewer' component={JsonViewer} />
+      <Route path='/utf-encoder-decoder' component={UTFEncoderDecoder} />
+      <Route path='/bs64-encoder-decoder' component={BS64EncoderDecoder} />
       <Route path='/privacy' component={PrivacyPage} />
       <Route path='/contact-us' component={ContactPage} />
       <Route path='*' component={NotFound} />

@@ -36,7 +36,7 @@ export function Footer() {
                             Talk to an Expert
                         </a>
                         <a
-                            href="/faq"
+                            href="/help-support "
                             className="px-8 py-3 border border-slate-400 text-slate-100 font-semibold rounded-lg hover:bg-slate-800 transition-colors duration-300"
                         >
                             View Documentation
@@ -84,7 +84,7 @@ export function Footer() {
                     <div>
                         <h4 className="font-semibold mb-4">Tools</h4>
                         <ul className="space-y-2 text-sm text-slate-400">
-                            <li><a href="/features" className="hover:text-slate-100 transition-colors">JSON viewer</a></li>
+                            <li><a href="/json-viewer" className="hover:text-slate-100 transition-colors">JSON viewer</a></li>
                             <li>
                                 <a
                                     href='/jwt-validator'
@@ -94,10 +94,8 @@ export function Footer() {
                                 </a>
                             </li>
                             <li><a href="/url-encoder" className="hover:text-slate-100 transition-colors">URL Encoder</a></li>
-                            <li><a href="/security" className="hover:text-slate-100 transition-colors">UTF8 Encoder</a></li>
-                            <li><a href="/security" className="hover:text-slate-100 transition-colors">UTF8 Decoder</a></li>
-                            <li><a href="/security" className="hover:text-slate-100 transition-colors">Base64 Encoder</a></li>
-                            <li><a href="/security" className="hover:text-slate-100 transition-colors">Base64 Decoder</a></li>
+                            <li><a href="/utf-encoder-decoder" className="hover:text-slate-100 transition-colors">UTF8 Encoder & Decoder</a></li>
+                            <li><a href="/bs64-encoder-decoder" className="hover:text-slate-100 transition-colors">Base64 Encoder & Decoder</a></li>
                         </ul>
                     </div>
 
@@ -131,7 +129,7 @@ export function Footer() {
                 {/* Bottom */}
                 <div className="border-t border-slate-800 pt-8 flex flex-col sm:flex-row justify-between items-center text-sm text-slate-400">
                     <p>&copy; {currentYear} OptraFlow. All rights reserved.</p>
-                    <p>Tested with OptraFlow.</p>
+                    {/* <p>Tested with OptraFlow.</p> */}
                 </div>
             </div>
         </footer>

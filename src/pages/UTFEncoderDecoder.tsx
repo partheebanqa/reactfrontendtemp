@@ -6,7 +6,7 @@ import EncoderDecoder from '@/components/EncoderDecoder/EncoderDecoder';
 import LandingLayout from '@/components/LandingLayout/LandingLayout';
 
 
-function BS64EncoderDecoder() {
+function UTFEncoderDecoder() {
     return (
         <LandingLayout>
             <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -17,29 +17,31 @@ function BS64EncoderDecoder() {
                                 <Code2 className="w-8 h-8 text-white" />
                             </div>
                             <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-                                BS64  Encoder & Decoder
+                                UTF-8  Encoder & Decoder
                             </h1>
                         </div>
                         <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                            Professional Base64 encoding/decoding utility for QA teams and developers.
+                            Professional UTF-8 encoding/decoding utility for QA teams and developers.
                             Perfect for testing, debugging, and data validation.
                         </p>
                     </header>
+
                     <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sm:p-8">
+
                         <EncoderDecoder
-                            title="Base64 Encoder & Decoder"
-                            description="Encode and decode text, JSON, HTML, or any other text-based content to and from Base64 format. Useful for data transmission, API testing, and debugging encoded payloads."
-                            onEncode={base64Encode}
-                            onDecode={base64Decode}
-                            inputPlaceholder="Enter text, JSON, HTML, or any content to encode/decode..."
-                            outputPlaceholder="Base64 result will appear here..."
-                            showFormatButton={true}
-                            onFormat={formatJson}
+                            title="UTF-8 Encoder & Decoder"
+                            description="Convert text to UTF-8 byte sequences and decode UTF-8 byte sequences back to text. Essential for debugging character encoding issues and understanding text encoding."
+                            onEncode={utf8Encode}
+                            onDecode={utf8Decode}
+                            inputPlaceholder="Enter text to convert to UTF-8 bytes, or paste UTF-8 bytes (space-separated) to decode..."
+                            outputPlaceholder="UTF-8 bytes or decoded text will appear here..."
                         />
+
                     </div>
 
                     <section className="mt-12 max-w-6xl mx-auto">
                         <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6 sm:p-8">
+
                             <div className="prose prose-gray max-w-none">
                                 <h3 className="text-xl font-semibold text-gray-900 mb-3 mt-6">Use Cases</h3>
                                 <ul className="list-disc list-inside space-y-2 text-gray-700 mb-4">
@@ -63,10 +65,11 @@ function BS64EncoderDecoder() {
                             </div>
                         </div>
                     </section>
+
                 </div>
             </div>
         </LandingLayout>
     );
 }
 
-export default BS64EncoderDecoder;
+export default UTFEncoderDecoder;

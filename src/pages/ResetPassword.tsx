@@ -17,6 +17,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { resetPasswordApi } from '@/services/auth.service';
+import LogoFull from '../assests/images/OptraLogo.png';
 
 const ResetPassword: React.FC = () => {
   const [location, setLocation] = useLocation();
@@ -230,9 +231,14 @@ const ResetPassword: React.FC = () => {
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4'>
       <Card className='w-full max-w-md shadow-xl'>
+        <div className='flex justify-center items-center py-4'>
+          <a href='/'>
+            <img src={LogoFull} alt='Optraflow' className='w-32 h-auto' />
+          </a>
+        </div>
         <CardHeader className='text-center pb-4'>
           <CardTitle className='text-2xl font-bold'>
-            Reset Your Password
+            Reset Your Passwordss
           </CardTitle>
           <p className='text-muted-foreground'>
             Enter your new password for{' '}
@@ -311,43 +317,39 @@ const ResetPassword: React.FC = () => {
               </h4>
               <div className='space-y-1 text-xs'>
                 <div
-                  className={`flex items-center space-x-2 ${
-                    passwords.newPassword.length >= 6
-                      ? 'text-green-600'
-                      : 'text-muted-foreground'
-                  }`}
+                  className={`flex items-center space-x-2 ${passwords.newPassword.length >= 6
+                    ? 'text-green-600'
+                    : 'text-muted-foreground'
+                    }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>At least 6 characters</span>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 ${
-                    /(?=.*[a-z])(?=.*[A-Z])/.test(passwords.newPassword)
-                      ? 'text-green-600'
-                      : 'text-muted-foreground'
-                  }`}
+                  className={`flex items-center space-x-2 ${/(?=.*[a-z])(?=.*[A-Z])/.test(passwords.newPassword)
+                    ? 'text-green-600'
+                    : 'text-muted-foreground'
+                    }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>Both uppercase and lowercase letters</span>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 ${
-                    /(?=.*\d)/.test(passwords.newPassword)
-                      ? 'text-green-600'
-                      : 'text-muted-foreground'
-                  }`}
+                  className={`flex items-center space-x-2 ${/(?=.*\d)/.test(passwords.newPassword)
+                    ? 'text-green-600'
+                    : 'text-muted-foreground'
+                    }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>At least one number</span>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 ${
-                    passwords.newPassword &&
+                  className={`flex items-center space-x-2 ${passwords.newPassword &&
                     passwords.confirmPassword &&
                     passwords.newPassword === passwords.confirmPassword
-                      ? 'text-green-600'
-                      : 'text-muted-foreground'
-                  }`}
+                    ? 'text-green-600'
+                    : 'text-muted-foreground'
+                    }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>Passwords match</span>
