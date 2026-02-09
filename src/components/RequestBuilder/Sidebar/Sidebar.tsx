@@ -319,6 +319,12 @@ const Sidebar: React.FC = () => {
     setShowMenu(null);
     setMenuPosition(null);
   };
+  const handleOpenPerformanceScanning = (request: CollectionRequest) => {
+    collectionActions.openPerformanceScanning(request);
+    setShowMenu(null);
+    setMenuPosition(null);
+  };
+
   const handleCreateCollection = () => {
     setSelectedCollection(null);
     setShowCollectionModal(true);
@@ -1769,7 +1775,21 @@ const Sidebar: React.FC = () => {
                     >
                       <Rocket className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Testing
+                        Performance Testing {''}
+                        <span className='text-xs italic text-gray-500'>
+                          (Beta)
+                        </span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() =>
+                        handleOpenPerformanceScanning(selectedRequest)
+                      }
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Rocket className='h-4 w-4 mr-2' />
+                      <span>
+                        Performance Scanning {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>

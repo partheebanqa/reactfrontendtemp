@@ -8,8 +8,6 @@ import {
   ScanResult,
 } from '@/services/executeRequest.service';
 
-// ==================== QUERY KEYS ====================
-
 export const securityScanKeys = {
   all: ['securityScans'] as const,
   history: (workspaceId: string) =>
@@ -17,17 +15,10 @@ export const securityScanKeys = {
   scan: (scanId: string) => [...securityScanKeys.all, 'scan', scanId] as const,
 };
 
-// ==================== HOOKS ====================
-
-/**
- * Fetch scan history for a workspace
- * @param workspaceId - The workspace ID
- * @param pageSize - Number of scans to fetch (default: 500)
- */
 export const useScanHistory = (
   workspaceId: string,
   pageSize: number = 500,
-  enabled: boolean = true
+  enabled: boolean = true,
 ) => {
   return useQuery<SecurityScanHistoryResponse, Error>({
     queryKey: securityScanKeys.history(workspaceId),
@@ -38,9 +29,6 @@ export const useScanHistory = (
   });
 };
 
-/**
- * Start a new security scan
- */
 export const useStartSecurityScan = () => {
   const queryClient = useQueryClient();
 
@@ -51,7 +39,6 @@ export const useStartSecurityScan = () => {
   >({
     mutationFn: ({ requestId }) => startSecurityScan(requestId),
     onSuccess: (_, variables) => {
-      // Invalidate scan history to refetch
       queryClient.invalidateQueries({
         queryKey: securityScanKeys.history(variables.workspaceId),
       });
@@ -59,9 +46,6 @@ export const useStartSecurityScan = () => {
   });
 };
 
-/**
- * Poll for security scan completion
- */
 export const usePollSecurityScan = () => {
   return useMutation<
     ScanResult,
@@ -77,9 +61,6 @@ export const usePollSecurityScan = () => {
   });
 };
 
-/**
- * Load historical scan results
- */
 export const useLoadHistoricalScan = () => {
   return useMutation<
     ScanResult,
@@ -93,10 +74,6 @@ export const useLoadHistoricalScan = () => {
   });
 };
 
-/**
- * Combined hook for the entire scan flow
- * This simplifies the component by handling start + poll in one hook
- */
 export const useSecurityScanFlow = (workspaceId: string) => {
   const queryClient = useQueryClient();
   const startScan = useStartSecurityScan();
@@ -105,23 +82,20 @@ export const useSecurityScanFlow = (workspaceId: string) => {
   const executeScan = async (
     requestId: string,
     onProgress?: (status: any) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<ScanResult> => {
     try {
-      // Start the scan
       const { scanId } = await startScan.mutateAsync({
         requestId,
         workspaceId,
       });
 
-      // Poll for results
       const result = await pollScan.mutateAsync({
         scanId,
         onProgress,
         signal,
       });
 
-      // Invalidate history after successful scan
       queryClient.invalidateQueries({
         queryKey: securityScanKeys.history(workspaceId),
       });

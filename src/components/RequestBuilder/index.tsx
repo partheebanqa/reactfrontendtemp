@@ -35,6 +35,7 @@ import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityS
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 import PerformanceTesting from './PerformanceTesting/PerformanceTesting';
 import { useToast } from '@/hooks/use-toast';
+import PerformanceScanView from './PerformanceSecurityScan/PerformanceView';
 
 const RequestBuilder = () => {
   const { toast } = useToast();
@@ -56,8 +57,13 @@ const RequestBuilder = () => {
     Array<{ name: string; path: string; source?: string }>
   >([]);
 
-  const { sanitizeTestRunner, securityScan, collections, performanceTest } =
-    useCollectionStore();
+  const {
+    sanitizeTestRunner,
+    securityScan,
+    performanceScan,
+    collections,
+    performanceTest,
+  } = useCollectionStore();
   const { currentWorkspace } = useWorkspace();
   const {
     refetch: refetchCollection,
@@ -73,7 +79,7 @@ const RequestBuilder = () => {
   const [resizePosition, setResizePosition] = useState(isMobile ? 60 : 50);
   const [showSidebar, setShowSidebar] = useState(!isMobile);
   const [activePanel, setActivePanel] = useState<'editor' | 'response'>(
-    'editor'
+    'editor',
   );
   const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,12 +87,12 @@ const RequestBuilder = () => {
   useEffect(() => {
     if (activeCollection?.id) {
       const collectionVars = collectionActions.getExtractedVariables(
-        activeCollection.id
+        activeCollection.id,
       );
       console.log(
         'Loading extracted variables for collection:',
         activeCollection.id,
-        collectionVars
+        collectionVars,
       );
       setExtractedVariables(collectionVars);
     } else {
@@ -134,7 +140,7 @@ const RequestBuilder = () => {
                 path: extraction.path,
                 source: extraction.source,
               }
-            : e
+            : e,
         );
       }
 
@@ -157,7 +163,7 @@ const RequestBuilder = () => {
       collectionActions.setExtractedVariable(
         collectionId,
         extraction.name,
-        extraction.value
+        extraction.value,
       );
 
       return updated;
@@ -193,7 +199,7 @@ const RequestBuilder = () => {
       document.body.style.cursor = isBottomLayout ? 'row-resize' : 'col-resize';
       document.body.style.userSelect = 'none';
     },
-    [isBottomLayout]
+    [isBottomLayout],
   );
 
   const handleRedirectToTab = useCallback((tabName: string) => {
@@ -228,7 +234,7 @@ const RequestBuilder = () => {
       newPosition = Math.max(minSize, Math.min(maxSize, newPosition));
       setResizePosition(newPosition);
     },
-    [isBottomLayout, isMobile]
+    [isBottomLayout, isMobile],
   );
 
   const handleResizeEnd = useCallback(() => {
@@ -326,13 +332,11 @@ const RequestBuilder = () => {
               isBottomLayout ? 'flex-col' : 'flex-row'
             }`}
           >
-            {/* ✅ If Sanitize Test Runner is open, show it fullscreen */}
             {sanitizeTestRunner.isOpen && sanitizeCollection ? (
               <div className='flex-1 w-full h-full'>
                 <SanitizeTestRunner collection={sanitizeCollection} />
               </div>
-            ) : /* ✅ If Security Scan is open, show it fullscreen */
-            securityScan.isOpen && securityScan.request ? (
+            ) : securityScan.isOpen && securityScan.request ? (
               <div className='flex-1 w-full h-full overflow-auto'>
                 <SecurityScanView
                   request={{
@@ -345,7 +349,22 @@ const RequestBuilder = () => {
                   onClose={() => collectionActions.closeSecurityScan()}
                 />
               </div>
-            ) : performanceTest.isOpen && performanceTest?.request ? (
+            ) : performanceScan?.isOpen && performanceScan.request ? (
+              <>
+                <div className='flex-1 w-full h-full overflow-auto'>
+                  <PerformanceScanView
+                    request={{
+                      id: performanceScan.request.id || '',
+                      name: performanceScan.request.name || 'Untitled Request',
+                      method: performanceScan.request.method,
+                      url: performanceScan.request.url || '',
+                    }}
+                    workspaceId={currentWorkspace?.id || ''}
+                    onClose={() => collectionActions.closeSecurityScan()}
+                  />
+                </div>
+              </>
+            ) : performanceTest?.isOpen && performanceTest?.request ? (
               <div className='flex-1 w-full h-full overflow-auto'>
                 <PerformanceTesting
                   request={{

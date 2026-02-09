@@ -40,6 +40,11 @@ export interface CollectionState {
     requestId: string | null;
     request: CollectionRequest | null;
   };
+  performanceScan: {
+    isOpen: boolean;
+    requestId: string | null;
+    request: CollectionRequest | null;
+  };
   preRequestAuth?: {
     collectionId: string | null;
     preRequestId: string | null;
@@ -72,6 +77,11 @@ export const initialCollectionState: CollectionState = {
     collectionId: null,
   },
   securityScan: {
+    isOpen: false,
+    requestId: null,
+    request: null,
+  },
+  performanceScan: {
     isOpen: false,
     requestId: null,
     request: null,
@@ -533,6 +543,29 @@ export const collectionActions = {
       },
     }));
   },
+
+  openPerformanceScanning: (request: CollectionRequest) => {
+    collectionStore.setState((state) => ({
+      ...state,
+      performanceScan: {
+        isOpen: true,
+        requestId: request.id || null,
+        request: request,
+      },
+    }));
+  },
+
+  closePerformanceScan: () => {
+    collectionStore.setState((state) => ({
+      ...state,
+      performanceScan: {
+        isOpen: false,
+        requestId: null,
+        request: null,
+      },
+    }));
+  },
+
   openPerformanceTesting: (request: CollectionRequest) => {
     collectionStore.setState((state) => ({
       ...state,
