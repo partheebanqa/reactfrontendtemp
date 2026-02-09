@@ -117,7 +117,6 @@ export default function PerformanceScanView({
   onClose,
 }: PerformanceScanProps) {
   const { currentWorkspace } = useWorkspace();
-  const [showReport, setShowReport] = useState(false);
 
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
   const [scanResult, setScanResult] =
@@ -476,7 +475,6 @@ export default function PerformanceScanView({
           )}
         </button>
 
-        {/* RIGHT COLUMN - Analysis Interface */}
         <div className='flex-1 overflow-auto scrollbar-thin'>
           {scanStatus === 'idle' && (
             <div className='flex items-center justify-center h-full px-6'>
@@ -622,13 +620,12 @@ export default function PerformanceScanView({
 
           {scanStatus === 'completed' && scanResult && (
             <div className='h-full overflow-auto scrollbar-thin'>
-              <div id='performance-analysis-content'>
-                <PerformanceReportView
-                  result={scanResult}
-                  request={request}
-                  onClose={() => setShowReport(false)}
-                />
-              </div>
+              <PerformanceReportView
+                result={scanResult}
+                request={request}
+                onClose={() => setScanStatus('idle')}
+                onRescan={startAnalysis}
+              />
             </div>
           )}
 

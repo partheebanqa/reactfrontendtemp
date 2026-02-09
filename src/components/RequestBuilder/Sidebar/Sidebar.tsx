@@ -24,6 +24,7 @@ import {
   Shield,
   KeyRound,
   Rocket,
+  Gauge,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -1767,6 +1768,24 @@ const Sidebar: React.FC = () => {
                       </span>
                     </button>
 
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
+                    <button
+                      onClick={() =>
+                        handleOpenPerformanceScanning(selectedRequest)
+                      }
+                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <Zap className='h-4 w-4 mr-2' />
+                      <span>
+                        Performance Scanning {''}
+                        <span className='text-xs italic text-gray-500'>
+                          (Beta)
+                        </span>
+                      </span>
+                    </button>
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
+
                     <button
                       onClick={() =>
                         handleOpenPerformanceTesting(selectedRequest)
@@ -1776,20 +1795,6 @@ const Sidebar: React.FC = () => {
                       <Rocket className='h-4 w-4 mr-2' />
                       <span>
                         Performance Testing {''}
-                        <span className='text-xs italic text-gray-500'>
-                          (Beta)
-                        </span>
-                      </span>
-                    </button>
-                    <button
-                      onClick={() =>
-                        handleOpenPerformanceScanning(selectedRequest)
-                      }
-                      className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <Rocket className='h-4 w-4 mr-2' />
-                      <span>
-                        Performance Scanning {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>
