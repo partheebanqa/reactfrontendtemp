@@ -17,25 +17,19 @@ import {
     StepForward,
 } from "lucide-react";
 
-import MemberGIF from "../../assests/images/Members.gif";
-import Appointments from "../../assests/images/Members.gif";
-import Courses from "../../assests/images/Coursess.gif";
-import Events from "../../assests/images/Eventss.gif";
-import Meetings from "../../assests/images/Meetingss.gif";
-import Posts from "../../assests/images/Posts.gif";
-// import Reports from "../assets/images/Reports.gif";
-import Subscribers from "../../assests/images/Subscriberss.gif";
+import RadipTest from "../../assests/images/RapidTest.gif";
+import Security from "../../assests/images/security_testing.gif";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import CICD from "../../assests/images/cicd.jpeg";
-import Integration from "../../assests/images/integration.jpeg";
+import CICD from "../../assests/images/CICD.gif";
+import Integration from "../../assests/images/IntegrationTesting.gif";
 
 const features = [
     {
         title: "Rapid Test Creation",
         subtitle: "Record live app traffic with our Network Interceptor to build production-ready suites instantly.",
         icon: <Bug size={25} />,
-        image: MemberGIF,
+        image: RadipTest,
         to: "/member-management",
     },
     {
@@ -49,7 +43,7 @@ const features = [
         title: "Security at the Source",
         subtitle: "Native OWASP ZAP integration allows you to run top 10 security scans as part of your standard testing workflow.",
         icon: <LockKeyhole size={25} />,
-        image: Events,
+        image: Security,
         to: "/event-management",
     },
     {
