@@ -1,7 +1,13 @@
-import React from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import {
   Code,
   Zap,
@@ -11,27 +17,25 @@ import {
   Infinity,
   CheckCircle,
   ArrowRight,
-  Play
-} from "lucide-react";
-import { Link } from "wouter";
-import LandingLayout from "@/components/LandingLayout/LandingLayout";
-import FaqPage from "./FaqPage";
-import { HeroSection } from "@/components/LandingLayout/HeroSection";
-import { navigate } from "wouter/use-browser-location";
-import ProductFeatures from "@/components/LandingLayout/ProductFeatures";
-import { CollaborationSection } from "@/components/LandingLayout/CollaborationSection";
-import { RoadmapSection } from "@/components/LandingLayout/RoadmapSection";
-import { FeaturesSection } from "@/components/LandingLayout/FeaturesSection";
+  Play,
+} from 'lucide-react';
+import { Link } from 'wouter';
+import LandingLayout from '@/components/LandingLayout/LandingLayout';
+import FaqPage from './FaqPage';
+import { HeroSection } from '@/components/LandingLayout/HeroSection';
+import { navigate } from 'wouter/use-browser-location';
+import ProductFeatures from '@/components/LandingLayout/ProductFeatures';
+import { CollaborationSection } from '@/components/LandingLayout/CollaborationSection';
+import { RoadmapSection } from '@/components/LandingLayout/RoadmapSection';
+import { FeaturesSection } from '@/components/LandingLayout/FeaturesSection';
 
 const Landing: React.FC = () => {
-
-
   const hanldeClickSingIn = () => {
-    navigate('/signin')
-  }
+    navigate('/signin');
+  };
   const hanldeClickSingUp = () => {
-    navigate('/signup')
-  }
+    navigate('/signup');
+  };
 
   return (
     <LandingLayout>
@@ -146,11 +150,6 @@ const Landing: React.FC = () => {
       </section> */}
       <ProductFeatures />
 
-
-
-
-
-
       {/* <FeaturesSection /> */}
 
       <RoadmapSection onBetaClick={hanldeClickSingIn} />
@@ -158,50 +157,49 @@ const Landing: React.FC = () => {
       <CollaborationSection />
 
       {/* Benefits Section */}
-      <section className="bg-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+      <section className='bg-white py-20'>
+        <div className='container mx-auto px-4'>
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center'>
             <div>
-              <h2 className="text-3xl font-bold mb-6">
-                Why Choose APIFlow?
-              </h2>
+              <h2 className='text-3xl font-bold mb-6'>Why Choose OPTRAFLOW?</h2>
 
-              <div className="space-y-4">
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className='space-y-4'>
+                <div className='flex items-start space-x-3'>
+                  <CheckCircle className='w-6 h-6 text-green-600 mt-0.5 flex-shrink-0' />
                   <div>
-                    <h3 className="font-semibold">No Code Required</h3>
-                    <p className="text-muted-foreground">
-                      Build complex API tests without writing a single line of code
+                    <h3 className='font-semibold'>No Code Required</h3>
+                    <p className='text-muted-foreground'>
+                      Build complex API tests without writing a single line of
+                      code
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
+                <div className='flex items-start space-x-3'>
+                  <CheckCircle className='w-6 h-6 text-green-600 mt-0.5 flex-shrink-0' />
                   <div>
-                    <h3 className="font-semibold">Fast Setup</h3>
-                    <p className="text-muted-foreground">
+                    <h3 className='font-semibold'>Fast Setup</h3>
+                    <p className='text-muted-foreground'>
                       Get started in minutes with our intuitive interface
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
+                <div className='flex items-start space-x-3'>
+                  <CheckCircle className='w-6 h-6 text-green-600 mt-0.5 flex-shrink-0' />
                   <div>
-                    <h3 className="font-semibold">Scalable</h3>
-                    <p className="text-muted-foreground">
+                    <h3 className='font-semibold'>Scalable</h3>
+                    <p className='text-muted-foreground'>
                       From small teams to enterprise - we scale with you
                     </p>
                   </div>
                 </div>
 
-                <div className="flex items-start space-x-3">
-                  <CheckCircle className="w-6 h-6 text-green-600 mt-0.5 flex-shrink-0" />
+                <div className='flex items-start space-x-3'>
+                  <CheckCircle className='w-6 h-6 text-green-600 mt-0.5 flex-shrink-0' />
                   <div>
-                    <h3 className="font-semibold">Reliable</h3>
-                    <p className="text-muted-foreground">
+                    <h3 className='font-semibold'>Reliable</h3>
+                    <p className='text-muted-foreground'>
                       99.9% uptime SLA with enterprise-grade infrastructure
                     </p>
                   </div>
@@ -209,37 +207,48 @@ const Landing: React.FC = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl p-8 shadow-lg">
-              <div className="space-y-4">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-sm font-medium">✓ User Authentication API</span>
+            <div className='bg-white rounded-2xl p-8 shadow-lg'>
+              <div className='space-y-4'>
+                <div className='bg-green-50 border border-green-200 rounded-lg p-4'>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 bg-green-500 rounded-full'></div>
+                    <span className='text-sm font-medium'>
+                      ✓ User Authentication API
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-5">Response time: 245ms</p>
+                  <p className='text-xs text-muted-foreground ml-5'>
+                    Response time: 245ms
+                  </p>
                 </div>
 
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                    <span className="text-sm font-medium">✗ Payment Processing API</span>
+                <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 bg-red-500 rounded-full'></div>
+                    <span className='text-sm font-medium'>
+                      ✗ Payment Processing API
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-5">Error: Timeout after 5s</p>
+                  <p className='text-xs text-muted-foreground ml-5'>
+                    Error: Timeout after 5s
+                  </p>
                 </div>
 
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm font-medium">⟳ Data Sync API Chain</span>
+                <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+                  <div className='flex items-center space-x-2'>
+                    <div className='w-3 h-3 bg-blue-500 rounded-full animate-pulse'></div>
+                    <span className='text-sm font-medium'>
+                      ⟳ Data Sync API Chain
+                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground ml-5">Running...</p>
+                  <p className='text-xs text-muted-foreground ml-5'>
+                    Running...
+                  </p>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </section>
-
 
       {/* CTA Section */}
       {/* <section className="bg-white px-4 py-20 text-center">
@@ -262,7 +271,6 @@ const Landing: React.FC = () => {
       </section> */}
 
       <FaqPage />
-
     </LandingLayout>
   );
 };
