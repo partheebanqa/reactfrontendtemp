@@ -31,7 +31,7 @@ import { FeaturesSection } from '@/components/LandingLayout/FeaturesSection';
 
 const Landing: React.FC = () => {
   const hanldeClickSingIn = () => {
-    navigate('/signin');
+    navigate('/signup');
   };
   const hanldeClickSingUp = () => {
     navigate('/signup');
