@@ -316,7 +316,7 @@ export default function PerformanceTesting({
       // console.log(runDetails, "runDetails");
       const status = runDetails?.status;
       // console.log(status, "status");
-      if (status === "COMPLETED" || status === "FAILED" || status === "CANCELLED") return false;
+      if (status === "COMPLETED" || status === "FAILED" || status === "CANCELLED" || status === "STOPPED") return false;
       return 2000;
     },
   });
@@ -340,7 +340,8 @@ export default function PerformanceTesting({
   const isRunFinished =
     runDetails?.status === "COMPLETED" ||
     runDetails?.status === "FAILED" ||
-    runDetails?.status === "CANCELLED";
+    runDetails?.status === "CANCELLED" ||
+    runDetails?.status === "STOPPED";
 
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 

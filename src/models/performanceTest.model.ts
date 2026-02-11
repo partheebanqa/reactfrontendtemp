@@ -132,7 +132,8 @@ export type PerformanceRunStatus =
   | "RUNNING"
   | "COMPLETED"
   | "FAILED"
-  | "CANCELLED";
+  | "CANCELLED"
+  | "STOPPED";
 
 export type PerformanceRunApi = {
   Id: string;
