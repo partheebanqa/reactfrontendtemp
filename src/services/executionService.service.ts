@@ -75,16 +75,20 @@ const fetchExecutionHistory = async (params: {
   const workspaceId = params.workspaceId;
 
   const url = `${API_EXECUTOR}/execution-history?page=${encodeURIComponent(
-    page
+    page,
   )}&limit=${encodeURIComponent(limit)}&workspace_id=${encodeURIComponent(
-    workspaceId
+    workspaceId,
   )}`;
 
-  const res = await apiRequest('GET', url);
+  const res = await apiRequest('GET', url, {
+    headers: {
+      'X-Workspace-ID': workspaceId,
+    },
+  });
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(
-      `Failed to fetch execution history (${res.status}): ${text}`
+      `Failed to fetch execution history (${res.status}): ${text}`,
     );
   }
   return res.json();
@@ -110,12 +114,16 @@ const fetchExecutionFilterSuiteHistory = async ({
 
   const url = `${API_EXECUTOR}/execution-history?${params.toString()}`;
 
-  const res = await apiRequest('GET', url);
+  const res = await apiRequest('GET', url, {
+    headers: {
+      'X-Workspace-ID': workspaceId,
+    },
+  });
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(
-      `Failed to fetch execution history (${res.status}): ${text}`
+      `Failed to fetch execution history (${res.status}): ${text}`,
     );
   }
 
@@ -142,12 +150,16 @@ const fetchExecutionFilterChainHistory = async ({
 
   const url = `${API_EXECUTOR}/execution-history?${params.toString()}`;
 
-  const res = await apiRequest('GET', url);
+  const res = await apiRequest('GET', url, {
+    headers: {
+      'X-Workspace-ID': workspaceId,
+    },
+  });
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
     throw new Error(
-      `Failed to fetch execution history (${res.status}): ${text}`
+      `Failed to fetch execution history (${res.status}): ${text}`,
     );
   }
 
@@ -157,7 +169,7 @@ const fetchExecutionFilterChainHistory = async ({
 const getTestSuiteReport = async (
   testSuiteId: string,
   executionId: string,
-  workspaceId: string
+  workspaceId: string,
 ) => {
   const response = await apiRequest(
     'GET',
@@ -166,7 +178,7 @@ const getTestSuiteReport = async (
       headers: {
         'X-Workspace-ID': workspaceId,
       },
-    }
+    },
   );
 
   if (!response.ok) {
@@ -179,7 +191,7 @@ const getTestSuiteReport = async (
 const getRequestChainReport = async (
   requestChainId: string,
   executionId: string,
-  workspaceId: string
+  workspaceId: string,
 ) => {
   const response = await apiRequest(
     'GET',
@@ -188,7 +200,7 @@ const getRequestChainReport = async (
       headers: {
         'X-Workspace-ID': workspaceId,
       },
-    }
+    },
   );
   if (!response.ok) {
     throw new Error('Failed to fetch request chain report');
@@ -197,7 +209,7 @@ const getRequestChainReport = async (
 };
 
 export const mapExecutionData = (
-  apiResponse: ApiExecutionResponse
+  apiResponse: ApiExecutionResponse,
 ): MappedExecutionResponse => {
   const executions: MappedExecution[] = apiResponse.items.map((item) => ({
     id: item.executionId,

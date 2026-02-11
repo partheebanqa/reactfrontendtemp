@@ -280,7 +280,7 @@ export default function FAQ() {
 
   const toggleItem = (id: string) => {
     setOpenItems((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
     );
   };
 
@@ -289,7 +289,7 @@ export default function FAQ() {
       item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.tags.some((tag) =>
-        tag.toLowerCase().includes(searchQuery.toLowerCase())
+        tag.toLowerCase().includes(searchQuery.toLowerCase()),
       );
 
     const matchesCategory =
@@ -349,7 +349,7 @@ export default function FAQ() {
                 {categories.map((category) => {
                   const Icon = category.icon;
                   const count = faqData.filter(
-                    (item) => item.category === category.name
+                    (item) => item.category === category.name,
                   ).length;
                   return (
                     <Button
@@ -383,7 +383,7 @@ export default function FAQ() {
                 <div className='flex items-center gap-3 mb-2'>
                   {(() => {
                     const category = categories.find(
-                      (c) => c.name === selectedCategory
+                      (c) => c.name === selectedCategory,
                     );
                     if (category) {
                       const Icon = category.icon;
@@ -508,11 +508,17 @@ export default function FAQ() {
               help.
             </p>
             <div className='flex items-center justify-center gap-4'>
-              <Button variant='outline'>
+              <Button
+                onClick={() => (window.location.href = '/contact-us')}
+                variant='outline'
+              >
                 <MessageCircle className='mr-2' size={16} />
                 Contact Support
               </Button>
-              <Button>
+              <Button
+                onClick={() => (window.location.href = '/signup')}
+                variant='default'
+              >
                 <ArrowRight className='mr-2' size={16} />
                 Get Started
               </Button>
