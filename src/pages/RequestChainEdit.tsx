@@ -27,7 +27,7 @@ const RequestChainEdit = () => {
   } = useQuery({
     queryKey: ['requestChain', chainId],
     queryFn: () => getRequestChainById(chainId!, currentWorkspace!.id),
-    enabled: !!chainId,
+    enabled: !!chainId && !!currentWorkspace?.id,
     staleTime: 0, // Always fetch fresh data when editing
   });
 
@@ -53,7 +53,7 @@ const RequestChainEdit = () => {
   });
 
   const handleSaveChain = async (
-    chain: RequestChain
+    chain: RequestChain,
   ): Promise<RequestChain | null> => {
     return new Promise((resolve) => {
       saveChain(chain, {
@@ -73,7 +73,7 @@ const RequestChainEdit = () => {
   };
 
   // Show loading state while fetching chain details
-  if (isLoadingChain) {
+  if (!currentWorkspace || isLoadingChain) {
     return (
       <>
         <Loader message='Loading Request Chains' />

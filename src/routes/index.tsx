@@ -73,6 +73,7 @@ export default function Router() {
           <Route path='/signup' component={SignUp} />
           <Route path='/forgot-password' component={ForgotPassword} />
           <Route path='/reset-password' component={ResetPassword} />
+          <Route path='/help-document' component={FAQ} />
         </>
       ) : (
         <AppLayout>
@@ -98,8 +99,8 @@ export default function Router() {
           <Route path='/notifications' component={Notifications} />
           <Route path='/settings/account' component={AccountSettingsPage} />
           <Route path='/cicd-configuration' component={CICDConfiguration} />
-          <Route path="/executions" component={Executions} />
-          <Route path="/executions/report" component={Executions} />
+          <Route path='/executions' component={Executions} />
+          <Route path='/executions/report' component={Executions} />
           <Route path='/executions-reports' component={ExecutionReportsPage} />
           <Route
             path='/executions/report/:type/:entityId'
@@ -122,7 +123,6 @@ export default function Router() {
       <Route path='/privacy' component={PrivacyPage} />
       <Route path='/contact-us' component={ContactPage} />
       <Route path='*' component={NotFound} />
-
     </Switch>
   );
 }

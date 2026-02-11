@@ -83,6 +83,14 @@ const EditTestSuiteContent: React.FC = () => {
   const id = (params as any).id;
   const isCreateMode = location.includes('/create');
 
+  console.log('🔍 Debug Info:', {
+    id,
+    isCreateMode,
+    currentWorkspaceId: currentWorkspace?.id,
+    location,
+    params,
+  });
+
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
 
@@ -96,7 +104,7 @@ const EditTestSuiteContent: React.FC = () => {
   // Add state for extracted variables and preRequestId
   const [preRequestId, setPreRequestId] = useState<string | null>(null);
   const [extractVariables, setExtractVariables] = useState<ExtractedVariable[]>(
-    []
+    [],
   );
 
   const {
@@ -106,9 +114,20 @@ const EditTestSuiteContent: React.FC = () => {
     error,
     refetch: refetchRequests,
   } = useQuery({
-    queryKey: ['testSuite', id],
-    queryFn: () => getTestSuites(id!, currentWorkspace!.id),
-    enabled: !!id && !isCreateMode,
+    queryKey: ['testSuite', id, currentWorkspace?.id],
+    queryFn: async () => {
+      console.log('Fetching test suite:', {
+        id,
+        workspaceId: currentWorkspace?.id,
+      });
+      if (!id || !currentWorkspace?.id) {
+        throw new Error('Missing id or workspace');
+      }
+      return getTestSuites(id, currentWorkspace.id);
+    },
+    enabled: !!id && !isCreateMode && !!currentWorkspace?.id,
+    retry: 2,
+    staleTime: 0,
   });
 
   const { data: collectionsWithRequests } = useQuery({
@@ -247,8 +266,8 @@ const EditTestSuiteContent: React.FC = () => {
       params: Array.isArray(req.params)
         ? req.params
         : Array.isArray(req.parameters)
-        ? req.parameters
-        : [],
+          ? req.parameters
+          : [],
 
       order: req.order || 0,
       testCases: {
@@ -302,23 +321,23 @@ const EditTestSuiteContent: React.FC = () => {
             headers: hasHeaders
               ? req.headers
               : Array.isArray(imported.headers)
-              ? imported.headers
-              : [],
+                ? imported.headers
+                : [],
             params: hasParams
               ? req.params
               : Array.isArray(imported.params)
-              ? imported.params
-              : [],
+                ? imported.params
+                : [],
             bodyRawContent: hasBody
               ? req.bodyRawContent
-              : imported.bodyRawContent ?? imported.body ?? '',
-            bodyType: hasBodyType ? req.bodyType : imported.bodyType ?? 'raw',
+              : (imported.bodyRawContent ?? imported.body ?? ''),
+            bodyType: hasBodyType ? req.bodyType : (imported.bodyType ?? 'raw'),
             authorizationType: hasAuthType
               ? req.authorizationType
-              : imported.authorizationType ?? 'none',
+              : (imported.authorizationType ?? 'none'),
             authorization: hasAuth
               ? req.authorization
-              : imported.authorization ?? null,
+              : (imported.authorization ?? null),
           };
         });
 
@@ -387,8 +406,8 @@ const EditTestSuiteContent: React.FC = () => {
   const handleUpdateTestCases = (requestId: string, testCaseIds: string[]) => {
     setRequests((prev) =>
       prev.map((req) =>
-        req.id === requestId ? { ...req, selectedTestCases: testCaseIds } : req
-      )
+        req.id === requestId ? { ...req, selectedTestCases: testCaseIds } : req,
+      ),
     );
     toast({
       title: 'Test cases updated',
@@ -401,7 +420,7 @@ const EditTestSuiteContent: React.FC = () => {
 
   const handleSaveExtractVariables = (
     requestId: string,
-    variables: ExtractedVariable[]
+    variables: ExtractedVariable[],
   ) => {
     setPreRequestId(requestId);
     setExtractVariables(variables);
@@ -415,10 +434,10 @@ const EditTestSuiteContent: React.FC = () => {
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
     const addRequestIds = currentRequestIds.filter(
-      (id) => !originalRequestIds.includes(id)
+      (id) => !originalRequestIds.includes(id),
     );
     const removeRequestIds = originalRequestIds.filter(
-      (id) => !currentRequestIds.includes(id)
+      (id) => !currentRequestIds.includes(id),
     );
     return { addRequestIds, removeRequestIds };
   };
@@ -467,6 +486,18 @@ const EditTestSuiteContent: React.FC = () => {
   const isLoading = isCreateMode ? false : isLoadingTestSuite;
   const isSaving = createMutation.isPending || updateMutation.isPending;
 
+  // Show loading if workspace is not ready
+  if (!isCreateMode && !currentWorkspace) {
+    return (
+      <div className='flex items-center justify-center min-h-screen'>
+        <div className='text-center'>
+          <div className='w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
+          <p className='text-muted-foreground'>Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
   // Get imported request IDs to pass to ImportModal
   const importedRequestIds = requests.map((request) => request.id);
 
@@ -476,13 +507,13 @@ const EditTestSuiteContent: React.FC = () => {
       isCreateMode
         ? requests.reduce(
             (total, req) => total + (req.selectedTestCases?.length || 0),
-            0
+            0,
           )
         : requests.reduce(
             (total, req) => total + (req.meta?.selectedTests ?? 0),
-            0
+            0,
           ),
-    [requests, isCreateMode]
+    [requests, isCreateMode],
   );
 
   const importableRequests = useMemo(() => {
@@ -491,7 +522,7 @@ const EditTestSuiteContent: React.FC = () => {
         collection.requests.map((request) => ({
           ...request,
           collectionName: collection.name,
-        }))
+        })),
       );
     }
     return [];
@@ -689,8 +720,8 @@ const EditTestSuiteContent: React.FC = () => {
                             ? 'Creating Test Suite...'
                             : 'Saving...'
                           : isCreateMode
-                          ? 'Create Test Suite'
-                          : 'Save Changes'}
+                            ? 'Create Test Suite'
+                            : 'Save Changes'}
                       </Button>
                     </div>
                   </div>
@@ -740,8 +771,8 @@ const EditTestSuiteContent: React.FC = () => {
                             ? 'Creating Test Suite...'
                             : 'Saving...'
                           : isCreateMode
-                          ? 'Create Test Suite'
-                          : 'Save Changes'}
+                            ? 'Create Test Suite'
+                            : 'Save Changes'}
                       </Button>
                     </div>
                   </div>

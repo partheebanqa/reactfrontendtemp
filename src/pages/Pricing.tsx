@@ -210,15 +210,17 @@ const Pricing: React.FC = () => {
           {/* Billing Toggle */}
           <div className='flex items-center justify-center space-x-4 mb-12'>
             <span
-              className={`text-sm ${!isYearly ? 'font-medium' : 'text-muted-foreground'
-                }`}
+              className={`text-sm ${
+                !isYearly ? 'font-medium' : 'text-muted-foreground'
+              }`}
             >
               Monthly
             </span>
             <Switch checked={isYearly} onCheckedChange={setIsYearly} />
             <span
-              className={`text-sm ${isYearly ? 'font-medium' : 'text-muted-foreground'
-                }`}
+              className={`text-sm ${
+                isYearly ? 'font-medium' : 'text-muted-foreground'
+              }`}
             >
               Yearly
             </span>
@@ -234,10 +236,11 @@ const Pricing: React.FC = () => {
             {plans.map((plan, index) => (
               <Card
                 key={plan.name}
-                className={`relative ${plan.highlighted
-                  ? 'border-primary shadow-xl scale-105'
-                  : 'border-gray-200'
-                  }`}
+                className={`relative ${
+                  plan.highlighted
+                    ? 'border-primary shadow-xl scale-105'
+                    : 'border-gray-200'
+                }`}
               >
                 {plan.badge && (
                   <div className='absolute -top-4 left-1/2 transform -translate-x-1/2'>
@@ -250,10 +253,11 @@ const Pricing: React.FC = () => {
                 <CardHeader className='text-center pb-4'>
                   <div className='flex items-center justify-center mb-4'>
                     <div
-                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${plan.highlighted
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-gray-100 text-gray-600'
-                        }`}
+                      className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                        plan.highlighted
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}
                     >
                       {plan.icon}
                     </div>
@@ -266,18 +270,16 @@ const Pricing: React.FC = () => {
 
                   <div className='mt-4'>
                     <div className='flex items-baseline justify-center'>
-
-
-                      {plan.name === "Enterprise" ? (
+                      {plan.name === 'Enterprise' ? (
                         <Button
                           className='w-full'
                           variant={plan.buttonVariant}
                           size='lg'
                           onClick={() => {
                             if (plan.name === 'Enterprise') {
-                              window.location.href = 'mailto:sales@optraflow.com';
+                              window.location.href = '/contact-us';
                             } else if (!isAuthenticated) {
-                              window.location.href = '/signin';
+                              window.location.href = '/signup';
                             }
                           }}
                         >
@@ -301,7 +303,7 @@ const Pricing: React.FC = () => {
                         Save{' '}
                         {calculateYearlySavings(
                           plan.price.monthly,
-                          plan.price.yearly
+                          plan.price.yearly,
                         )}
                         % vs monthly billing
                       </p>
@@ -366,9 +368,9 @@ const Pricing: React.FC = () => {
                     size='lg'
                     onClick={() => {
                       if (plan.name === 'Enterprise') {
-                        window.location.href = 'mailto:sales@optraflow.com';
+                        window.location.href = '/contact-us';
                       } else if (!isAuthenticated) {
-                        window.location.href = '/signin';
+                        window.location.href = '/signup';
                       }
                     }}
                   >
