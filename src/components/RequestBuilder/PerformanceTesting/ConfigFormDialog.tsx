@@ -27,6 +27,9 @@ import { Button } from '@/components/ui/button';
 
 import { Loader2 } from 'lucide-react';
 import { PerformanceConfig } from '@/models/performanceTest.model';
+import { Checkbox } from '@/components/ui/checkbox';
+import { tr } from '@faker-js/faker';
+
 
 /* ---------------------- Schema ---------------------- */
 
@@ -36,15 +39,17 @@ const formSchema = z
 
     description: z.string().max(500).optional(),
 
-    numRequests: z.coerce.number().min(1).max(1_000_000),
+    numRequests: z.coerce.number().min(0).max(1_000_000),
 
-    concurrency: z.coerce.number().min(1).max(1_000),
+    concurrency: z.coerce.number().min(0).max(1_000),
 
     delay: z.coerce.number().min(0).max(60_000),
 
     timeout: z.coerce.number().min(100).max(300_000),
 
     rateLimitEnabled: z.boolean(),
+
+    stopOnError: z.boolean(),
 
     rateLimitRequests: z.coerce.number().min(1).max(100_000).optional(),
 
@@ -98,18 +103,19 @@ export function ConfigFormDialog({
     defaultValues: {
       name: '',
       description: '',
-      numRequests: 1,
-      concurrency: 10,
+      numRequests: 0,
+      concurrency: 0,
       delay: 0,
       timeout: 5000,
-      rateLimitEnabled: false,
+      rateLimitEnabled: true,
+      stopOnError: true,
       rateLimitRequests: 1,
       rateLimitPeriod: 0,
       rateLimitType: 'FIXED_WINDOW',
     },
   });
 
-  const rateLimitEnabled = form.watch('rateLimitEnabled');
+  // const rateLimitEnabled = form.watch('rateLimitEnabled');
 
   /* ---------------------- Reset Logic ---------------------- */
 
@@ -128,6 +134,7 @@ export function ConfigFormDialog({
       delay: values.delay,
       timeout: values.timeout,
       rateLimitEnabled: values.rateLimitEnabled,
+      stopOnError: values.stopOnError,
       rateLimitRequests: values.rateLimitRequests,
       rateLimitPeriod: values.rateLimitPeriod,
       rateLimitType: values?.rateLimitType
@@ -145,11 +152,12 @@ export function ConfigFormDialog({
       form.reset({
         name: config.name ?? "",
         description: config.description ?? "",
-        numRequests: config.numRequests ?? 1,
-        concurrency: config.concurrency ?? 10,
+        numRequests: config.numRequests ?? 0,
+        concurrency: config.concurrency ?? 0,
         delay: config.delay ?? 0,
         timeout: config.timeout ?? 5000,
         rateLimitEnabled: !!config.rateLimitEnabled,
+        stopOnError: !!config.stopOnError,
         rateLimitRequests: config.rateLimitRequests ?? 1,
         rateLimitPeriod: config.rateLimitPeriod ?? 1,
         rateLimitType: (config.rateLimitType as any) ?? "FIXED_WINDOW",
@@ -158,13 +166,14 @@ export function ConfigFormDialog({
       form.reset({
         name: "",
         description: "",
-        numRequests: 1,
-        concurrency: 10,
+        numRequests: 0,
+        concurrency: 0,
         delay: 0,
         timeout: 5000,
-        rateLimitEnabled: false,
+        rateLimitEnabled: true,
         rateLimitRequests: 1,
         rateLimitPeriod: 1,
+        stopOnError: true,
         rateLimitType: "FIXED_WINDOW",
       });
     }
@@ -205,22 +214,42 @@ export function ConfigFormDialog({
               )}
             />
 
-            <FormField
+            {/* <FormField
               control={form.control}
               name="description"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Describe the purpose of this test configuration..." rows={3} {...field} />
+                    <Textarea placeholder="Describe the purpose of this test configuration..." rows={2} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            /> */}
+            <h3 className="text-lg font-semibold mb-4">Rate Limiting Settings</h3>
+            {/* <FormField
+              control={form.control}
+              name="rateLimitEnabled"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between border p-4 rounded-lg">
+                  <div>
+                    <FormLabel className="text-base">Enable Rate Limiting</FormLabel>
+                    <FormDescription>
+                      Limit the number of requests per time window
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch defaultChecked checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            /> */}
 
             <div className="grid md:grid-cols-2 gap-4">
-              <FormField
+
+
+              {/* <FormField
                 control={form.control}
                 name="numRequests"
                 render={({ field }) => (
@@ -233,9 +262,9 @@ export function ConfigFormDialog({
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
 
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="concurrency"
                 render={({ field }) => (
@@ -245,6 +274,36 @@ export function ConfigFormDialog({
                       <Input type="number" {...field} />
                     </FormControl>
                     <FormDescription>Concurrent requests</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              /> */}
+
+              <FormField
+                control={form.control}
+                name="rateLimitRequests"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Requests Per Window</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormDescription>Max requests allowed</FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="rateLimitPeriod"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Time Window (seconds)</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                    <FormDescription>Window duration</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -281,29 +340,34 @@ export function ConfigFormDialog({
               />
             </div>
 
-            <div className="border-t pt-4 space-y-4">
-              <h3 className="text-lg font-semibold mb-4">Rate Limiting Settings</h3>
-              <FormField
-                control={form.control}
-                name="rateLimitEnabled"
-                render={({ field }) => (
-                  <FormItem className="flex items-center justify-between border p-4 rounded-lg">
-                    <div>
-                      <FormLabel className="text-base">Enable Rate Limiting</FormLabel>
-                      <FormDescription>
-                        Limit the number of requests per time window
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch checked={field.value} onCheckedChange={field.onChange} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
 
-              {rateLimitEnabled && (
-                <div className="grid md:grid-cols-2 gap-4">
-                  <FormField
+            <FormField
+              control={form.control}
+              name="stopOnError"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 border p-4 rounded-lg">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Stop On First Error</FormLabel>
+                    <FormDescription>
+                      Automatically stop the test execution when a request fails.
+                    </FormDescription>
+                  </div>
+                </FormItem>
+              )}
+            />
+
+            <div className="border-t pt-4 space-y-4">
+
+
+              {/* {rateLimitEnabled && ( */}
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* <FormField
                     control={form.control}
                     name="rateLimitRequests"
                     render={({ field }) => (
@@ -331,48 +395,51 @@ export function ConfigFormDialog({
                         <FormMessage />
                       </FormItem>
                     )}
-                  />
+                  /> */}
 
-                  <FormField
-                    control={form.control}
-                    name="rateLimitType"
-                    render={({ field }) => (
-                      <FormItem className="md:col-span-2">
-                        <FormLabel>Rate Limit Type</FormLabel>
-                        <FormControl>
-                          <div className="space-y-2">
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                value="FIXED_WINDOW"
-                                checked={field.value === 'FIXED_WINDOW'}
-                                onChange={field.onChange}
-                              />
-                              <span className="text-sm">
-                                Fixed Window (e.g. 10 req/min starting at full minutes)
-                              </span>
-                            </label>
 
-                            <label className="flex items-center gap-2">
-                              <input
-                                type="radio"
-                                value="SLIDING_WINDOW"
-                                checked={field.value === 'SLIDING_WINDOW'}
-                                onChange={field.onChange}
-                              />
-                              <span className="text-sm">
-                                Sliding Window (e.g. 10 requests within any 60s period)
-                              </span>
-                            </label>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                </div>
-              )}
+
+                <FormField
+                  control={form.control}
+                  name="rateLimitType"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Rate Limit Type</FormLabel>
+                      <FormControl>
+                        <div className="space-y-2">
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              value="FIXED_WINDOW"
+                              checked={field.value === 'FIXED_WINDOW'}
+                              onChange={field.onChange}
+                            />
+                            <span className="text-sm">
+                              Fixed Window (e.g. 10 req/min starting at full minutes)
+                            </span>
+                          </label>
+
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              value="SLIDING_WINDOW"
+                              checked={field.value === 'SLIDING_WINDOW'}
+                              onChange={field.onChange}
+                            />
+                            <span className="text-sm">
+                              Sliding Window (e.g. 10 requests within any 60s period)
+                            </span>
+                          </label>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+              </div>
+              {/* )} */}
             </div>
 
             <DialogFooter>

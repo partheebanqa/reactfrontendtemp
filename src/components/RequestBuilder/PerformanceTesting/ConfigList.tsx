@@ -99,9 +99,11 @@ export function ConfigList({
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead className="hidden md:table-cell">Requests</TableHead>
-                  <TableHead className="hidden lg:table-cell">Concurrency</TableHead>
-                  <TableHead className="hidden lg:table-cell">Rate Limiting</TableHead>
+                  <TableHead className="hidden md:table-cell">
+                    RateLimitPeriod
+                  </TableHead>
+                  <TableHead className="hidden lg:table-cell">RateLimitRequests</TableHead>
+                  <TableHead className="hidden lg:table-cell">RateLimitType</TableHead>
                   <TableHead className="hidden xl:table-cell">Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -131,17 +133,16 @@ export function ConfigList({
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {config?.NumRequests.toLocaleString()}
+                        {config?.RateLimitPeriod}s
                       </TableCell>
-                      <TableCell className="hidden lg:table-cell">{config?.Concurrency}</TableCell>
+                      <TableCell className="hidden lg:table-cell">{config?.RateLimitRequests}</TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        {config.RateLimitEnabled ? (
-                          <Badge variant="secondary">
-                            {config?.RateLimitRequests}/{config?.RateLimitPeriod}s
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">Disabled</Badge>
-                        )}
+
+                        <Badge variant="secondary">
+                          {config?.RateLimitType}
+                        </Badge>
+
+
                       </TableCell>
                       <TableCell className="hidden xl:table-cell text-muted-foreground text-sm">
                         {format(new Date(config?.CreatedAt), 'PPp')}
