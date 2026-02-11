@@ -48,6 +48,7 @@ export interface PerformanceTestConfigApi {
   Timeout: number;
 
   RateLimitEnabled: boolean;
+  StopOnError: boolean;
   RateLimitRequests: number;
   RateLimitPeriod: number;
   RateLimitType: RateLimitType;
@@ -102,6 +103,7 @@ export interface PerformanceConfig {
   delay: number;
   timeout: number;
   rateLimitEnabled?: boolean;
+  stopOnError?: boolean;
   rateLimitRequests?: number;
   rateLimitType?: string;
   rateLimitPeriod?: number;

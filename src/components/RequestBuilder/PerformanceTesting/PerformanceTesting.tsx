@@ -245,6 +245,7 @@ export default function PerformanceTesting({
         delay: data.Delay,
         timeout: data.Timeout,
         rateLimitEnabled: data.RateLimitEnabled,
+        stopOnError: data.StopOnError,
         rateLimitRequests: data.RateLimitRequests,
         rateLimitPeriod: data.RateLimitPeriod,
         rateLimitType: data.RateLimitType,
