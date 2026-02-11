@@ -2658,7 +2658,7 @@ export function RequestChainEditor({
                 </Select>
               </div>
 
-              <DynamicVariablesPanel />
+              {/* <DynamicVariablesPanel /> */}
             </CardContent>
           </Card>
 
