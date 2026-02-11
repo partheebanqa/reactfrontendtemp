@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import RadipTest from "../../assests/images/RapidTest.gif";
-import Security from "../../assests/images/security_testing.gif";
+import Security from "../../assests/images/security.gif";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import CICD from "../../assests/images/CICD.gif";
