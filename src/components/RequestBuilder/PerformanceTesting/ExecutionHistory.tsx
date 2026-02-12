@@ -66,6 +66,7 @@ export function ExecutionHistory({ history, isLoading }: ExecutionHistoryProps) 
       </Card>
     );
   }
+  console.log(history, "history");
 
   return (
     <Card>

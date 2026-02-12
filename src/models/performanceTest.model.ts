@@ -219,4 +219,58 @@ export type PerformanceRunResultDTO = {
   testPhase: string;
   testRunId: string;
   timestamp: string;
+  requestCurl: string;
+  responseBody: string | null;
+
+  dnsTime?: number | null;
+  tcpTime?: number | null;
+  tlsTime?: number | null;
+  ttfbTime?: number | null;
 };
+
+export interface PerformanceRunSummaryDTO {
+  id: string;
+  status:
+    | "INITIALIZING"
+    | "RUNNING"
+    | "COMPLETED"
+    | "FAILED"
+    | "CANCELLED"
+    | "STOPPED";
+
+  startTime: string;
+  endTime: string;
+
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+
+  rateLimitDetected: boolean;
+  firstRateLimitAt: number;
+
+  avgResponseTime: number;
+  minResponseTime: number;
+  maxResponseTime: number;
+
+  p50ResponseTime: number;
+  p90ResponseTime: number;
+  p95ResponseTime: number;
+  p99ResponseTime: number;
+
+  throughput: number;
+  totalDuration: number;
+
+  avgDnsTime: number;
+  avgTcpTime: number;
+  avgTlsTime: number;
+  avgTtfbTime: number;
+
+  avgDownloadSize: number;
+
+  errorBreakdown: Record<string, number>;
+}
+
+export interface PerformanceRunResultsResponse {
+  summary: PerformanceRunSummaryDTO;
+  results: PerformanceRunResultDTO[];
+}

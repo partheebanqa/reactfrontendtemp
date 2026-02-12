@@ -1,147 +1,143 @@
-
 import React, { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Copy, FileDown, Eye } from "lucide-react";
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+    Table, TableBody, TableCell, TableHead,
+    TableHeader, TableRow,
 } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PerformanceRunResultDTO } from "@/models/performanceTest.model";
 
 
-function safeDate(v?: string) {
-    if (!v) return null;
-    const d = new Date(v);
-    return isNaN(d.getTime()) ? null : d;
-}
 
-export function RunResultsTable({ results }: { results: PerformanceRunResultDTO[] }) {
+export function RunResultsTable({
+    results,
+}: {
+    results: PerformanceRunResultDTO[];
+}) {
     const [search, setSearch] = useState("");
+    const [selectedBody, setSelectedBody] = useState<string | null>(null);
 
+
+    console.log("Results:", results);
     const filtered = useMemo(() => {
-        const q = search.trim().toLowerCase();
+        const q = search.toLowerCase();
         if (!q) return results;
-
-        return results.filter((r) => {
-            const hay = [
-                r.statusCode,
-                r.error,
-                r.requestId,
-                r.testPhase,
-                r.id,
-                r.testRunId,
-            ]
-                .filter(Boolean)
-                .join(" ")
-                .toLowerCase();
-
-            return hay.includes(q);
-        });
+        return results.filter((r: any) =>
+            `${r.statusCode} ${r.id} ${r.testPhase}`.toLowerCase().includes(q)
+        );
     }, [results, search]);
 
-    const stats = useMemo(() => {
-        const total = results.length;
-        const success = results.filter((r) => r.isSuccess).length;
-        const rateLimited = results.filter((r) => r.isRateLimited).length;
-        const failed = total - success;
-        return { total, success, failed, rateLimited };
-    }, [results]);
+    const downloadCSV = () => {
+        if (!results?.length) return;
+
+        const header = Object.keys(results[0]).join(",");
+        const rows = results.map((r) =>
+            Object.values(r).map((v) => `"${String(v ?? "")}"`).join(",")
+        );
+
+        const blob = new Blob([header + "\n" + rows.join("\n")], {
+            type: "text/csv",
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "performance-results.csv";
+        a.click();
+    };
+
 
     return (
-        <Card>
-            <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                    <CardTitle>Results</CardTitle>
-                    <div className="text-sm text-muted-foreground mt-1">
-                        Total: {stats.total} • ✅ {stats.success} • ❌ {stats.failed} • ⛔ {stats.rateLimited} rate-limited
-                    </div>
-                </div>
-
-                <div className="w-full md:w-80">
+        <>
+            <div className="overflow-x-auto">
+                <div className="flex justify-between mb-3 gap-3">
                     <Input
-                        placeholder="Search by status, error, requestId..."
+                        placeholder="Search..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
+                        className="max-w-xs"
                     />
+                    <Button variant="secondary" onClick={downloadCSV}>
+                        <FileDown className="h-4 w-4 mr-2" />
+                        Download CSV
+                    </Button>
                 </div>
-            </CardHeader>
 
-            <CardContent>
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Time</TableHead>
-                                <TableHead className="hidden md:table-cell">Phase</TableHead>
-                                <TableHead className="hidden lg:table-cell">Response Time</TableHead>
-                                <TableHead className="hidden lg:table-cell">Size</TableHead>
-                                <TableHead className="hidden xl:table-cell">Rate Limited</TableHead>
-                                <TableHead>Error</TableHead>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Time</TableHead>
+                            <TableHead>Response</TableHead>
+                            <TableHead>Size</TableHead>
+                            <TableHead>Rate</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+
+                    <TableBody>
+                        {filtered.map((r: PerformanceRunResultDTO, index: number) => (
+                            <TableRow key={index}>
+                                <TableCell>
+                                    <Badge variant={r.isSuccess ? "secondary" : "destructive"}>
+                                        {r.statusCode}
+                                    </Badge>
+                                </TableCell>
+
+                                <TableCell>
+                                    {format(new Date(r?.timestamp), "HH:mm:ss")}
+                                </TableCell>
+
+                                <TableCell>{r.responseTime} ms</TableCell>
+                                <TableCell>{r.responseSize} B</TableCell>
+
+                                <TableCell>
+                                    {r.isRateLimited ? (
+                                        <Badge variant="destructive">Yes</Badge>
+                                    ) : (
+                                        <Badge variant="outline">No</Badge>
+                                    )}
+                                </TableCell>
+
+                                <TableCell className="flex gap-2">
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => navigator.clipboard.writeText(r.requestId)}
+                                    >
+                                        <Copy className="h-4 w-4" />
+                                    </Button>
+
+                                    <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => setSelectedBody(r.responseBody)}
+
+                                    >
+                                        <Eye className="h-4 w-4" />
+                                    </Button>
+                                </TableCell>
                             </TableRow>
-                        </TableHeader>
+                        ))}
+                    </TableBody>
+                </Table>
 
-                        <TableBody>
-                            {filtered.map((r) => {
-                                const t = safeDate(r.timestamp);
-                                const badge =
-                                    r.isSuccess ? "secondary" : r.statusCode >= 500 ? "destructive" : "outline";
-
-                                return (
-                                    <TableRow key={r.id}>
-                                        <TableCell>
-                                            <Badge variant={badge as any}>
-                                                {r.statusCode || (r.isSuccess ? "OK" : "ERR")}
-                                            </Badge>
-                                        </TableCell>
-
-                                        <TableCell className="text-muted-foreground text-sm">
-                                            {t ? format(t, "PPp") : "-"}
-                                        </TableCell>
-
-                                        <TableCell className="hidden md:table-cell">
-                                            {r.testPhase || "-"}
-                                        </TableCell>
-
-                                        <TableCell className="hidden lg:table-cell">
-                                            {r.responseTime} ms
-                                        </TableCell>
-
-                                        <TableCell className="hidden lg:table-cell">
-                                            {r.responseSize} bytes
-                                        </TableCell>
-
-                                        <TableCell className="hidden xl:table-cell">
-                                            {r.isRateLimited ? (
-                                                <Badge variant="destructive">Yes</Badge>
-                                            ) : (
-                                                <Badge variant="outline">No</Badge>
-                                            )}
-                                        </TableCell>
-
-                                        <TableCell className="max-w-[420px]">
-                                            <div className="text-sm line-clamp-2 text-muted-foreground">
-                                                {r.error || "-"}
-                                            </div>
-                                            {r.retryAfter ? (
-                                                <div className="text-xs text-muted-foreground mt-1">
-                                                    Retry-After: {r.retryAfter}
-                                                </div>
-                                            ) : null}
-                                        </TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                        </TableBody>
-                    </Table>
-                </div>
-            </CardContent>
-        </Card>
+                {/* Response Body Modal */}
+                <Dialog open={!!selectedBody} onOpenChange={() => setSelectedBody(null)}>
+                    <DialogContent className="max-w-3xl">
+                        <DialogHeader>
+                            <DialogTitle>Response Body</DialogTitle>
+                        </DialogHeader>
+                        <pre className="bg-gray-100 dark:bg-gray-800 p-4 rounded text-sm overflow-auto max-h-[500px]">
+                            {selectedBody}
+                        </pre>
+                    </DialogContent>
+                </Dialog>
+            </div>
+        </>
     );
 }

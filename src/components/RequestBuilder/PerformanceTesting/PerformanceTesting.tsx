@@ -44,7 +44,7 @@ import {
 import { ConfigFormDialog } from './ConfigFormDialog';
 import { ExecutionHistory } from './ExecutionHistory';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { PerformanceConfig, PerformanceRunApi, PerformanceRunDTO, PerformanceTestConfigApi, PerformanceTestConfigDTO, PerformanceTestUpdatePayload } from '@/models/performanceTest.model';
+import { PerformanceConfig, PerformanceRunApi, PerformanceRunDTO, PerformanceRunResultsResponse, PerformanceTestConfigApi, PerformanceTestConfigDTO, PerformanceTestUpdatePayload } from '@/models/performanceTest.model';
 import { deletePerformanceTestConfig, executePerformanceTest, getPerformanceConfigsByRequestId, getPerformanceRunByExecutionId, getPerformanceRunResults, getPerformanceTestConfig, performanceTestCreate, updatePerformanceTestConfig } from '@/services/performance.service';
 import { ConfigList } from './ConfigList';
 import { queryClient } from '@/lib/queryClient';
@@ -52,6 +52,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RunDetailsInline } from './RunDetailsInline';
 import { RunResultsTable } from './RunResultsTable';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RunSummaryCard } from './RunSummaryCard';
 
 export interface PerformanceTestProps {
   request: {
@@ -90,12 +91,6 @@ export default function PerformanceTesting({
   const { executeScan, isLoading: isScanning } = useSecurityScanFlow(
     currentWorkspace?.id || ''
   );
-
-
-
-
-
-
 
 
   const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -322,19 +317,19 @@ export default function PerformanceTesting({
   });
 
 
-
-
   const {
-    data: runResults,
+    data: runResultsResponse,
     isFetching: isFetchingResults,
     error: resultsError,
     refetch: refetchResults,
-  } = useQuery({
+  } = useQuery<PerformanceRunResultsResponse>({
     queryKey: ["performance-run-results", activeExecutionId],
     queryFn: () => getPerformanceRunResults(activeExecutionId!),
     enabled: false,
     refetchOnWindowFocus: false,
   });
+
+  // console.log(runResultsResponse, "runResultsResponse");
 
 
   const isRunFinished =
@@ -343,7 +338,6 @@ export default function PerformanceTesting({
     runDetails?.status === "CANCELLED" ||
     runDetails?.status === "STOPPED";
 
-  const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 
 
   return (
@@ -427,31 +421,9 @@ export default function PerformanceTesting({
 
       <div className='flex-1 flex overflow-hidden relative'>
 
-        {/* <div
-          className={`border-r border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden transition-all duration-300 ${isHistoryOpen ? 'w-80' : 'w-0'
-            }`}
-        >
-          <ConfigList
-            configs={perfConfigs || []}
-            isLoading={isLoading}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-            onExecute={handleRunClick}
-            executingConfigId={executingConfigId || ""}
-          />
-        </div> */}
 
-        {/* <button
-          onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-          className='absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-r-lg p-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-md'
-          style={{ left: isHistoryOpen ? '320px' : '0px' }}
-        >
-          {isHistoryOpen ? (
-            <ChevronLeft className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-          ) : (
-            <ChevronRight className='w-4 h-4 text-gray-600 dark:text-gray-400' />
-          )}
-        </button> */}
+
+
 
         {/* RIGHT COLUMN - Scan Interface */}
         <div className='flex-1 overflow-auto scrollbar-thin p-3'>
@@ -566,9 +538,9 @@ export default function PerformanceTesting({
 
 
       {
-        showResults && (
-          <div className="mt-4">
-            {isFetchingResults && !runResults ? (
+        showResults && runResultsResponse && (
+          <div className="border-t border-gray-200 dark:border-gray-800 p-4">
+            {isFetchingResults && !runResultsResponse ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Fetching results...
@@ -577,15 +549,20 @@ export default function PerformanceTesting({
               <div className="text-sm text-destructive">
                 {(resultsError as any)?.message || "Failed to load results"}
               </div>
-            ) : !runResults || runResults.length === 0 ? (
+            ) : !runResultsResponse ? (
               <div className="text-sm text-muted-foreground">No results found.</div>
             ) : (
-              <RunResultsTable results={runResults} />
+              <div className="space-y-4">
+                <RunSummaryCard summary={runResultsResponse.summary} />
+                <RunResultsTable
+                  results={runResultsResponse.results}
+                />
+              </div>
             )}
           </div>
         )
       }
-
+      ``
     </div >
   );
 }
