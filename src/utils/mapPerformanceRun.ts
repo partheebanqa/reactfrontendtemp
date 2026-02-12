@@ -39,21 +39,25 @@ export const mapPerformanceRun = (
   };
 };
 
-export const mapPerformanceRunResult = (
-  api: PerformanceRunResultApi,
-): PerformanceRunResultDTO => ({
-  error: api.Error || null,
-  id: api.Id,
-  isRateLimited: api.IsRateLimited,
-  isSuccess: api.IsSuccess,
-  requestId: api.RequestId,
-  responseSize: api.ResponseSize,
-  responseTime: api.ResponseTime,
-  retryAfter: api.RetryAfter || null,
-  statusCode: api.StatusCode,
-  testPhase: api.TestPhase,
-  testRunId: api.TestRunId,
-  timestamp: api.Timestamp,
+export const mapPerformanceRunResult = (api: any): PerformanceRunResultDTO => ({
+  id: api.id,
+  testRunId: api.testRunId ?? null,
+  statusCode: api.statusCode,
+  responseTime: api.responseTime,
+  responseSize: api.responseSize,
+  isSuccess: api.isSuccess,
+  isRateLimited: api.isRateLimited,
+  testPhase: api.testPhase,
+  requestCurl: api.requestCurl,
+  requestId: api.requestId ?? null,
+  responseBody: api.responseBody ?? null,
+  retryAfter: api.retryAfter ?? null,
+  dnsTime: api.dnsTime ?? null,
+  tcpTime: api.tcpTime ?? null,
+  tlsTime: api.tlsTime ?? null,
+  ttfbTime: api.ttfbTime ?? null,
+  timestamp: api.timestamp,
+  error: api.error ?? null,
 });
 
 export const mapPerformanceRunSummary = (

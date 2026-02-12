@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 
 export function RunSummaryCard({ summary }: { summary: any }) {
     return (
-        <Card>
+        <Card className="space-y-4">
             <CardContent className="p-4 space-y-4">
                 {/* Top Metrics */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

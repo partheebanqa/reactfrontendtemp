@@ -219,6 +219,13 @@ export type PerformanceRunResultDTO = {
   testPhase: string;
   testRunId: string;
   timestamp: string;
+  requestCurl: string;
+  responseBody: string | null;
+
+  dnsTime?: number | null;
+  tcpTime?: number | null;
+  tlsTime?: number | null;
+  ttfbTime?: number | null;
 };
 
 export interface PerformanceRunSummaryDTO {

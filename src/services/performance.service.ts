@@ -229,6 +229,8 @@ export const getPerformanceRunResults = async (
 
   const data = await response.json();
 
+  console.log("Raw Run Results:", data);
+
   return {
     summary: mapPerformanceRunSummary(data.summary),
     results: data.results.map(mapPerformanceRunResult),
