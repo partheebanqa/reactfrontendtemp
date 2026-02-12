@@ -4,6 +4,7 @@ import {
   PerformanceRunDTO,
   PerformanceRunResultApi,
   PerformanceRunResultDTO,
+  PerformanceRunSummaryDTO,
 } from "@/models/performanceTest.model";
 
 export const mapPerformanceRun = (
@@ -53,4 +54,41 @@ export const mapPerformanceRunResult = (
   testPhase: api.TestPhase,
   testRunId: api.TestRunId,
   timestamp: api.Timestamp,
+});
+
+export const mapPerformanceRunSummary = (
+  api: any,
+): PerformanceRunSummaryDTO => ({
+  id: api.id,
+  status: api.status,
+  startTime: api.startTime,
+  endTime: api.endTime,
+
+  totalRequests: api.totalRequests,
+  successfulRequests: api.successfulRequests,
+  failedRequests: api.failedRequests,
+
+  rateLimitDetected: api.rateLimitDetected,
+  firstRateLimitAt: api.firstRateLimitAt,
+
+  avgResponseTime: api.avgResponseTime,
+  minResponseTime: api.minResponseTime,
+  maxResponseTime: api.maxResponseTime,
+
+  p50ResponseTime: api.p50ResponseTime,
+  p90ResponseTime: api.p90ResponseTime,
+  p95ResponseTime: api.p95ResponseTime,
+  p99ResponseTime: api.p99ResponseTime,
+
+  throughput: api.throughput,
+  totalDuration: api.totalDuration,
+
+  avgDnsTime: api.avgDnsTime,
+  avgTcpTime: api.avgTcpTime,
+  avgTlsTime: api.avgTlsTime,
+  avgTtfbTime: api.avgTtfbTime,
+
+  avgDownloadSize: api.avgDownloadSize,
+
+  errorBreakdown: api.errorBreakdown || {},
 });

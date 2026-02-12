@@ -9,6 +9,7 @@ import {
   PerformanceRunDTO,
   PerformanceRunResultApi,
   PerformanceRunResultDTO,
+  PerformanceRunResultsResponse,
   PerformanceTestConfigApi,
   PerformanceTestConfigDTO,
   PerformanceTestCreatePayload,
@@ -18,6 +19,7 @@ import {
 import {
   mapPerformanceRun,
   mapPerformanceRunResult,
+  mapPerformanceRunSummary,
 } from "@/utils/mapPerformanceRun";
 
 export const performanceTestCreate = async (
@@ -207,7 +209,7 @@ export const getPerformanceRunByExecutionId = async (
 
 export const getPerformanceRunResults = async (
   executionId: string,
-): Promise<PerformanceRunResultDTO[]> => {
+): Promise<PerformanceRunResultsResponse> => {
   const response = await apiRequest(
     "GET",
     `${API_PERFORMANCE_TEST}/runs/${executionId}/results`,
@@ -215,6 +217,7 @@ export const getPerformanceRunResults = async (
       headers: { "Content-Type": "application/json" },
     },
   );
+
   if (!response.ok) {
     let errMsg = "Failed to fetch run results";
     try {
@@ -224,8 +227,10 @@ export const getPerformanceRunResults = async (
     throw new Error(errMsg);
   }
 
-  const data = (await response.json()) as PerformanceRunResultApi[];
+  const data = await response.json();
 
-  // ✅ map each item
-  return data.map(mapPerformanceRunResult);
+  return {
+    summary: mapPerformanceRunSummary(data.summary),
+    results: data.results.map(mapPerformanceRunResult),
+  };
 };

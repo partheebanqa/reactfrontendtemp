@@ -44,7 +44,7 @@ import {
 import { ConfigFormDialog } from './ConfigFormDialog';
 import { ExecutionHistory } from './ExecutionHistory';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { PerformanceConfig, PerformanceRunApi, PerformanceRunDTO, PerformanceTestConfigApi, PerformanceTestConfigDTO, PerformanceTestUpdatePayload } from '@/models/performanceTest.model';
+import { PerformanceConfig, PerformanceRunApi, PerformanceRunDTO, PerformanceRunResultsResponse, PerformanceTestConfigApi, PerformanceTestConfigDTO, PerformanceTestUpdatePayload } from '@/models/performanceTest.model';
 import { deletePerformanceTestConfig, executePerformanceTest, getPerformanceConfigsByRequestId, getPerformanceRunByExecutionId, getPerformanceRunResults, getPerformanceTestConfig, performanceTestCreate, updatePerformanceTestConfig } from '@/services/performance.service';
 import { ConfigList } from './ConfigList';
 import { queryClient } from '@/lib/queryClient';
@@ -52,6 +52,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RunDetailsInline } from './RunDetailsInline';
 import { RunResultsTable } from './RunResultsTable';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { RunSummaryCard } from './RunSummaryCard';
 
 export interface PerformanceTestProps {
   request: {
@@ -90,12 +91,6 @@ export default function PerformanceTesting({
   const { executeScan, isLoading: isScanning } = useSecurityScanFlow(
     currentWorkspace?.id || ''
   );
-
-
-
-
-
-
 
 
   const [formDialogOpen, setFormDialogOpen] = useState(false);
@@ -324,17 +319,34 @@ export default function PerformanceTesting({
 
 
 
+
+
+
+  // const {
+  //   data: runResults,
+  //   isFetching: isFetchingResults,
+  //   error: resultsError,
+  //   refetch: refetchResults,
+  // } = useQuery({
+  //   queryKey: ["performance-run-results", activeExecutionId],
+  //   queryFn: () => getPerformanceRunResults(activeExecutionId!),
+  //   enabled: false,
+  //   refetchOnWindowFocus: false,
+  // });
+
+
   const {
-    data: runResults,
+    data: runResultsResponse,
     isFetching: isFetchingResults,
     error: resultsError,
     refetch: refetchResults,
-  } = useQuery({
+  } = useQuery<PerformanceRunResultsResponse>({
     queryKey: ["performance-run-results", activeExecutionId],
     queryFn: () => getPerformanceRunResults(activeExecutionId!),
     enabled: false,
     refetchOnWindowFocus: false,
   });
+
 
 
   const isRunFinished =
@@ -565,7 +577,7 @@ export default function PerformanceTesting({
       }
 
 
-      {
+      {/* {
         showResults && (
           <div className="mt-4">
             {isFetchingResults && !runResults ? (
@@ -584,7 +596,20 @@ export default function PerformanceTesting({
             )}
           </div>
         )
-      }
+      } */}
+
+
+      {showResults && runResultsResponse && (
+        <div className="mt-4 space-y-4">
+          <RunSummaryCard summary={runResultsResponse.summary} />
+          <RunResultsTable
+            results={runResultsResponse.results}
+            summary={runResultsResponse.summary}
+          />
+        </div>
+      )}
+
+
 
     </div >
   );
