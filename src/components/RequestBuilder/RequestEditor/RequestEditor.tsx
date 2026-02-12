@@ -1164,6 +1164,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               token: tokenValue,
             }));
 
+            // ✅ ADD THIS: Update the opened request in store
             collectionActions.updateOpenedRequest({
               ...activeRequest,
               authorizationType: 'bearer',
@@ -1176,8 +1177,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         } catch (error) {
           console.error('Error parsing stored token:', error);
         }
-      } else {
-        console.warn('⚠️ Pre-request token not found in localStorage');
       }
     }
   }, [
@@ -1186,7 +1185,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     activeRequest?.id,
     isCurrentRequestPreRequest,
   ]);
-
   const handlePreRequestToggle = (checked: boolean) => {
     // Prevent toggling if this IS the pre-request
     if (isCurrentRequestPreRequest) {

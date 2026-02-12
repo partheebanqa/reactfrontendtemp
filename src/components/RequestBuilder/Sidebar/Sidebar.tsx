@@ -690,10 +690,47 @@ const Sidebar: React.FC = () => {
     try {
       const collection = collectionsData.find((c) => c.id === collectionId);
       if (!collection) {
+        console.error('Collection not found:', collectionId);
         return;
       }
 
-      const preRequest = collection.requests.find((r) => r.id === preRequestId);
+      const findRequestInCollection = (requestId: string): any => {
+        const topLevelRequest = collection.requests.find(
+          (r) => r.id === requestId,
+        );
+        if (topLevelRequest) {
+          return topLevelRequest;
+        }
+
+        const searchInFolders = (folders: any[] = []): any => {
+          for (const folder of folders) {
+            if (folder.requests && Array.isArray(folder.requests)) {
+              const found = folder.requests.find(
+                (r: any) => r.id === requestId,
+              );
+              if (found) {
+                return found;
+              }
+            }
+            if (folder.folders && Array.isArray(folder.folders)) {
+              const found = searchInFolders(folder.folders);
+              if (found) return found;
+            }
+          }
+          return null;
+        };
+
+        const folderResult = searchInFolders((collection as any).folders || []);
+        if (folderResult) {
+          return folderResult;
+        }
+
+        console.error('Pre-request not found anywhere in collection');
+        return null;
+      };
+
+      const preRequest = findRequestInCollection(preRequestId);
+
       if (!preRequest) {
         toast({
           title: 'Pre-request Not Found',
@@ -723,14 +760,11 @@ const Sidebar: React.FC = () => {
 
       const response = await executeRequest(payload);
 
-      console.log('response123:', response);
-
       if (
         preRequest.extractVariables &&
         Array.isArray(preRequest.extractVariables) &&
         preRequest.extractVariables.length > 0
       ) {
-        // Get the response data
         let rawBody =
           response?.data?.responses?.[0]?.body ||
           response?.data?.body ||
@@ -783,7 +817,7 @@ const Sidebar: React.FC = () => {
                 value: String(value),
                 timestamp: Date.now(),
                 collectionId: collectionId,
-                source: 'response_body', // This will be determined by extractDataFromResponse
+                source: 'response_body',
                 path:
                   preRequest.extractVariables.find(
                     (ev: any) => (ev.variableName || ev.name) === varName,
@@ -800,8 +834,6 @@ const Sidebar: React.FC = () => {
             extractedCount++;
           }
         });
-
-        console.log('extractedCount:', extractedCount);
 
         if (extractedCount > 0) {
           const executionKey = `preRequest_executed_${collectionId}_${preRequestId}`;
@@ -821,7 +853,7 @@ const Sidebar: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error('Failed to auto-run pre-request:', error);
+      console.error('❌ Failed to auto-run pre-request:', error);
       toast({
         title: 'Pre-request Failed',
         description: 'Could not execute authentication request',
@@ -900,10 +932,33 @@ const Sidebar: React.FC = () => {
         });
 
         if (collectionData?.preRequestId) {
-          console.log('PreRequestId found:', collectionData.preRequestId);
+          const findRequestInCollection = (requestId: string): any => {
+            const topLevelRequest = collectionData.requests?.find(
+              (r: any) => r.id === requestId,
+            );
+            if (topLevelRequest) return topLevelRequest;
 
-          const preRequest = collectionData.requests?.find(
-            (r: any) => r.id === collectionData.preRequestId,
+            const searchInFolders = (folders: any[] = []): any => {
+              for (const folder of folders) {
+                if (folder.requests && Array.isArray(folder.requests)) {
+                  const found = folder.requests.find(
+                    (r: any) => r.id === requestId,
+                  );
+                  if (found) return found;
+                }
+                if (folder.folders && Array.isArray(folder.folders)) {
+                  const found = searchInFolders(folder.folders);
+                  if (found) return found;
+                }
+              }
+              return null;
+            };
+
+            return searchInFolders(collectionData.folders || []);
+          };
+
+          const preRequest = findRequestInCollection(
+            collectionData.preRequestId,
           );
 
           if (
@@ -1646,11 +1701,9 @@ const Sidebar: React.FC = () => {
                               selectedCollection &&
                               selectedCollection.preRequestId
                             ) {
-                              // Clear execution flag to allow re-run
                               const executionKey = `preRequest_executed_${selectedCollection.id}_${selectedCollection.preRequestId}`;
                               localStorage.removeItem(executionKey);
 
-                              // Clear all old extracted variables for this collection
                               const storageKeys = Object.keys(
                                 localStorage,
                               ).filter((key) =>
@@ -1663,7 +1716,6 @@ const Sidebar: React.FC = () => {
                                 localStorage.removeItem(key);
                               });
 
-                              // Re-run pre-request to get fresh tokens
                               await autoRunPreRequest(
                                 selectedCollection.id,
                                 selectedCollection.preRequestId,
