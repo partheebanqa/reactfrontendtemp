@@ -2813,41 +2813,52 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 </div>
               </div>
 
-              <div
-                className={`flex items-center gap-1.5 ${
-                  hasPreRequestConfigured && !isCurrentRequestPreRequest
-                    ? ''
-                    : 'opacity-50 pointer-events-none'
-                }`}
-              >
+              <div className='flex items-center gap-1.5'>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor'>
+                      <span
+                        className={`text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${
+                          !hasPreRequestConfigured || isCurrentRequestPreRequest
+                            ? 'opacity-50'
+                            : ''
+                        }`}
+                      >
                         Auto Auth Sync
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
                       {isCurrentRequestPreRequest
-                        ? 'This is the pre-request - token usage is always'
-                        : hasPreRequestConfigured
-                          ? 'Toggle to use token from Auto-Auth'
-                          : 'Configure Auto‑Auth for a Collection'}
+                        ? 'This is the pre-request - token usage is always enabled'
+                        : !hasPreRequestConfigured
+                          ? 'Configure Auto‑Auth for a Collection'
+                          : preRequestEnabled
+                            ? 'Disable Auto‑Auth to provide authentication manually'
+                            : 'Turn on Auto‑Auth sync'}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <ToggleSwitch
-                  id='preRequestAuth'
-                  checked={
-                    isCurrentRequestPreRequest ? true : preRequestEnabled
-                  }
-                  onChange={handlePreRequestToggle}
-                  label=''
-                  description=''
-                  disabled={
+
+                <div
+                  className={
                     !hasPreRequestConfigured || isCurrentRequestPreRequest
+                      ? 'opacity-50 pointer-events-none'
+                      : ''
                   }
-                />
+                >
+                  <ToggleSwitch
+                    id='preRequestAuth'
+                    checked={
+                      isCurrentRequestPreRequest ? true : preRequestEnabled
+                    }
+                    onChange={handlePreRequestToggle}
+                    label=''
+                    description=''
+                    disabled={
+                      !hasPreRequestConfigured || isCurrentRequestPreRequest
+                    }
+                  />
+                </div>
               </div>
             </div>
           </div>
