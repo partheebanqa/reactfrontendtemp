@@ -1164,6 +1164,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               token: tokenValue,
             }));
 
+            // ✅ ADD THIS: Update the opened request in store
             collectionActions.updateOpenedRequest({
               ...activeRequest,
               authorizationType: 'bearer',
@@ -1176,8 +1177,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         } catch (error) {
           console.error('Error parsing stored token:', error);
         }
-      } else {
-        console.warn('⚠️ Pre-request token not found in localStorage');
       }
     }
   }, [
@@ -1186,7 +1185,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     activeRequest?.id,
     isCurrentRequestPreRequest,
   ]);
-
   const handlePreRequestToggle = (checked: boolean) => {
     // Prevent toggling if this IS the pre-request
     if (isCurrentRequestPreRequest) {
@@ -2825,16 +2823,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-help'>
-                        Use pre-request token
+                      <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor'>
+                        Auto Auth Sync
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
                       {isCurrentRequestPreRequest
-                        ? 'This is the pre-request - token usage is always enabled'
+                        ? 'This is the pre-request - token usage is always'
                         : hasPreRequestConfigured
-                          ? 'Toggle to use token from authentication request'
-                          : 'No pre-request configured for this collection'}
+                          ? 'Toggle to use token from Auto-Auth'
+                          : 'Configure Auto‑Auth for a Collection'}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>

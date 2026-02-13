@@ -29,7 +29,8 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
           </p>
         )}
       </div>
-      <div className='relative inline-block w-10 mr-2 align-middle select-none'>
+
+      <div className='relative inline-block w-10 h-5 align-middle select-none'>
         <input
           type='checkbox'
           id={id}
@@ -37,17 +38,18 @@ const ToggleSwitch: React.FC<ToggleSwitchProps> = ({
           onChange={(e) => onChange(e.target.checked)}
           className='sr-only'
         />
+
         <label
           htmlFor={id}
-          className={`block overflow-hidden h-6 rounded-full cursor-pointer ${
+          className={`block h-5 rounded-full cursor-pointer transition-colors duration-200 ${
             checked ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-700'
           }`}
         >
           <span
-            className={`dot block h-6 w-6 rounded-full bg-white shadow transform transition-transform ${
-              checked ? 'translate-x-4' : 'translate-x-0'
+            className={`absolute top-0.5 left-0.5 h-4 w-4 bg-white rounded-full shadow transform transition-transform duration-200 ${
+              checked ? 'translate-x-5' : 'translate-x-0'
             }`}
-          ></span>
+          />
         </label>
       </div>
     </div>

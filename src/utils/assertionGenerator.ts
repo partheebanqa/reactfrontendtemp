@@ -520,11 +520,8 @@ export const generateAssertions = (
     id: 'response-time',
     category: 'performance',
     type: 'response_time',
-    description: `Response time is less than ${Math.max(
-      response.responseTime * 2,
-      500,
-    )} ms`,
-    expectedValue: String(Math.max(response.responseTime * 2, 500)),
+    description: `Response time is less than 500 ms`,
+    expectedValue: '500',
     dataType: 'number',
     enabled: false,
   });
@@ -536,9 +533,9 @@ export const generateAssertions = (
     id: 'payload-size',
     category: 'performance',
     type: 'payload_size',
-    description: `Payload size is less than ${maxKb} KB`,
-    expectedValue: String(maxKb),
-    dataType: 'Number',
+    description: `Payload size is less than 10 KB`,
+    expectedValue: '10',
+    dataType: 'number',
     enabled: false,
   });
 

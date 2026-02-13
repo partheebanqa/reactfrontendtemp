@@ -228,29 +228,8 @@ export const collectionActions = {
       const collection = state.collections.find((c) => c.id === collectionId);
       if (!collection) return state;
 
-      const getAllRequests = (
-        requests: CollectionRequest[] = [],
-        folders: any[] = [],
-      ): CollectionRequest[] => {
-        let allRequests = [...requests];
-        folders.forEach((folder) => {
-          if (folder.requests) {
-            allRequests = [...allRequests, ...folder.requests];
-          }
-          if (folder.folders) {
-            allRequests = [
-              ...allRequests,
-              ...getAllRequests([], folder.folders),
-            ];
-          }
-        });
-        return allRequests;
-      };
-
-      const allRequests = getAllRequests(
-        collection.requests || [],
-        (collection as any).folders || [],
-      );
+      const allRequests =
+        collectionActions.getAllRequestsFromCollection(collection);
 
       if (allRequests.length === 0) return state;
 
@@ -803,7 +782,11 @@ export const collectionActions = {
 
       const newMap = new Map(state.requestPreRequestEnabled);
 
-      collection.requests.forEach((req) => {
+      // Get ALL requests including those in folders
+      const allRequests =
+        collectionActions.getAllRequestsFromCollection(collection);
+
+      allRequests.forEach((req) => {
         if (req.id) {
           const key = `${collectionId}:${req.id}`;
           newMap.delete(key);
@@ -824,7 +807,11 @@ export const collectionActions = {
 
       const newMap = new Map(state.requestPreRequestEnabled);
 
-      collection.requests.forEach((req) => {
+      // Get ALL requests including those in folders
+      const allRequests =
+        collectionActions.getAllRequestsFromCollection(collection);
+
+      allRequests.forEach((req) => {
         if (req.id && req.id !== collection.preRequestId) {
           const key = `${collectionId}:${req.id}`;
           newMap.set(key, true);
@@ -836,6 +823,29 @@ export const collectionActions = {
         requestPreRequestEnabled: newMap,
       };
     });
+  },
+
+  getAllRequestsFromCollection: (
+    collection: Collection,
+  ): CollectionRequest[] => {
+    const requests: CollectionRequest[] = [];
+
+    requests.push(...(collection.requests || []));
+
+    const getFolderRequests = (folders: any[] = []): void => {
+      folders.forEach((folder) => {
+        if (folder.requests) {
+          requests.push(...folder.requests);
+        }
+        if (folder.folders && folder.folders.length > 0) {
+          getFolderRequests(folder.folders);
+        }
+      });
+    };
+
+    getFolderRequests((collection as any).folders || []);
+
+    return requests;
   },
 };
 

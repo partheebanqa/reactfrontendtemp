@@ -153,7 +153,6 @@ export default function PerformanceScanView({
 
   const loadHistoricalMutation = useLoadHistoricalPerformanceAnalysis();
 
-  // Auto-open history only when idle, close for other states
   useEffect(() => {
     if (scanStatus === 'idle') {
       setIsHistoryOpen(true);
