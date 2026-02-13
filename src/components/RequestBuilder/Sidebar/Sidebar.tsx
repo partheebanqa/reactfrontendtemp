@@ -1351,7 +1351,7 @@ const Sidebar: React.FC = () => {
 
                               <div className='flex items-center space-x-1 relative'>
                                 {collection.preRequestId && (
-                                  <TooltipContainer text='Pre-Request Auth'>
+                                  <TooltipContainer text='Auto Auth'>
                                     <div className='p-1'>
                                       <KeyRound className='h-4 w-4 text-blue-600' />
                                     </div>
@@ -1437,7 +1437,7 @@ const Sidebar: React.FC = () => {
                                                     <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
                                                   </TooltipTrigger>
                                                   <TooltipContent side='top'>
-                                                    Pre-Request Auth
+                                                    Auto Auth
                                                   </TooltipContent>
                                                 </Tooltip>
                                               </TooltipProvider>
@@ -1788,7 +1788,7 @@ const Sidebar: React.FC = () => {
                                   }`}
                                 >
                                   <KeyRound className='h-4 w-4 mr-2' />
-                                  Pre-request Auth
+                                  Set Auto Auth
                                 </button>
                               </div>
                             </TooltipTrigger>
@@ -1797,7 +1797,7 @@ const Sidebar: React.FC = () => {
                                 <p className='text-xs'>
                                   Add Authorization token extraction
                                   <br />
-                                  to set as pre Auth for the collection.
+                                  to set as auto Auth for the collection.
                                 </p>
                               </TooltipContent>
                             )}

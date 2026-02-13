@@ -2823,16 +2823,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-help'>
-                        Use pre-request token
+                      <span className='text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor'>
+                        Auto Auth Sync
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
                       {isCurrentRequestPreRequest
-                        ? 'This is the pre-request - token usage is always enabled'
+                        ? 'This is the pre-request - token usage is always'
                         : hasPreRequestConfigured
-                          ? 'Toggle to use token from authentication request'
-                          : 'No pre-request configured for this collection'}
+                          ? 'Toggle to use token from Auto-Auth'
+                          : 'Configure Auto‑Auth for a Collection'}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
