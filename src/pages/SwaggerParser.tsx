@@ -16,6 +16,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import OpenAPIExporter from '@/components/SwaggerParse/OpenAPIExporter';
+import LandingLayout from '@/components/LandingLayout/LandingLayout';
 
 interface ParsedEndpoint {
   id: string;
@@ -195,7 +196,7 @@ const SwaggerParser: React.FC = () => {
       if (!validationResult.isValid) {
         setUrlError(
           validationResult.error ||
-            'URL does not contain a valid Swagger/OpenAPI specification'
+          'URL does not contain a valid Swagger/OpenAPI specification'
         );
         return;
       }
@@ -336,9 +337,8 @@ const SwaggerParser: React.FC = () => {
       servers: swaggerContent.servers || [
         {
           url: swaggerContent.host
-            ? `${swaggerContent.schemes?.[0] || 'https'}://${
-                swaggerContent.host
-              }${swaggerContent.basePath || ''}`
+            ? `${swaggerContent.schemes?.[0] || 'https'}://${swaggerContent.host
+            }${swaggerContent.basePath || ''}`
             : 'https://api.example.com',
           description: 'API Server',
         },
@@ -517,87 +517,89 @@ const SwaggerParser: React.FC = () => {
 
   return (
     <>
-      <OpenAPIExporter />
-      <div className=' mt-3'>
-        <div className=''>
-          {/* Info Box */}
-          <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
-            <div className='flex items-start space-x-2'>
-              <Info className='w-5 h-5 text-blue-600 mt-0.5' />
-              <div className='text-sm text-blue-800'>
-                <p className='font-medium mb-1'>How it works:</p>
-                <ol className='space-y-1 text-xs list-decimal list-inside'>
-                  <li>
-                    Upload a complete Swagger/OpenAPI file or fetch from a URL
-                    containing multiple API endpoint definitions
-                  </li>
-                  <li>
-                    The system validates the file format and extracts all
-                    available endpoints from the "paths" section
-                  </li>
-                  <li>
-                    Review and select which endpoints you want to generate
-                    individual specs for
-                  </li>
-                  <li>
-                    Each selected endpoint will be converted to a standalone
-                    OpenAPI 3.0 specification
-                  </li>
-                  <li>
-                    Generated specs include only the relevant schemas and
-                    components for that endpoint
-                  </li>
-                  <li>
-                    Use the generated specs individually in the main testing
-                    tool
-                  </li>
-                </ol>
-                <p className='font-medium mt-2 mb-1'>File Requirements:</p>
-                <ul className='space-y-1 text-xs list-disc list-inside'>
-                  <li>
-                    Must be a valid Swagger 2.0 or OpenAPI 3.0+ specification
-                  </li>
-                  <li>
-                    Must contain a "paths" section with actual API endpoint
-                    definitions
-                  </li>
-                  <li>
-                    JSON format only (YAML files need to be converted first)
-                  </li>
-                  <li>
-                    The file should define complete API operations, not just
-                    data schemas
-                  </li>
-                </ul>
+      <LandingLayout>
+        <OpenAPIExporter />
+        <div className='px-4 sm:px-6 lg:px-8 py-6 mb-5"'>
+          <div className=''>
+            {/* Info Box */}
+            <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+              <div className='flex items-start space-x-2'>
+                <Info className='w-5 h-5 text-blue-600 mt-0.5' />
+                <div className='text-sm text-blue-800'>
+                  <p className='font-medium mb-1'>How it works:</p>
+                  <ol className='space-y-1 text-xs list-decimal list-inside'>
+                    <li>
+                      Upload a complete Swagger/OpenAPI file or fetch from a URL
+                      containing multiple API endpoint definitions
+                    </li>
+                    <li>
+                      The system validates the file format and extracts all
+                      available endpoints from the "paths" section
+                    </li>
+                    <li>
+                      Review and select which endpoints you want to generate
+                      individual specs for
+                    </li>
+                    <li>
+                      Each selected endpoint will be converted to a standalone
+                      OpenAPI 3.0 specification
+                    </li>
+                    <li>
+                      Generated specs include only the relevant schemas and
+                      components for that endpoint
+                    </li>
+                    <li>
+                      Use the generated specs individually in the main testing
+                      tool
+                    </li>
+                  </ol>
+                  <p className='font-medium mt-2 mb-1'>File Requirements:</p>
+                  <ul className='space-y-1 text-xs list-disc list-inside'>
+                    <li>
+                      Must be a valid Swagger 2.0 or OpenAPI 3.0+ specification
+                    </li>
+                    <li>
+                      Must contain a "paths" section with actual API endpoint
+                      definitions
+                    </li>
+                    <li>
+                      JSON format only (YAML files need to be converted first)
+                    </li>
+                    <li>
+                      The file should define complete API operations, not just
+                      data schemas
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Preview Modal */}
-        {showPreview && (
-          <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-            <div className='bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden'>
-              <div className='flex items-center justify-between p-4 border-b'>
-                <h3 className='text-lg font-medium text-gray-800'>
-                  Generated OpenAPI Spec Preview
-                </h3>
-                <button
-                  onClick={() => setShowPreview('')}
-                  className='text-gray-400 hover:text-gray-600'
-                >
-                  ✕
-                </button>
-              </div>
-              <div className='p-4 overflow-y-auto scrollbar-thin max-h-[60vh]'>
-                <pre className='text-xs font-mono bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto scrollbar-thin'>
-                  {showPreview}
-                </pre>
+          {/* Preview Modal */}
+          {showPreview && (
+            <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+              <div className='bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden'>
+                <div className='flex items-center justify-between p-4 border-b'>
+                  <h3 className='text-lg font-medium text-gray-800'>
+                    Generated OpenAPI Spec Preview
+                  </h3>
+                  <button
+                    onClick={() => setShowPreview('')}
+                    className='text-gray-400 hover:text-gray-600'
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className='p-4 overflow-y-auto scrollbar-thin max-h-[60vh]'>
+                  <pre className='text-xs font-mono bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto scrollbar-thin'>
+                    {showPreview}
+                  </pre>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </LandingLayout>
     </>
   );
 };

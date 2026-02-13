@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
 import LogoFull from '../../assests/images/OptraLogo-removebg-preview.png';
 import { Link } from 'wouter';
+import { useAuth } from '@/hooks/useAuth';
+import { navigate } from 'wouter/use-browser-location';
 
 interface HeaderProps {
     onTrialClick: () => void;
@@ -12,7 +14,7 @@ interface HeaderProps {
 export function LayoutHeader({ onTrialClick, onBetaClick }: HeaderProps) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-
+    const { isAuthenticated } = useAuth();
 
     const navItems = [
         { label: 'Pricing', href: '/pricing' },
@@ -78,11 +80,15 @@ export function LayoutHeader({ onTrialClick, onBetaClick }: HeaderProps) {
           >
             Beta Access
           </button> */}
+
+
                     <button
-                        onClick={onTrialClick}
+                        onClick={
+                            isAuthenticated ? () => navigate("/dashboard") : onTrialClick
+                        }
                         className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300"
                     >
-                        Sign In
+                        {isAuthenticated ? "Go to Dashboard" : " Sign In"}
                     </button>
                 </div>
 

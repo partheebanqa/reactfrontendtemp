@@ -66,9 +66,24 @@ export default function Router() {
 
   return (
     <Switch>
+      {/* Always accessible */}
+      <Route path='/' component={Landing} />
+      <Route path='/pricing' component={Pricing} />
+      <Route path='/terms' component={TermsPage} />
+      <Route path='/faq' component={FaqPageNew} />
+      <Route path='/pilot-program' component={PilotProgram} />
+      <Route path='/jwt-validator' component={JWTValidator} />
+      <Route path='/url-encoder' component={URLEncoder} />
+      <Route path='/json-parser' component={JsonParser} />
+      <Route path='/swagger-parser' component={SwaggerParser} />
+      <Route path='/json-viewer' component={JsonViewer} />
+      <Route path='/utf-encoder-decoder' component={UTFEncoderDecoder} />
+      <Route path='/bs64-encoder-decoder' component={BS64EncoderDecoder} />
+      <Route path='/privacy' component={PrivacyPage} />
+      <Route path='/contact-us' component={ContactPage} />
+
       {!isAuthenticated ? (
         <>
-          <Route path='/' component={Landing} />
           <Route path='/signin' component={SignIn} />
           <Route path='/signup' component={SignUp} />
           <Route path='/forgot-password' component={ForgotPassword} />
@@ -77,10 +92,7 @@ export default function Router() {
         </>
       ) : (
         <AppLayout>
-          <Route path='/' children={<Redirect to='/dashboard' />} />
           <Route path='/dashboard' component={Dashboard} />
-          <Route path='/json-parser' component={JsonParser} />
-          <Route path='/swagger-parser' component={SwaggerParser} />
           <Route path='/request-builder' component={RequestBuilderPage} />
           <Route path='/request-chains' component={RequestChains} />
           <Route path='/request-chains/create' component={RequestChainCreate} />
@@ -111,18 +123,9 @@ export default function Router() {
           <Route path='/help-support' component={FAQ} />
         </AppLayout>
       )}
-      <Route path='/pricing' component={Pricing} />
-      <Route path='/terms' component={TermsPage} />
-      <Route path='/faq' component={FaqPageNew} />
-      <Route path='/pilot-program' component={PilotProgram} />
-      <Route path='/jwt-validator' component={JWTValidator} />
-      <Route path='/url-encoder' component={URLEncoder} />
-      <Route path='/json-viewer' component={JsonViewer} />
-      <Route path='/utf-encoder-decoder' component={UTFEncoderDecoder} />
-      <Route path='/bs64-encoder-decoder' component={BS64EncoderDecoder} />
-      <Route path='/privacy' component={PrivacyPage} />
-      <Route path='/contact-us' component={ContactPage} />
+
       <Route path='*' component={NotFound} />
     </Switch>
+
   );
 }

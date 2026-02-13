@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Github, Twitter, Linkedin, Youtube } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 
-interface FooterProps {}
+interface FooterProps { }
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -143,6 +143,7 @@ export function Footer() {
                 <a
                   href='/json-viewer'
                   className='hover:text-slate-100 transition-colors'
+                  target='_blank'
                 >
                   JSON viewer
                 </a>
@@ -151,6 +152,7 @@ export function Footer() {
                 <a
                   href='/jwt-validator'
                   className='hover:text-slate-100 transition-colors'
+                  target='_blank'
                 >
                   JWT validator
                 </a>
@@ -159,6 +161,7 @@ export function Footer() {
                 <a
                   href='/url-encoder'
                   className='hover:text-slate-100 transition-colors'
+                  target='_blank'
                 >
                   URL Encoder
                 </a>
@@ -167,6 +170,7 @@ export function Footer() {
                 <a
                   href='/utf-encoder-decoder'
                   className='hover:text-slate-100 transition-colors'
+                  target='_blank'
                 >
                   UTF8 Encoder & Decoder
                 </a>
@@ -175,6 +179,7 @@ export function Footer() {
                 <a
                   href='/bs64-encoder-decoder'
                   className='hover:text-slate-100 transition-colors'
+                  target='_blank'
                 >
                   Base64 Encoder & Decoder
                 </a>

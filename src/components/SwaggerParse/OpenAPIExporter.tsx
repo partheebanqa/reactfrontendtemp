@@ -545,7 +545,7 @@ export default function OpenAPIExporter() {
 
   return (
     <div>
-      <BreadCum
+      {/* <BreadCum
         title="OpenAPI Spec Exporter"
         subtitle="Parse OpenAPI/Swagger specifications and export individual endpoints for documentation or integration"
         showCreateButton={false}
@@ -555,8 +555,8 @@ export default function OpenAPIExporter() {
         iconBgClass="bg-orange-100"
         iconColor="#f97316"
         iconSize={40}
-      />
-      <div className="max-w-7xl mx-auto ">
+      /> */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
 
 
