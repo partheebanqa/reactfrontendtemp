@@ -28,10 +28,12 @@ import ApiAssertionInterface from '../Shared/Assertion/ApiAssertionInterface';
 
 interface ResponseExplorerProps {
   response?: {
+    status?: number;
     statusCode: number;
     statusText: string;
     headers: Record<string, string>;
     body: any;
+    size?: number;
     cookies?: Array<{ name: string; value: string }>;
     assertions?: any[];
     requestId?: string;
@@ -103,9 +105,8 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
-  console.log('allAssertions123:', allAssertions);
+  console.log('reesponse:', response);
 
-  // Helper function to generate UUID v4
   const generateUUID = (): string => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
       /[xy]/g,
@@ -117,12 +118,10 @@ export function ResponseExplorer({
     );
   };
 
-  // Helper function to ensure all assertions have unique IDs
   const ensureAssertionIds = (assertions: any[]): any[] => {
     if (!assertions || !Array.isArray(assertions)) return [];
 
     return assertions.map((assertion) => {
-      // If assertion already has a valid UUID format ID, keep it
       if (
         assertion.id &&
         /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -132,7 +131,6 @@ export function ResponseExplorer({
         return assertion;
       }
 
-      // Otherwise, generate a new UUID
       return {
         ...assertion,
         id: generateUUID(),
@@ -1174,13 +1172,51 @@ export function ResponseExplorer({
               );
             })}
           </nav>
-          <button
-            onClick={() => setShowAssertionUI(true)}
-            className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors mr-6'
-          >
-            <CheckCircle className='w-4 h-4' />
-            <span>Manage Assertions</span>
-          </button>
+
+          <div className='flex items-center gap-4'>
+            <button
+              onClick={() => setShowAssertionUI(true)}
+              className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
+            >
+              <CheckCircle className='w-4 h-4' />
+              <span>Manage Assertions</span>
+            </button>
+
+            {response && (
+              <div className='flex items-center space-x-4 text-sm text-gray-600'>
+                {/* {response.status && (
+                  <span
+                    className={`flex items-center space-x-1 px-2 py-1 rounded-full ${
+                      response.status >= 200 && response.status < 300
+                        ? 'bg-green-100 text-green-700'
+                        : response.status >= 400
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
+                    }`}
+                  >
+                    <CheckCircle className='w-4 h-4' />
+                    <span>
+                      {response.status} {response.statusText || 'OK'}
+                    </span>
+                  </span>
+                )} */}
+
+                {response.assertions &&
+                  response.assertions.length > 0 &&
+                  response.assertions[0].responseTime && (
+                    <span className='font-medium'>
+                      {response.assertions[0].responseTime}ms
+                    </span>
+                  )}
+
+                {response?.size && (
+                  <span className='font-medium'>
+                    {(response?.size / 1024).toFixed(2)} KB
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className='p-6 max-h-96 overflow-auto scrollbar-thin'>
