@@ -480,7 +480,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     if (activeRequest?.id && activeCollection?.id) {
       const collection = collections.find((c) => c.id === activeCollection.id);
 
-      // Check if current request IS the pre-request
       const isPreRequest = collection?.preRequestId === activeRequest.id;
 
       const isEnabled = collectionActions.getRequestPreRequestEnabled(
