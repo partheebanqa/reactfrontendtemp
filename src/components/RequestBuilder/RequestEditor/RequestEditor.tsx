@@ -2653,49 +2653,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     );
   };
 
-  const handleMethodChange = (newMethod: RequestMethod) => {
-    setMethod(newMethod);
-
-    const hasContentTypeHeader = headers.some((h) => h.key === 'Content-Type');
-    if (methodsWithBody.includes(newMethod) && !hasContentTypeHeader) {
-      setHeaders([
-        { key: 'Content-Type', value: 'application/json', enabled: true },
-        ...headers,
-      ]);
-    } else if (!methodsWithBody.includes(newMethod) && hasContentTypeHeader) {
-      setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
-    }
-  };
-
-  const handleBodyTypeChange = (newBodyType: BodyType) => {
-    setBodyType(newBodyType);
-
-    if (newBodyType !== 'none') {
-      const contentTypeValue = getContentTypeForBodyType(newBodyType);
-      const contentTypeHeaderIndex = headers.findIndex(
-        (h) => h.key.toLowerCase() === 'content-type',
-      );
-
-      if (contentTypeHeaderIndex !== -1) {
-        const updatedHeaders = [...headers];
-        updatedHeaders[contentTypeHeaderIndex] = {
-          ...updatedHeaders[contentTypeHeaderIndex],
-          value: contentTypeValue,
-        };
-        setHeaders(updatedHeaders);
-      } else if (methodsWithBody.includes(method)) {
-        setHeaders([
-          {
-            key: 'Content-Type',
-            value: contentTypeValue,
-            enabled: true,
-          },
-          ...headers,
-        ]);
-      }
-    }
-  };
-
   const handleVariableSelect = (variables: SelectedVariable[]) => {
     setSelectedVariable(variables);
     if (activeRequest) {
