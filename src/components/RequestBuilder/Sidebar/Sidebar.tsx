@@ -1462,7 +1462,6 @@ const Sidebar: React.FC = () => {
                                               selectRequest(request, collection)
                                             }
                                           >
-                                            {/* Add auth badge before method */}
                                             {isAuthRequest(
                                               request.id,
                                               collection.id,
