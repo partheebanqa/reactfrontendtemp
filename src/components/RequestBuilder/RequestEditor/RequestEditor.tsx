@@ -495,7 +495,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         );
         setPreRequestEnabled(true);
       } else if (isPreRequest) {
-        // If this IS the pre-request, force it to be enabled but don't allow toggling
         setPreRequestEnabled(true);
       } else {
         setPreRequestEnabled(isEnabled);
