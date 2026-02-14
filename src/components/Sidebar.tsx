@@ -50,6 +50,7 @@ type FeatureKey =
   | 'cicd_integrations'
   | 'swagger_parser'
   | 'json_parser'
+  | 'jwt_validator'
   | 'settings'
   | 'notifications'
   | 'faqs';
@@ -60,6 +61,7 @@ type MenuItem = {
   icon: React.ComponentType<any>;
   feature: FeatureKey;
   upcoming?: boolean;
+  newTab?: boolean;
 };
 
 const menuItems: MenuItem[] = [
@@ -121,12 +123,21 @@ const utilsItems: MenuItem[] = [
     path: '/swagger-parser',
     icon: Zap,
     feature: 'swagger_parser',
+    newTab: true,
   },
   {
     label: 'JSON Parser',
     path: '/json-parser',
     icon: Code,
     feature: 'json_parser',
+    newTab: true,
+  },
+  {
+    label: 'JWT Validator',
+    path: '/jwt-validator',
+    icon: FileText,
+    feature: 'jwt_validator',
+    newTab: true,
   },
 ];
 
@@ -180,7 +191,7 @@ const Sidebar: React.FC = () => {
         variant={isActive ? 'active' : 'ghost'}
         className={`w-full ${collapsed ? 'p-4 justify-center' : 'justify-start'
           } relative 
-        ${lockedByFeatureGate || item.upcoming || isDisabled
+          ${lockedByFeatureGate || item.upcoming || isDisabled
             ? 'opacity-50 cursor-not-allowed'
             : ''
           } text-[13px]`}
@@ -194,10 +205,10 @@ const Sidebar: React.FC = () => {
               {showEnterpriseBadge && '(Enterprise)'}{' '}
             </span>
             {/* {showEnterpriseBadge && (
-              <Badge variant="secondary" className="ml-2">
-                Enterprise
-              </Badge>
-            )} */}
+                <Badge variant="secondary" className="ml-2">
+                  Enterprise
+                </Badge>
+              )} */}
           </span>
         )}
         {!collapsed && lockedByFeatureGate && isPro && (
@@ -205,6 +216,8 @@ const Sidebar: React.FC = () => {
         )}
       </Button>
     );
+
+    const isToolItem = utilsItems.some((u) => u.path === item.path);
 
     if (collapsed) {
       return (
@@ -214,7 +227,19 @@ const Sidebar: React.FC = () => {
               {item.upcoming || lockedByFeatureGate || isDisabled ? (
                 <div className='w-full'>{Content}</div>
               ) : (
-                <Link href={item.path!}>{Content}</Link>
+                isToolItem ? (
+                  <a
+                    href={item.path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full"
+                  >
+                    {Content}
+                  </a>
+                ) : (
+                  <Link href={item.path!}>{Content}</Link>
+                )
+
               )}
             </TooltipTrigger>
             <TooltipContent side='right'>{item.label}</TooltipContent>
@@ -225,9 +250,19 @@ const Sidebar: React.FC = () => {
 
     return item.upcoming || lockedByFeatureGate || isDisabled ? (
       <div className='w-full'>{Content}</div>
+    ) : isToolItem ? (
+      <a
+        href={item.path}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="w-full"
+      >
+        {Content}
+      </a>
     ) : (
       <Link href={item.path!}>{Content}</Link>
     );
+
   };
 
   return (
@@ -316,6 +351,7 @@ const Sidebar: React.FC = () => {
                           key={item.path}
                           item={item}
                           isActive={location === item.path}
+
                         />
                       ))}
                     </div>
