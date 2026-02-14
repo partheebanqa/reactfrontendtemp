@@ -81,6 +81,7 @@ import { executeRequest } from '@/services/executeRequest.service';
 import {
   extractDataFromResponse,
   getValueByPath,
+  isBearerToken,
   shouldRefreshExtractedVariables,
 } from '@/lib/request-utils';
 import { CollectionRequestsResponse } from '@/shared/types/request';
@@ -145,6 +146,8 @@ const Sidebar: React.FC = () => {
   const [showDeleteCollectionDialog, setShowDeleteCollectionDialog] =
     useState(false);
   const [showDeleteRequestDialog, setShowDeleteRequestDialog] = useState(false);
+  const [showDeleteAuthRequestDialog, setShowDeleteAuthRequestDialog] =
+    useState(false);
 
   const { mutateAsync: addFolder, loading: addingFolder } = useAddFolder();
 
@@ -670,8 +673,41 @@ const Sidebar: React.FC = () => {
       Array.isArray(request.extractVariables) &&
       request.extractVariables.length > 0;
 
-    return hasRequestExtractions;
+    if (!hasRequestExtractions) return false;
+
+    const collection = collections.find((c) => c.id === request.collectionId);
+    if (!collection?.id) return false;
+
+    const storageKeys = Object.keys(localStorage).filter((key) =>
+      key.startsWith(`extracted_var_${collection.id}_`),
+    );
+
+    let hasValidToken = false;
+
+    for (const storageKey of storageKeys) {
+      try {
+        const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
+        if (data.value && isBearerToken(data.value)) {
+          hasValidToken = true;
+          break;
+        }
+      } catch (error) {
+        console.error('Error parsing stored token:', error);
+      }
+    }
+
+    if (!hasValidToken) {
+      const extractedVars = collectionActions.getExtractedVariables(
+        collection.id,
+      );
+      hasValidToken = Object.values(extractedVars).some((value) =>
+        isBearerToken(value),
+      );
+    }
+
+    return hasValidToken;
   };
+
   const isAuthRequest = (requestId: string, collectionId: string) => {
     const collection = collections.find((c) => c.id === collectionId);
 
@@ -1126,7 +1162,7 @@ const Sidebar: React.FC = () => {
                           : ''
                       } ${
                         isAuthRequest(request.id, parentCollection.id)
-                          ? 'border-2 border-blue-500 rounded-lg'
+                          ? 'border-2 border-blue-500 rounded-lg shadow-sm'
                           : ''
                       }`}
                     >
@@ -1426,7 +1462,6 @@ const Sidebar: React.FC = () => {
                                               selectRequest(request, collection)
                                             }
                                           >
-                                            {/* Add auth badge before method */}
                                             {isAuthRequest(
                                               request.id,
                                               collection.id,
@@ -1767,7 +1802,6 @@ const Sidebar: React.FC = () => {
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div>
-                                {' '}
                                 <button
                                   onClick={() => {
                                     if (
@@ -1795,9 +1829,9 @@ const Sidebar: React.FC = () => {
                             {!hasExtractedVariables(selectedRequest) && (
                               <TooltipContent side='right'>
                                 <p className='text-xs'>
-                                  Add Authorization token extraction
+                                  Extract a valid Bearer token
                                   <br />
-                                  to set as auto Auth for the collection.
+                                  to enable Auto Auth for this collection.
                                 </p>
                               </TooltipContent>
                             )}
@@ -1806,7 +1840,6 @@ const Sidebar: React.FC = () => {
                         <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                       </>
                     )}
-
                     <button
                       onClick={() => handleOpenSecurityScan(selectedRequest)}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1856,7 +1889,19 @@ const Sidebar: React.FC = () => {
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                     <button
                       onClick={() => {
-                        setShowDeleteRequestDialog(true);
+                        // Check if this is an auth request
+                        if (
+                          selectedRequest &&
+                          selectedCollection &&
+                          isAuthRequest(
+                            selectedRequest.id,
+                            selectedCollection.id,
+                          )
+                        ) {
+                          setShowDeleteAuthRequestDialog(true);
+                        } else {
+                          setShowDeleteRequestDialog(true);
+                        }
                         setShowMenu(null);
                         setMenuPosition(null);
                       }}
@@ -2115,6 +2160,56 @@ const Sidebar: React.FC = () => {
                   }}
                 >
                   Delete Request
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog
+            open={showDeleteAuthRequestDialog}
+            onOpenChange={setShowDeleteAuthRequestDialog}
+          >
+            <AlertDialogTrigger asChild></AlertDialogTrigger>
+            <AlertDialogContent className='border-2 border-red-500'>
+              <AlertDialogHeader>
+                <AlertDialogTitle className='flex items-center gap-2 text-red-600'>
+                  <KeyRound className='h-5 w-5' />
+                  Delete Auto-Auth Request "{selectedRequest?.name}"?
+                </AlertDialogTitle>
+                <AlertDialogDescription className='space-y-3'>
+                  <div className='p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md'>
+                    <p className='text-sm text-red-800 dark:text-red-200 font-medium'>
+                      ⚠️ Warning: This request handles Auto-Auth for{' '}
+                      <span className='font-bold'>
+                        {selectedCollection?.name}
+                      </span>
+                      .
+                    </p>
+                    <p className='text-sm text-red-700 dark:text-red-300 mt-2'>
+                      If you remove it, you'll need to enter tokens manually for
+                      each request in this collection.
+                    </p>
+                  </div>
+                  <p className='text-sm text-gray-600 dark:text-gray-400'>
+                    This action cannot be undone.
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <Button
+                  variant='destructive'
+                  onClick={async () => {
+                    if (selectedRequest?.id) {
+                      await handleDeleteRequest(selectedRequest.id);
+                    } else {
+                      handleDeleteNewRequest();
+                    }
+                    setShowDeleteAuthRequestDialog(false);
+                  }}
+                >
+                  <Trash2 className='h-4 w-4 mr-2' />
+                  Yes, Delete Auto-Auth Request
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
