@@ -1259,3 +1259,10 @@ export const isBearerToken = (value: any): boolean => {
 
   return false;
 };
+
+export const validateBaseUrl = (url: string): boolean => {
+  if (!url || url.trim() === '') return true;
+  const baseUrlRegex =
+    /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%.\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%\+.~#?&\/=]*)$/;
+  return baseUrlRegex.test(url);
+};
