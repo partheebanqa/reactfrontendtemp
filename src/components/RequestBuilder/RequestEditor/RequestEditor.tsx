@@ -684,6 +684,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     const createPayload = {
       workspaceId: currentWorkspace?.id,
       requestId: activeRequest?.id,
+      preRequestId: activeCollection?.preRequestId,
       name: `${activeRequest?.name || 'Request'} - Performance Test`,
 
       numRequests: settings.performanceTest.numRequests,

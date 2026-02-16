@@ -1,4 +1,4 @@
-export type RateLimitType = "fixed" | "sliding";
+export type RateLimitType = 'fixed' | 'sliding';
 
 export interface PerformanceTestCreatePayload {
   concurrency: number;
@@ -12,6 +12,7 @@ export interface PerformanceTestCreatePayload {
   requestId: string;
   timeout: number;
   workspaceId: string;
+  preRequestId?: string;
 }
 
 export interface PerformanceTestCreateResponseApi {
@@ -117,7 +118,7 @@ export interface ExecutionResult {
   configName: string;
   startTime: string;
   endTime: string;
-  status: "success" | "failed" | "partial";
+  status: 'success' | 'failed' | 'partial';
   totalRequests: number;
   successfulRequests: number;
   failedRequests: number;
@@ -128,12 +129,12 @@ export interface ExecutionResult {
 }
 
 export type PerformanceRunStatus =
-  | "PENDING"
-  | "RUNNING"
-  | "COMPLETED"
-  | "FAILED"
-  | "CANCELLED"
-  | "STOPPED";
+  | 'PENDING'
+  | 'RUNNING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'STOPPED';
 
 export type PerformanceRunApi = {
   Id: string;
@@ -231,12 +232,12 @@ export type PerformanceRunResultDTO = {
 export interface PerformanceRunSummaryDTO {
   id: string;
   status:
-    | "INITIALIZING"
-    | "RUNNING"
-    | "COMPLETED"
-    | "FAILED"
-    | "CANCELLED"
-    | "STOPPED";
+    | 'INITIALIZING'
+    | 'RUNNING'
+    | 'COMPLETED'
+    | 'FAILED'
+    | 'CANCELLED'
+    | 'STOPPED';
 
   startTime: string;
   endTime: string;

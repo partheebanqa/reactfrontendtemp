@@ -44,14 +44,45 @@ import {
 import { ConfigFormDialog } from './ConfigFormDialog';
 import { ExecutionHistory } from './ExecutionHistory';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { PerformanceConfig, PerformanceRunApi, PerformanceRunDTO, PerformanceRunResultsResponse, PerformanceTestConfigApi, PerformanceTestConfigDTO, PerformanceTestUpdatePayload } from '@/models/performanceTest.model';
-import { deletePerformanceTestConfig, executePerformanceTest, getPerformanceConfigsByRequestId, getPerformanceRunByExecutionId, getPerformanceRunResults, getPerformanceTestConfig, performanceTestCreate, updatePerformanceTestConfig } from '@/services/performance.service';
+import {
+  PerformanceConfig,
+  PerformanceRunApi,
+  PerformanceRunDTO,
+  PerformanceRunResultsResponse,
+  PerformanceTestConfigApi,
+  PerformanceTestConfigDTO,
+  PerformanceTestUpdatePayload,
+} from '@/models/performanceTest.model';
+import {
+  deletePerformanceTestConfig,
+  executePerformanceTest,
+  getPerformanceConfigsByRequestId,
+  getPerformanceRunByExecutionId,
+  getPerformanceRunResults,
+  getPerformanceTestConfig,
+  performanceTestCreate,
+  updatePerformanceTestConfig,
+} from '@/services/performance.service';
 import { ConfigList } from './ConfigList';
 import { queryClient } from '@/lib/queryClient';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { RunDetailsInline } from './RunDetailsInline';
 import { RunResultsTable } from './RunResultsTable';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { RunSummaryCard } from './RunSummaryCard';
 
 export interface PerformanceTestProps {
@@ -62,26 +93,29 @@ export interface PerformanceTestProps {
     url: string;
   };
   workspaceId: string;
+  environmentId?: string;
+  preRequestId?: string;
   onClose: () => void;
 }
-
 type ScanStatus = 'idle' | 'initializing' | 'scanning' | 'completed' | 'error';
 
 export default function PerformanceTesting({
   request,
+  environmentId,
+  preRequestId,
   onClose,
 }: PerformanceTestProps) {
   const { currentWorkspace } = useWorkspace();
 
-  const requestId = request?.id
-  const [editingConfig, setEditingConfig] = useState<PerformanceTestConfigApi | null>(null);
+  const requestId = request?.id;
+  const [editingConfig, setEditingConfig] =
+    useState<PerformanceTestConfigApi | null>(null);
 
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [configToDelete, setConfigToDelete] = useState<PerformanceTestConfigApi | null>(null);
-
+  const [configToDelete, setConfigToDelete] =
+    useState<PerformanceTestConfigApi | null>(null);
 
   const { toast } = useToast();
-
 
   const {
     data: historyData,
@@ -89,19 +123,20 @@ export default function PerformanceTesting({
     refetch: refetchHistory,
   } = useScanHistory(currentWorkspace?.id || '');
   const { executeScan, isLoading: isScanning } = useSecurityScanFlow(
-    currentWorkspace?.id || ''
+    currentWorkspace?.id || '',
   );
-
 
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [editingConfigId, setEditingConfigId] = useState<string | null>(null);
-  const [executingConfigId, setExecutingConfigId] = useState<string | null>(null);
-  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(null);
+  const [executingConfigId, setExecutingConfigId] = useState<string | null>(
+    null,
+  );
+  const [activeExecutionId, setActiveExecutionId] = useState<string | null>(
+    null,
+  );
   const [showResults, setShowResults] = useState(false);
 
   const [formConfig, setFormConfig] = useState<PerformanceConfig | null>(null);
-
-
 
   const {
     data: perfConfigs,
@@ -109,42 +144,60 @@ export default function PerformanceTesting({
     isFetching,
     isError,
   } = useQuery<PerformanceTestConfigApi[]>({
-    queryKey: ["performance-configs-by-request", requestId],
+    queryKey: ['performance-configs-by-request', requestId],
     queryFn: () => getPerformanceConfigsByRequestId(requestId!),
-    enabled: !!requestId && !String(requestId).startsWith("temp-"),
+    enabled: !!requestId && !String(requestId).startsWith('temp-'),
     refetchOnWindowFocus: false,
   });
 
-
-
-
-
-
-  const configs = perfConfigs
+  const configs = perfConfigs;
 
   const createConfigMutation = useMutation({
     mutationFn: performanceTestCreate,
     onSuccess: () => {
-      toast({ title: "Configuration created", description: "Saved successfully" });
+      toast({
+        title: 'Configuration created',
+        description: 'Saved successfully',
+      });
       setFormDialogOpen(false);
-      queryClient.invalidateQueries({ queryKey: ["performance-configs-by-request", requestId] });
+      queryClient.invalidateQueries({
+        queryKey: ['performance-configs-by-request', requestId],
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Failed to create", description: error.message, variant: "destructive" });
+      toast({
+        title: 'Failed to create',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 
   const updateConfigMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: PerformanceTestUpdatePayload }) =>
-      updatePerformanceTestConfig(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: PerformanceTestUpdatePayload;
+    }) => updatePerformanceTestConfig(id, payload),
     onSuccess: () => {
-      toast({ title: "Configuration updated", description: "Updated successfully" });
+      toast({
+        title: 'Configuration updated',
+        description: 'Updated successfully',
+      });
       setFormDialogOpen(false);
       setEditingConfig(null);
-      queryClient.invalidateQueries({ queryKey: ["performance-configs-by-request", requestId] });
+      queryClient.invalidateQueries({
+        queryKey: ['performance-configs-by-request', requestId],
+      });
     },
     onError: (error: any) => {
-      toast({ title: "Update failed", description: error.message, variant: "destructive" });
+      toast({
+        title: 'Update failed',
+        description: error.message,
+        variant: 'destructive',
+      });
     },
   });
 
@@ -153,27 +206,26 @@ export default function PerformanceTesting({
 
     onSuccess: () => {
       toast({
-        title: "Configuration deleted",
-        description: "The configuration has been removed successfully",
+        title: 'Configuration deleted',
+        description: 'The configuration has been removed successfully',
       });
 
       setDeleteDialogOpen(false);
       setConfigToDelete(null);
 
       queryClient.invalidateQueries({
-        queryKey: ["performance-configs-by-request", requestId],
+        queryKey: ['performance-configs-by-request', requestId],
       });
     },
 
     onError: (error: any) => {
       toast({
-        title: "Delete failed",
-        description: error.message || "Could not delete configuration",
-        variant: "destructive",
+        title: 'Delete failed',
+        description: error.message || 'Could not delete configuration',
+        variant: 'destructive',
       });
     },
   });
-
 
   const executeMutation = useMutation({
     mutationFn: (configId: string) => executePerformanceTest({ configId }),
@@ -184,8 +236,8 @@ export default function PerformanceTesting({
 
     onSuccess: (data) => {
       toast({
-        title: "Test started",
-        description: data.message || "Performance test started successfully.",
+        title: 'Test started',
+        description: data.message || 'Performance test started successfully.',
       });
 
       setActiveExecutionId(data.executionId);
@@ -193,9 +245,9 @@ export default function PerformanceTesting({
 
     onError: (error: any) => {
       toast({
-        title: "Run failed",
-        description: error.message || "Could not start performance test",
-        variant: "destructive",
+        title: 'Run failed',
+        description: error.message || 'Could not start performance test',
+        variant: 'destructive',
       });
     },
 
@@ -204,13 +256,12 @@ export default function PerformanceTesting({
     },
   });
 
-
   const {
     data: editingConfigData,
     isFetching: isFetchingEditConfig,
     refetch: refetchEditConfig,
   } = useQuery({
-    queryKey: ["performance-config-by-id", editingConfigId],
+    queryKey: ['performance-config-by-id', editingConfigId],
     queryFn: () => getPerformanceTestConfig(editingConfigId!),
     enabled: false,
     refetchOnWindowFocus: false,
@@ -223,7 +274,6 @@ export default function PerformanceTesting({
     setEditingConfigId(null);
     setFormDialogOpen(true);
   };
-
 
   const handleEditClick = async (row: PerformanceTestConfigApi) => {
     try {
@@ -251,13 +301,12 @@ export default function PerformanceTesting({
       setFormDialogOpen(true);
     } catch (err: any) {
       toast({
-        title: "Failed to load config",
-        description: err.message || "Could not fetch configuration",
-        variant: "destructive",
+        title: 'Failed to load config',
+        description: err.message || 'Could not fetch configuration',
+        variant: 'destructive',
       });
     }
   };
-
 
   const handleDeleteClick = (config: PerformanceTestConfigApi) => {
     setConfigToDelete(config);
@@ -269,7 +318,6 @@ export default function PerformanceTesting({
     await deleteConfigMutation.mutateAsync(configToDelete.Id);
   };
 
-
   const handleCreateConfig = async (payload: any) => {
     if (!requestId || !currentWorkspace?.id) return;
 
@@ -277,10 +325,10 @@ export default function PerformanceTesting({
       ...payload,
       requestId,
       workspaceId: currentWorkspace.id,
+      environmentId,
+      preRequestId,
     });
   };
-
-
   const handleUpdateConfig = async (payload: PerformanceTestUpdatePayload) => {
     if (!editingConfigId) return;
 
@@ -289,8 +337,6 @@ export default function PerformanceTesting({
       payload,
     });
   };
-
-
 
   const handleRunClick = async (configId: string) => {
     await executeMutation.mutateAsync(configId);
@@ -301,7 +347,7 @@ export default function PerformanceTesting({
     isFetching: isFetchingRunDetails,
     error: runDetailsError,
   } = useQuery({
-    queryKey: ["performance-run-details", activeExecutionId],
+    queryKey: ['performance-run-details', activeExecutionId],
     queryFn: () => getPerformanceRunByExecutionId(activeExecutionId!),
     enabled: !!activeExecutionId,
     refetchOnWindowFocus: false,
@@ -311,11 +357,16 @@ export default function PerformanceTesting({
       // console.log(runDetails, "runDetails");
       const status = runDetails?.status;
       // console.log(status, "status");
-      if (status === "COMPLETED" || status === "FAILED" || status === "CANCELLED" || status === "STOPPED") return false;
+      if (
+        status === 'COMPLETED' ||
+        status === 'FAILED' ||
+        status === 'CANCELLED' ||
+        status === 'STOPPED'
+      )
+        return false;
       return 2000;
     },
   });
-
 
   const {
     data: runResultsResponse,
@@ -323,7 +374,7 @@ export default function PerformanceTesting({
     error: resultsError,
     refetch: refetchResults,
   } = useQuery<PerformanceRunResultsResponse>({
-    queryKey: ["performance-run-results", activeExecutionId],
+    queryKey: ['performance-run-results', activeExecutionId],
     queryFn: () => getPerformanceRunResults(activeExecutionId!),
     enabled: false,
     refetchOnWindowFocus: false,
@@ -331,14 +382,11 @@ export default function PerformanceTesting({
 
   // console.log(runResultsResponse, "runResultsResponse");
 
-
   const isRunFinished =
-    runDetails?.status === "COMPLETED" ||
-    runDetails?.status === "FAILED" ||
-    runDetails?.status === "CANCELLED" ||
-    runDetails?.status === "STOPPED";
-
-
+    runDetails?.status === 'COMPLETED' ||
+    runDetails?.status === 'FAILED' ||
+    runDetails?.status === 'CANCELLED' ||
+    runDetails?.status === 'STOPPED';
 
   return (
     <div className='bg-white dark:bg-gray-900 w-full h-full flex flex-col overflow-auto'>
@@ -350,7 +398,6 @@ export default function PerformanceTesting({
               <Rocket className='w-5 h-5 text-blue-500' />
               <h2 className='text-lg font-semibold text-gray-900 dark:text-white'>
                 Performance Testing
-
               </h2>
             </div>
             <p className='text-sm text-gray-600 dark:text-gray-400'>
@@ -361,7 +408,6 @@ export default function PerformanceTesting({
             </p>
           </div>
 
-
           <button
             onClick={onClose}
             className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
@@ -370,8 +416,6 @@ export default function PerformanceTesting({
           </button>
         </div>
       </div>
-
-
       <ConfigFormDialog
         open={formDialogOpen}
         onOpenChange={(open) => {
@@ -383,63 +427,57 @@ export default function PerformanceTesting({
         }}
         config={formConfig ?? undefined}
         onSubmit={formConfig ? handleUpdateConfig : handleCreateConfig}
-        isSubmitting={createConfigMutation.isPending || updateConfigMutation.isPending}
+        isSubmitting={
+          createConfigMutation.isPending || updateConfigMutation.isPending
+        }
         isLoadingConfig={isFetchingEditConfig}
       />
-
-
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete configuration?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will permanently delete "{configToDelete?.Name}". This action cannot be undone.
+              This will permanently delete "{configToDelete?.Name}". This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteConfigMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleteConfigMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
               disabled={deleteConfigMutation.isPending}
             >
               {deleteConfigMutation.isPending ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className='h-4 w-4 mr-2 animate-spin' />
                   Deleting
                 </>
               ) : (
-                "Delete"
+                'Delete'
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-
-
-
       <div className='flex-1 flex overflow-hidden relative'>
-
-
-
-
-
         {/* RIGHT COLUMN - Scan Interface */}
         <div className='flex-1 overflow-auto scrollbar-thin p-3'>
           <Card className='flex justify-between p-3 mb-2'>
             <div>
               <CardTitle>Configurations</CardTitle>
-              <CardDescription>Manage your performance test configurations</CardDescription>
+              <CardDescription>
+                Manage your performance test configurations
+              </CardDescription>
             </div>
             <div>
-              <Button onClick={handleCreateClick} >
-                <Plus className="h-4 w-4 mr-2" />
+              <Button onClick={handleCreateClick}>
+                <Plus className='h-4 w-4 mr-2' />
                 New Configuration
               </Button>
             </div>
-
-
           </Card>
           <ConfigList
             configs={perfConfigs || []}
@@ -447,122 +485,119 @@ export default function PerformanceTesting({
             onEdit={handleEditClick}
             onDelete={handleDeleteClick}
             onExecute={handleRunClick}
-            executingConfigId={executingConfigId || ""}
+            executingConfigId={executingConfigId || ''}
           />
-
         </div>
 
         {/* RUN DETAILS PANEL */}
       </div>
-
-      {
-        activeExecutionId && (
-          <div className="border-t border-gray-200 dark:border-gray-800 p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              {/* LEFT */}
-              <div>
-                <h3 className="text-base font-semibold text-gray-900 dark:text-white">
-                  Latest Run Details
-                </h3>
-                <p className="text-xs text-muted-foreground break-all">
-                  Execution ID: {activeExecutionId}
-                </p>
-              </div>
-
-              {/* RIGHT */}
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                {isRunFinished && (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={async () => {
-                      setShowResults(true);
-                      await refetchResults();
-                    }}
-                    disabled={!activeExecutionId || isFetchingResults}
-                  >
-                    {isFetchingResults ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Loading results...
-                      </>
-                    ) : (
-                      "Show Results"
-                    )}
-                  </Button>
-                )}
-
-                {showResults && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowResults(false)}
-                  >
-                    Hide
-                  </Button>
-                )}
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setShowResults(false);
-                    setActiveExecutionId(null);
-                  }}
-                >
-                  <X />
-                </Button>
-              </div>
+      {activeExecutionId && (
+        <div className='border-t border-gray-200 dark:border-gray-800 p-4'>
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between'>
+            {/* LEFT */}
+            <div>
+              <h3 className='text-base font-semibold text-gray-900 dark:text-white'>
+                Latest Run Details
+              </h3>
+              <p className='text-xs text-muted-foreground break-all'>
+                Execution ID: {activeExecutionId}
+              </p>
             </div>
 
-
-            <div className="mt-4">
-              {isFetchingRunDetails && !runDetails ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Fetching run details...
-                </div>
-              ) : runDetailsError ? (
-                <div className="text-sm text-destructive">
-                  {(runDetailsError as any)?.message || "Failed to load run details"}
-                </div>
-              ) : !runDetails ? (
-                <div className="text-sm text-muted-foreground">No run data yet.</div>
-              ) : (
-                <RunDetailsInline data={runDetails} loading={isFetchingRunDetails} />
+            {/* RIGHT */}
+            <div className='flex flex-wrap items-center justify-end gap-2'>
+              {isRunFinished && (
+                <Button
+                  size='sm'
+                  variant='secondary'
+                  onClick={async () => {
+                    setShowResults(true);
+                    await refetchResults();
+                  }}
+                  disabled={!activeExecutionId || isFetchingResults}
+                >
+                  {isFetchingResults ? (
+                    <>
+                      <Loader2 className='h-4 w-4 mr-2 animate-spin' />
+                      Loading results...
+                    </>
+                  ) : (
+                    'Show Results'
+                  )}
+                </Button>
               )}
+
+              {showResults && (
+                <Button
+                  size='sm'
+                  variant='ghost'
+                  onClick={() => setShowResults(false)}
+                >
+                  Hide
+                </Button>
+              )}
+
+              <Button
+                variant='ghost'
+                size='sm'
+                onClick={() => {
+                  setShowResults(false);
+                  setActiveExecutionId(null);
+                }}
+              >
+                <X />
+              </Button>
             </div>
           </div>
-        )
-      }
 
-
-      {
-        showResults && runResultsResponse && (
-          <div className="border-t border-gray-200 dark:border-gray-800 p-4">
-            {isFetchingResults && !runResultsResponse ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-6">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Fetching results...
+          <div className='mt-4'>
+            {isFetchingRunDetails && !runDetails ? (
+              <div className='flex items-center gap-2 text-sm text-muted-foreground py-6'>
+                <Loader2 className='h-4 w-4 animate-spin' />
+                Fetching run details...
               </div>
-            ) : resultsError ? (
-              <div className="text-sm text-destructive">
-                {(resultsError as any)?.message || "Failed to load results"}
+            ) : runDetailsError ? (
+              <div className='text-sm text-destructive'>
+                {(runDetailsError as any)?.message ||
+                  'Failed to load run details'}
               </div>
-            ) : !runResultsResponse ? (
-              <div className="text-sm text-muted-foreground">No results found.</div>
+            ) : !runDetails ? (
+              <div className='text-sm text-muted-foreground'>
+                No run data yet.
+              </div>
             ) : (
-              <div className="space-y-4">
-                <RunSummaryCard summary={runResultsResponse.summary} />
-                <RunResultsTable
-                  results={runResultsResponse.results}
-                />
-              </div>
+              <RunDetailsInline
+                data={runDetails}
+                loading={isFetchingRunDetails}
+              />
             )}
           </div>
-        )
-      }
+        </div>
+      )}
+      {showResults && runResultsResponse && (
+        <div className='border-t border-gray-200 dark:border-gray-800 p-4'>
+          {isFetchingResults && !runResultsResponse ? (
+            <div className='flex items-center gap-2 text-sm text-muted-foreground py-6'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              Fetching results...
+            </div>
+          ) : resultsError ? (
+            <div className='text-sm text-destructive'>
+              {(resultsError as any)?.message || 'Failed to load results'}
+            </div>
+          ) : !runResultsResponse ? (
+            <div className='text-sm text-muted-foreground'>
+              No results found.
+            </div>
+          ) : (
+            <div className='space-y-4'>
+              <RunSummaryCard summary={runResultsResponse.summary} />
+              <RunResultsTable results={runResultsResponse.results} />
+            </div>
+          )}
+        </div>
+      )}
       ``
-    </div >
+    </div>
   );
 }
