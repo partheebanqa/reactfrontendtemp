@@ -33,12 +33,14 @@ import WelcomeImage from '../../assests/images/Welcome.webp';
 import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/sanitizeTest';
 import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
+import { useDataManagement } from '@/hooks/useDataManagement';
 import PerformanceTesting from './PerformanceTesting/PerformanceTesting';
 import { useToast } from '@/hooks/use-toast';
 import PerformanceScanView from './PerformanceSecurityScan/PerformanceView';
 
 const RequestBuilder = () => {
   const { toast } = useToast();
+  const { activeEnvironment } = useDataManagement();
   const saveRequestRef = useRef<(() => Promise<void>) | null>(null);
   const [usedVariables, setUsedVariables] = useState<{
     staticVars: Array<{ name: string; value: string }>;
@@ -346,6 +348,8 @@ const RequestBuilder = () => {
                     url: securityScan.request.url || '',
                   }}
                   workspaceId={currentWorkspace?.id || ''}
+                  environmentId={activeEnvironment?.id}
+                  preRequestId={activeCollection?.preRequestId}
                   onClose={() => collectionActions.closeSecurityScan()}
                 />
               </div>
@@ -360,6 +364,8 @@ const RequestBuilder = () => {
                       url: performanceScan.request.url || '',
                     }}
                     workspaceId={currentWorkspace?.id || ''}
+                    environmentId={activeEnvironment?.id}
+                    preRequestId={activeCollection?.preRequestId}
                     onClose={() => collectionActions.closeSecurityScan()}
                   />
                 </div>

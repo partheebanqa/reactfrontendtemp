@@ -101,7 +101,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         createWorkspaceMutation.mutate(workspaceData, {
           onSuccess: (response) => {
             const currWorkspace = workspaces.find(
-              (ws) => ws.id === response?.workspaceId
+              (ws) => ws.id === response?.workspaceId,
             );
             if (currWorkspace) {
               setCurrentWorkspace(currWorkspace);
@@ -113,7 +113,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         updateWorkspaceMutation.mutate(workspaceData, {
           onSuccess: (data) => {
             const currWorkspace = workspaces.find(
-              (ws) => ws.id === workspaceData.id
+              (ws) => ws.id === workspaceData.id,
             );
             setCurrentWorkspace(currWorkspace || null);
             success('Workspace updated successfully.');
@@ -128,7 +128,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         `Error ${
           workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
-        error
+        error,
       );
       throw error;
     }

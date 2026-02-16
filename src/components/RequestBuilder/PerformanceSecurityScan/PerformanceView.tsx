@@ -4,20 +4,13 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Loader2,
   X,
-  Download,
-  Share2,
-  Search,
   Zap,
   Clock,
   AlertCircle,
   CheckCircle,
   Play,
-  FileText,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
-  AlertTriangle,
-  Info,
   Settings,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +40,7 @@ export interface PerformanceScanProps {
   };
   workspaceId: string;
   environmentId?: string;
+  preRequestId?: string;
   onClose: () => void;
 }
 
@@ -114,6 +108,7 @@ export default function PerformanceScanView({
   request,
   workspaceId,
   environmentId,
+  preRequestId,
   onClose,
 }: PerformanceScanProps) {
   const { currentWorkspace } = useWorkspace();
@@ -141,15 +136,18 @@ export default function PerformanceScanView({
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // TanStack Query hooks
   const {
     data: historyData,
     isLoading: loadingHistory,
     refetch: refetchHistory,
   } = usePerformanceHistory(request.id);
-
   const { executeAnalysis, isLoading: isAnalyzing } =
-    usePerformanceAnalyzerFlow(request.id, workspaceId, environmentId);
+    usePerformanceAnalyzerFlow(
+      request.id,
+      workspaceId,
+      environmentId,
+      preRequestId,
+    );
 
   const loadHistoricalMutation = useLoadHistoricalPerformanceAnalysis();
 
