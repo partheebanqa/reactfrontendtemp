@@ -21,6 +21,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useWorkspace } from '@/hooks/useWorkspace';
 
 import {
@@ -131,6 +141,7 @@ export default function PerformanceScanView({
   const [performanceChecks, setPerformanceChecks] =
     useState<PerformanceCheck[]>(DEFAULT_CHECKS);
   const [showCheckConfig, setShowCheckConfig] = useState(false);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -187,7 +198,30 @@ export default function PerformanceScanView({
 
   const enabledChecksCount = performanceChecks.filter((c) => c.enabled).length;
 
+  const handleStartAnalysisClick = () => {
+    const enabledCheckIds = performanceChecks
+      .filter((check) => check.enabled)
+      .map((check) => check.id);
+
+    if (enabledCheckIds.length === 0) {
+      toast({
+        title: 'No Checks Selected',
+        description: 'Please select at least one performance check',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!preRequestId) {
+      setShowWarningModal(true);
+      return;
+    }
+
+    startAnalysis();
+  };
+
   const startAnalysis = async () => {
+    setShowWarningModal(false);
     const enabledCheckIds = performanceChecks
       .filter((check) => check.enabled)
       .map((check) => check.id);
@@ -567,7 +601,7 @@ export default function PerformanceScanView({
                 </div>
 
                 <Button
-                  onClick={startAnalysis}
+                  onClick={handleStartAnalysisClick}
                   disabled={enabledChecksCount === 0}
                   size='lg'
                 >
@@ -642,6 +676,43 @@ export default function PerformanceScanView({
               </div>
             </div>
           )}
+
+          <AlertDialog
+            open={showWarningModal}
+            onOpenChange={setShowWarningModal}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className='flex items-center gap-2'>
+                  <AlertCircle className='h-5 w-5 text-yellow-600' />
+                  No Auto-Auth Configured
+                </AlertDialogTitle>
+                <AlertDialogDescription className='space-y-2'>
+                  <p>
+                    This collection does not have an Auto-Auth request
+                    configured.
+                  </p>
+                  <p>
+                    Without Auto-Auth, the performance analysis will run without
+                    authentication tokens, which may result in limited or
+                    inaccurate performance metrics for authenticated endpoints.
+                  </p>
+                  <p className='font-medium text-gray-900 dark:text-gray-100'>
+                    Do you want to continue anyway?
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={startAnalysis}
+                  className='bg-yellow-600 hover:bg-yellow-700'
+                >
+                  Continue Without Auth
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>
