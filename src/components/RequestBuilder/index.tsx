@@ -380,6 +380,8 @@ const RequestBuilder = () => {
                     url: performanceTest.request.url || '',
                   }}
                   workspaceId={currentWorkspace?.id || ''}
+                  environmentId={activeEnvironment?.id}
+                  preRequestId={activeCollection?.preRequestId}
                   onClose={() => collectionActions.closePerformanceTesting()}
                 />
               </div>
