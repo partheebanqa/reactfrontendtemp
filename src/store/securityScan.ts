@@ -35,9 +35,19 @@ export const useStartSecurityScan = () => {
   return useMutation<
     { scanId: string },
     Error,
-    { requestId: string; workspaceId: string }
+    {
+      requestId: string;
+      workspaceId: string;
+      environmentId?: string;
+      preRequestId?: string;
+    }
   >({
-    mutationFn: ({ requestId }) => startSecurityScan(requestId),
+    mutationFn: ({ requestId, environmentId, preRequestId }) =>
+      startSecurityScan({
+        requestId,
+        environmentId,
+        preRequestId,
+      }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: securityScanKeys.history(variables.workspaceId),
@@ -83,11 +93,15 @@ export const useSecurityScanFlow = (workspaceId: string) => {
     requestId: string,
     onProgress?: (status: any) => void,
     signal?: AbortSignal,
+    environmentId?: string,
+    preRequestId?: string,
   ): Promise<ScanResult> => {
     try {
       const { scanId } = await startScan.mutateAsync({
         requestId,
         workspaceId,
+        environmentId,
+        preRequestId,
       });
 
       const result = await pollScan.mutateAsync({

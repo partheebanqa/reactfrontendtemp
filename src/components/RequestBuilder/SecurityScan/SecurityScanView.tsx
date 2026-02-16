@@ -48,6 +48,8 @@ export interface SecurityScanViewProps {
     url: string;
   };
   workspaceId: string;
+  environmentId?: string;
+  preRequestId?: string;
   onClose: () => void;
 }
 
@@ -55,6 +57,8 @@ type ScanStatus = 'idle' | 'initializing' | 'scanning' | 'completed' | 'error';
 
 export default function SecurityScanView({
   request,
+  environmentId,
+  preRequestId,
   onClose,
 }: SecurityScanViewProps) {
   const { currentWorkspace } = useWorkspace();
@@ -70,7 +74,7 @@ export default function SecurityScanView({
   const [scanProgress, setScanProgress] = useState('');
   const [remainingTime, setRemainingTime] = useState(60);
   const [selectedHistoryScan, setSelectedHistoryScan] = useState<string | null>(
-    null
+    null,
   );
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
 
@@ -78,18 +82,16 @@ export default function SecurityScanView({
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // TanStack Query hooks
   const {
     data: historyData,
     isLoading: loadingHistory,
     refetch: refetchHistory,
   } = useScanHistory(currentWorkspace.id || '');
   const { executeScan, isLoading: isScanning } = useSecurityScanFlow(
-    currentWorkspace.id || ''
+    currentWorkspace.id || '',
   );
   const loadHistoricalMutation = useLoadHistoricalScan();
 
-  // Auto-open history only when idle, close for other states
   useEffect(() => {
     if (scanStatus === 'idle') {
       setIsHistoryOpen(true);
@@ -98,7 +100,6 @@ export default function SecurityScanView({
     }
   }, [scanStatus]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
@@ -146,7 +147,9 @@ export default function SecurityScanView({
             setScanProgress(`Scanning... ${status.progress}%`);
           }
         },
-        abortControllerRef.current.signal
+        abortControllerRef.current.signal,
+        environmentId,
+        preRequestId,
       );
 
       if (abortControllerRef.current?.signal.aborted) {
@@ -300,7 +303,7 @@ export default function SecurityScanView({
     try {
       await downloadSecurityScanAsPDF(
         'security-scan-content',
-        `${request.name}_security_scan.pdf`
+        `${request.name}_security_scan.pdf`,
       );
       toast({
         title: 'PDF Downloaded',
@@ -323,7 +326,7 @@ export default function SecurityScanView({
       downloadSecurityScanAsHTML(
         scanResult,
         request,
-        `${request.name}_security_scan.html`
+        `${request.name}_security_scan.html`,
       );
       toast({
         title: 'HTML Downloaded',
@@ -677,7 +680,7 @@ export default function SecurityScanView({
                                 severity.slice(1)}
                             </Button>
                           );
-                        }
+                        },
                       )}
                     </div>
                   </div>
@@ -710,7 +713,7 @@ export default function SecurityScanView({
                         isExpanded={expandedVulnerability === vuln.id}
                         onToggle={() =>
                           setExpandedVulnerability(
-                            expandedVulnerability === vuln.id ? null : vuln.id
+                            expandedVulnerability === vuln.id ? null : vuln.id,
                           )
                         }
                       />

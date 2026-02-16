@@ -82,11 +82,11 @@ export const useLoadHistoricalPerformanceAnalysis = () => {
 };
 
 /* -------------------- Flow Hook -------------------- */
-
 export const usePerformanceAnalyzerFlow = (
   requestId: string,
   workspaceId: string,
   environmentId?: string,
+  preRequestId?: string,
 ) => {
   const queryClient = useQueryClient();
   const startAnalyzer = useStartPerformanceAnalyzer();
@@ -94,7 +94,7 @@ export const usePerformanceAnalyzerFlow = (
 
   const executeAnalysis = async (
     signal?: AbortSignal,
-    enabledChecks?: string[], // Add this parameter
+    enabledChecks?: string[],
   ): Promise<PerformanceAnalyzerResult> => {
     try {
       // Use provided checks or default to all checks
@@ -113,6 +113,7 @@ export const usePerformanceAnalyzerFlow = (
         requestId,
         workspaceId,
         environmentId,
+        preRequestId,
         enabledChecks: checksToRun,
       });
 

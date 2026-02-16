@@ -107,7 +107,14 @@ export interface StartPerformanceAnalyzerPayload {
   requestId: string;
   workspaceId: string;
   environmentId?: string;
+  preRequestId?: string;
   enabledChecks: string[];
+}
+
+export interface StartSecurityScanPayload {
+  requestId: string;
+  environmentId?: string;
+  preRequestId?: string;
 }
 
 export const executeRequest = async (
@@ -413,14 +420,14 @@ export const fetchScanHistory = async (
  * Start a new security scan
  */
 export const startSecurityScan = async (
-  requestId: string,
+  payload: StartSecurityScanPayload,
 ): Promise<{ scanId: string }> => {
   try {
     const response = await apiRequest(
       'POST',
       `${SECURITY_API_BASE}/scan/start`,
       {
-        body: JSON.stringify({ requestId }),
+        body: JSON.stringify(payload),
         headers: {
           'Content-Type': 'application/json',
         },
