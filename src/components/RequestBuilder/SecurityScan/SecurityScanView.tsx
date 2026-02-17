@@ -15,15 +15,29 @@ import {
   FileText,
   ChevronLeft,
   ChevronRight,
+  Unlock,
+  Lock,
+  Settings,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import { collectionActions } from '@/store/collectionStore';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { VulnerabilityCard } from './VulnerabilityCard';
 import { useWorkspace } from '@/hooks/useWorkspace';
 
@@ -39,6 +53,9 @@ import {
   useScanHistory,
   useSecurityScanFlow,
 } from '@/store/securityScan';
+import { useCollection } from '@/hooks/useCollection';
+import { CollectionRequest } from '@/shared/types/collection';
+import { useRequest } from '@/hooks/useRequest';
 
 export interface SecurityScanViewProps {
   request: {
@@ -53,7 +70,14 @@ export interface SecurityScanViewProps {
   onClose: () => void;
 }
 
-type ScanStatus = 'idle' | 'initializing' | 'scanning' | 'completed' | 'error';
+type ScanStatus =
+  | 'idle'
+  | 'authCheck'
+  | 'setupAuth'
+  | 'initializing'
+  | 'scanning'
+  | 'completed'
+  | 'error';
 
 export default function SecurityScanView({
   request,
@@ -62,7 +86,6 @@ export default function SecurityScanView({
   onClose,
 }: SecurityScanViewProps) {
   const { currentWorkspace } = useWorkspace();
-  console.log('currentWorkspace111:', currentWorkspace);
 
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -77,18 +100,22 @@ export default function SecurityScanView({
     null,
   );
   const [isHistoryOpen, setIsHistoryOpen] = useState(true);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   const { toast } = useToast();
   const abortControllerRef = useRef<AbortController | null>(null);
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const { collections, activeCollection, setActiveCollection } =
+    useCollection();
+  const { setResponseData } = useRequest();
 
   const {
     data: historyData,
     isLoading: loadingHistory,
     refetch: refetchHistory,
-  } = useScanHistory(currentWorkspace.id || '');
+  } = useScanHistory(currentWorkspace?.id || '');
   const { executeScan, isLoading: isScanning } = useSecurityScanFlow(
-    currentWorkspace.id || '',
+    currentWorkspace?.id || '',
   );
   const loadHistoricalMutation = useLoadHistoricalScan();
 
@@ -111,12 +138,109 @@ export default function SecurityScanView({
     };
   }, []);
 
-  const startScan = async () => {
+  const handleStartScanClick = () => {
+    setScanStatus('authCheck');
+  };
+
+  const handleAuthResponse = (requiresAuth: boolean) => {
+    if (requiresAuth) {
+      if (preRequestId) {
+        startScanWithAuth();
+      } else {
+        setScanStatus('setupAuth');
+      }
+    } else {
+      startScanWithoutAuth();
+    }
+  };
+
+  const startScanWithAuth = async () => {
     try {
       abortControllerRef.current = new AbortController();
 
       setScanStatus('initializing');
-      setScanProgress('Initializing scan...');
+      setScanProgress('Initializing scan with authentication...');
+      setRemainingTime(60);
+      setSelectedHistoryScan(null);
+
+      // Start countdown timer
+      timerIntervalRef.current = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev <= 1) {
+            if (timerIntervalRef.current) {
+              clearInterval(timerIntervalRef.current);
+              timerIntervalRef.current = null;
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      setScanStatus('scanning');
+      setScanProgress('Scanning endpoint with authentication...');
+
+      const result = await executeScan(
+        request.id,
+        (status) => {
+          if (abortControllerRef.current?.signal.aborted) {
+            throw new Error('Scan cancelled');
+          }
+          if (status.progress) {
+            setScanProgress(`Scanning... ${status.progress}%`);
+          }
+        },
+        abortControllerRef.current.signal,
+        environmentId,
+        preRequestId, // Include preRequestId for auth
+      );
+
+      if (abortControllerRef.current?.signal.aborted) {
+        return;
+      }
+
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+
+      setScanResult(result);
+      setScanStatus('completed');
+
+      toast({
+        title: 'Scan Complete',
+        description: `Found ${result.totalIssues} security issues`,
+      });
+
+      refetchHistory();
+    } catch (error: any) {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+        timerIntervalRef.current = null;
+      }
+
+      if (error.message === 'Scan cancelled') {
+        return;
+      }
+
+      console.error('Security scan failed:', error);
+      setScanStatus('error');
+      toast({
+        title: 'Scan Failed',
+        description: error.message || 'Failed to complete security scan',
+        variant: 'destructive',
+      });
+    } finally {
+      abortControllerRef.current = null;
+    }
+  };
+
+  const startScanWithoutAuth = async () => {
+    try {
+      abortControllerRef.current = new AbortController();
+
+      setScanStatus('initializing');
+      setScanProgress('Initializing scan without authentication...');
       setRemainingTime(60);
       setSelectedHistoryScan(null);
 
@@ -149,7 +273,7 @@ export default function SecurityScanView({
         },
         abortControllerRef.current.signal,
         environmentId,
-        preRequestId,
+        undefined, // No preRequestId - scanning without auth
       );
 
       if (abortControllerRef.current?.signal.aborted) {
@@ -169,7 +293,6 @@ export default function SecurityScanView({
         description: `Found ${result.totalIssues} security issues`,
       });
 
-      // Refetch history to show the new scan
       refetchHistory();
     } catch (error: any) {
       if (timerIntervalRef.current) {
@@ -342,6 +465,90 @@ export default function SecurityScanView({
     }
   };
 
+  const handleSetupAuthAction = (action: 'setup' | 'skip') => {
+    if (action === 'setup') {
+      const collection = collections.find((c) => c.id === activeCollection?.id);
+
+      if (collection?.preRequestId) {
+        const findRequestInCollection = (
+          requestId: string,
+        ): CollectionRequest | null => {
+          const topLevelRequest = collection.requests.find(
+            (r) => r.id === requestId,
+          );
+          if (topLevelRequest) {
+            return topLevelRequest;
+          }
+
+          const searchInFolders = (
+            folders: any[] = [],
+          ): CollectionRequest | null => {
+            for (const folder of folders) {
+              if (folder.requests && Array.isArray(folder.requests)) {
+                const found = folder.requests.find(
+                  (r: any) => r.id === requestId,
+                );
+                if (found) return found;
+              }
+              if (folder.folders && Array.isArray(folder.folders)) {
+                const found = searchInFolders(folder.folders);
+                if (found) return found;
+              }
+            }
+            return null;
+          };
+
+          return searchInFolders((collection as any).folders || []);
+        };
+
+        const authRequest = findRequestInCollection(collection.preRequestId);
+
+        if (authRequest) {
+          onClose();
+
+          setTimeout(() => {
+            try {
+              setResponseData(null);
+            } catch {}
+
+            setActiveCollection(collection);
+
+            collectionActions.openRequest(authRequest);
+            collectionActions.setActiveRequest(authRequest);
+
+            collectionActions.closeSanitizeTestRunner();
+            collectionActions.closeSecurityScan();
+
+            toast({
+              title: 'Auth Request Opened',
+              description:
+                'Configure your authentication request to enable Auto-Auth',
+            });
+          }, 100);
+        } else {
+          toast({
+            title: 'Auth Request Not Found',
+            description:
+              'Please set up an Auto-Auth request in your collection',
+            variant: 'destructive',
+          });
+          onClose();
+
+          collectionActions.closeSanitizeTestRunner();
+          collectionActions.closeSecurityScan();
+        }
+      } else {
+        toast({
+          title: 'No Auto-Auth Request',
+          description: 'Please create an Auto-Auth request in your collection',
+          variant: 'destructive',
+        });
+        onClose();
+      }
+    } else {
+      startScanWithoutAuth();
+    }
+  };
   const filteredVulnerabilities = useMemo(() => {
     if (!scanResult?.vulnerabilities) return [];
 
@@ -501,7 +708,7 @@ export default function SecurityScanView({
                   misconfigurations, and best practice violations.
                 </p>
 
-                <Button onClick={startScan}>
+                <Button onClick={handleStartScanClick}>
                   <Play className='w-4 h-4' />
                   Start Security Scan
                 </Button>
@@ -592,7 +799,7 @@ export default function SecurityScanView({
 
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button onClick={startScan} size='sm'>
+                            <Button onClick={handleStartScanClick} size='sm'>
                               <Shield size={14} />
                               Rescan
                             </Button>
@@ -751,10 +958,181 @@ export default function SecurityScanView({
                 <p className='text-gray-600 dark:text-gray-400 mb-6'>
                   Unable to complete the security scan. Please try again.
                 </p>
-                <Button onClick={startScan}>Retry Scan</Button>
+                <Button onClick={handleStartScanClick}>Retry Scan</Button>
               </div>
             </div>
           )}
+
+          {scanStatus === 'authCheck' && (
+            <div className='flex items-center justify-center h-full px-6'>
+              <div className='text-center max-w-lg'>
+                <div className='w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-6'>
+                  <Lock className='w-10 h-10 text-blue-600 dark:text-blue-400' />
+                </div>
+
+                <h3 className='text-2xl font-semibold text-gray-900 dark:text-white mb-3'>
+                  Authentication Check
+                </h3>
+                <p className='text-gray-600 dark:text-gray-400 mb-8'>
+                  Does your API require authentication headers, tokens, or
+                  credentials to access endpoints?
+                </p>
+
+                <div className='space-y-3 max-w-md mx-auto'>
+                  <button
+                    onClick={() => handleAuthResponse(true)}
+                    className='w-full p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors flex items-start gap-3 text-left'
+                  >
+                    <div className='w-10 h-10 flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center'>
+                      <CheckCircle className='w-5 h-5 text-green-600 dark:text-green-400' />
+                    </div>
+                    <div className='flex-1'>
+                      <div className='text-gray-900 dark:text-white font-medium mb-1'>
+                        Yes, Authentication Required
+                      </div>
+                      <div className='text-gray-500 dark:text-gray-400 text-sm'>
+                        API needs auth headers or tokens
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleAuthResponse(false)}
+                    className='w-full p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors flex items-start gap-3 text-left'
+                  >
+                    <div className='w-10 h-10 flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center'>
+                      <Unlock className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+                    </div>
+                    <div className='flex-1'>
+                      <div className='text-gray-900 dark:text-white font-medium mb-1'>
+                        No Authentication Needed
+                      </div>
+                      <div className='text-gray-500 dark:text-gray-400 text-sm'>
+                        Public API, no auth required
+                      </div>
+                    </div>
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setScanStatus('idle')}
+                  className='mt-6 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm'
+                >
+                  ← Back
+                </button>
+              </div>
+            </div>
+          )}
+
+          {scanStatus === 'setupAuth' && (
+            <div className='flex items-center justify-center h-full px-6'>
+              <div className='text-center max-w-2xl'>
+                <div className='w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center mx-auto mb-6'>
+                  <AlertCircle className='w-10 h-10 text-yellow-600 dark:text-yellow-400' />
+                </div>
+
+                <h3 className='text-2xl font-semibold text-gray-900 dark:text-white mb-3'>
+                  Auto Auth Not Configured
+                </h3>
+                <p className='text-gray-600 dark:text-gray-400 mb-8'>
+                  Your API requires authentication, but Auto Auth isn't set up
+                  yet. Setting it up will ensure more accurate security scan
+                  results for protected endpoints.
+                </p>
+
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 max-w-xl mx-auto'>
+                  <button
+                    onClick={() => handleSetupAuthAction('setup')}
+                    className='p-5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors text-center'
+                  >
+                    <div className='w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-3'>
+                      <Settings className='w-7 h-7 text-blue-600 dark:text-blue-400' />
+                    </div>
+                    <h4 className='text-gray-900 dark:text-white font-medium mb-2'>
+                      Setup Auto Auth
+                    </h4>
+                    <p className='text-gray-500 dark:text-gray-400 text-sm mb-3'>
+                      Configure authentication for accurate scan results
+                    </p>
+                    <span className='inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 text-xs font-medium'>
+                      Recommended
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => handleSetupAuthAction('skip')}
+                    className='p-5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors text-center'
+                  >
+                    <div className='w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mx-auto mb-3'>
+                      <ChevronRight className='w-7 h-7 text-gray-600 dark:text-gray-400' />
+                    </div>
+                    <h4 className='text-gray-900 dark:text-white font-medium mb-2'>
+                      Continue Without Auth
+                    </h4>
+                    <p className='text-gray-500 dark:text-gray-400 text-sm mb-3'>
+                      Scan public endpoints only, may miss protected routes
+                    </p>
+                    <span className='inline-block px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 text-xs font-medium'>
+                      Limited Results
+                    </span>
+                  </button>
+                </div>
+
+                <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start max-w-xl mx-auto mb-6'>
+                  <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
+                  <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
+                    Without authentication, the scan may report false positives
+                    for protected endpoints and miss authentication-specific
+                    vulnerabilities.
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => setScanStatus('authCheck')}
+                  className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm'
+                >
+                  ← Back
+                </button>
+              </div>
+            </div>
+          )}
+
+          <AlertDialog
+            open={showWarningModal}
+            onOpenChange={setShowWarningModal}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className='flex items-center gap-2'>
+                  <AlertCircle className='h-5 w-5 text-yellow-600' />
+                  No Auto-Auth Configured
+                </AlertDialogTitle>
+                <AlertDialogDescription className='space-y-2'>
+                  <p>
+                    This collection does not have an Auto-Auth request
+                    configured.
+                  </p>
+                  <p>
+                    Without Auto-Auth, the security scan will run without
+                    authentication tokens, which may result in limited or
+                    incomplete vulnerability detection.
+                  </p>
+                  <p className='font-medium text-gray-900 dark:text-gray-100'>
+                    Do you want to continue anyway?
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleStartScanClick}
+                  className='bg-yellow-600 hover:bg-yellow-700'
+                >
+                  Continue Without Auth
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

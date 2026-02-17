@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, Copy, Trash2, X, Edit } from 'lucide-react';
+import { Search, Copy, Trash2, X, Edit, Plus } from 'lucide-react';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { useToast } from '@/hooks/use-toast';
 import VariableCreateDialog from './CreateVariableDialog';
@@ -60,7 +60,7 @@ export function DynamicVariables() {
     isLoading?: boolean;
     createVariableMutation?: {
       mutateAsync: (
-        p: Partial<NewVariableForm> & Record<string, any>
+        p: Partial<NewVariableForm> & Record<string, any>,
       ) => Promise<any>;
     };
     updateDynamicVariableMutation?: {
@@ -191,15 +191,15 @@ export function DynamicVariables() {
 
   const handleDynamicUpdate = async (
     id: string,
-    patch: Record<string, any>
+    patch: Record<string, any>,
   ) => {
     const prev = localList;
     setLocalList((list) =>
       list.map((v) =>
         v.id === id
           ? { ...v, ...patch, updatedAt: new Date().toISOString() }
-          : v
-      )
+          : v,
+      ),
     );
     try {
       if (!updateDynamicVariableMutation)
@@ -209,7 +209,7 @@ export function DynamicVariables() {
         ...patch,
       });
       setLocalList((list) =>
-        list.map((v) => (v.id === id ? { ...v, ...saved } : v))
+        list.map((v) => (v.id === id ? { ...v, ...saved } : v)),
       );
       toast({
         title: 'Updated',
@@ -312,7 +312,7 @@ export function DynamicVariables() {
             onClick={() => setIsCreateOpen(true)}
             className='inline-flex items-center gap-1'
           >
-            <Search size={16} />
+            <Plus size={16} />
             Create Variable
           </Button>
         </div>
@@ -409,7 +409,7 @@ export function DynamicVariables() {
                   ? '0'
                   : `${start + 1}-${Math.min(
                       start + itemsPerPage,
-                      filtered.length
+                      filtered.length,
                     )}`}{' '}
                 of {filtered.length}
               </div>
