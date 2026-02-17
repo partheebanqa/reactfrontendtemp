@@ -52,6 +52,7 @@ import { useDataManagement } from '@/hooks/useDataManagement';
 import AssertionResults from './AssertionReport';
 
 export interface Assertion {
+  displayType: string;
   id: string;
   category: string;
   type: string;
@@ -268,10 +269,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         }
         grouped[category].push(assertion);
       } else {
-        // Skip adding to body if it's a data_presence group
         if (
           !(
-            assertion.category === 'body' && assertion.group === 'data_presence'
+            (assertion.category === 'body' &&
+              assertion?.displayType === 'contains_dynamic') ||
+            assertion?.displayType === 'contains_static'
           )
         ) {
           const category = assertion.category || 'other';
@@ -431,7 +433,13 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   };
 
   const getSelectedCount = () => {
-    return localAssertions.filter((a) => a.enabled).length;
+    const enabledIds = new Set<string>();
+    Object.values(groupedAssertions).forEach((assertions) => {
+      assertions.forEach((a) => {
+        if (a.enabled) enabledIds.add(a.id);
+      });
+    });
+    return enabledIds.size;
   };
 
   const getFilteredAssertions = (
