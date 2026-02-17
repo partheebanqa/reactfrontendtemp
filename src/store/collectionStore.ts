@@ -154,6 +154,8 @@ export const collectionActions = {
   },
 
   openRequest: (request: CollectionRequest) => {
+    console.log('open request:', request);
+
     collectionStore.setState((state) => {
       const isAlreadyOpen = state.openedRequests.some(
         (r) => r.id === request.id,

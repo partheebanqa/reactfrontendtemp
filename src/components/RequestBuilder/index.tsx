@@ -32,6 +32,8 @@ import { Button } from '../ui/button';
 import WelcomeImage from '../../assests/images/Welcome.webp';
 import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/sanitizeTest';
 import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
+import SecurityScanWizard from '@/components/RequestBuilder/SecurityScan/Securityscanwizard';
+
 import { useCollectionStore, collectionActions } from '@/store/collectionStore';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import PerformanceTesting from './PerformanceTesting/PerformanceTesting';
@@ -366,7 +368,7 @@ const RequestBuilder = () => {
                     workspaceId={currentWorkspace?.id || ''}
                     environmentId={activeEnvironment?.id}
                     preRequestId={activeCollection?.preRequestId}
-                    onClose={() => collectionActions.closeSecurityScan()}
+                    onClose={() => collectionActions.closePerformanceScan()}
                   />
                 </div>
               </>
