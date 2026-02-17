@@ -181,11 +181,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   const [expandedCategories, setExpandedCategories] = useState<
     Record<string, boolean>
   >({
-    body: true,
-    headers: true,
-    'HeaderGuard™': true,
-    performance: true,
-    status: true,
+    body: false,
+    headers: false,
+    'HeaderGuard™': false,
+    performance: false,
+    status: false,
   });
   const [quickAddData, setQuickAddData] = useState({
     field: '',
@@ -1739,115 +1739,145 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
             )}
           </div>
 
-          {/* Main Content - Single Line */}
-          <div className='flex items-center gap-2 flex-1 min-w-0'>
-            {assertion.category === 'status' ? (
-              <>
-                <span className='font-medium text-gray-900 font-mono text-sm'>
-                  statusCode
-                </span>
-                <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
-                  equals
-                </span>
-                <span className='text-sm text-gray-700 font-mono'>
-                  ={' '}
-                  <span className='text-blue-600'>
-                    {assertion.expectedValue}
+          {/* Main Content */}
+          <div className='flex flex-col gap-0.5 flex-1 min-w-0'>
+            {/* Description line */}
+            <div className='flex items-center gap-2 min-w-0'>
+              {assertion.category === 'status' ? (
+                <>
+                  <span className='font-medium text-gray-900 font-mono text-sm'>
+                    statusCode
                   </span>
-                </span>
-              </>
-            ) : assertion.category === 'performance' ? (
-              <>
-                <span className='font-medium text-gray-900 font-mono text-sm truncate'>
-                  {assertion.type === 'response_time'
-                    ? 'responseTime'
-                    : 'payloadSize'}
-                </span>
-                <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
-                  {getOperatorDisplayLabel(assertion.operator || 'less_than')}
-                </span>
-                <span className='text-sm text-gray-700 font-mono'>
-                  ={' '}
-                  <span className='text-blue-600'>
-                    {assertion.expectedValue}
-                    {assertion.type === 'response_time' ? ' ms' : ' kb'}
-                  </span>
-                </span>
-              </>
-            ) : (
-              <>
-                {assertion.field && (
-                  <span className='font-medium text-gray-900 font-mono text-sm truncate'>
-                    {formatFieldDisplay(assertion.field)}
-                  </span>
-                )}
-
-                {assertion.type === 'field_present' ||
-                assertion.type === 'field_exists' ||
-                assertion.type === 'header_present' ||
-                assertion.type === 'header_exists' ||
-                assertion.type === 'field_null' ||
-                assertion.type === 'field_not_null' ||
-                assertion.type === 'field_is_true' ||
-                assertion.type === 'field_is_false' ||
-                assertion.type === 'field_not_empty' ||
-                assertion.type === 'array_present' ||
-                assertion.type === 'security_header_missing' ? (
                   <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
-                    {assertion.type === 'field_present' ||
-                    assertion.type === 'field_exists' ||
-                    assertion.type?.startsWith('header') ||
-                    assertion.type === 'array_present'
-                      ? 'exists'
-                      : assertion.type === 'field_null'
-                        ? 'is null'
-                        : assertion.type === 'field_not_null'
-                          ? 'is not null'
-                          : assertion.type === 'field_not_empty'
-                            ? 'not empty'
-                            : assertion.type === 'field_is_true'
-                              ? 'is true'
-                              : assertion.type === 'field_is_false'
-                                ? 'is false'
-                                : assertion.type === 'security_header_missing'
-                                  ? 'should be present'
-                                  : getOperatorDisplayLabel(
-                                      assertion.operator || 'exists',
-                                    )}
+                    equals
                   </span>
-                ) : (
-                  <>
-                    {/* Show operator and value for other types */}
-                    {assertion.operator && (
-                      <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
-                        {getOperatorDisplayLabel(assertion.operator)}
-                      </span>
-                    )}
-                    {assertion.expectedValue !== undefined &&
-                      assertion.expectedValue !== null &&
-                      assertion.expectedValue !== '' && (
-                        <span className='text-sm text-gray-700 font-mono truncate'>
-                          ={' '}
-                          <span className='text-blue-600'>
-                            {String(assertion.expectedValue)}
-                          </span>
+                  <span className='text-sm text-gray-700 font-mono'>
+                    ={' '}
+                    <span className='text-blue-600'>
+                      {assertion.expectedValue}
+                    </span>
+                  </span>
+                </>
+              ) : assertion.category === 'performance' ? (
+                <>
+                  <span className='font-medium text-gray-900 font-mono text-sm truncate'>
+                    {assertion.type === 'response_time'
+                      ? 'responseTime'
+                      : 'payloadSize'}
+                  </span>
+                  <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                    {getOperatorDisplayLabel(assertion.operator || 'less_than')}
+                  </span>
+                  <span className='text-sm text-gray-700 font-mono'>
+                    ={' '}
+                    <span className='text-blue-600'>
+                      {assertion.expectedValue}
+                      {assertion.type === 'response_time' ? ' ms' : ' kb'}
+                    </span>
+                  </span>
+                </>
+              ) : (
+                <>
+                  {assertion.field && (
+                    <span className='font-medium text-gray-900 font-mono text-sm truncate'>
+                      {formatFieldDisplay(assertion.field)}
+                    </span>
+                  )}
+
+                  {assertion.type === 'field_present' ||
+                  assertion.type === 'field_exists' ||
+                  assertion.type === 'header_present' ||
+                  assertion.type === 'header_exists' ||
+                  assertion.type === 'field_null' ||
+                  assertion.type === 'field_not_null' ||
+                  assertion.type === 'field_is_true' ||
+                  assertion.type === 'field_is_false' ||
+                  assertion.type === 'field_not_empty' ||
+                  assertion.type === 'array_present' ||
+                  assertion.type === 'security_header_missing' ? (
+                    <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                      {assertion.type === 'field_present' ||
+                      assertion.type === 'field_exists' ||
+                      assertion.type?.startsWith('header') ||
+                      assertion.type === 'array_present'
+                        ? 'exists'
+                        : assertion.type === 'field_null'
+                          ? 'is null'
+                          : assertion.type === 'field_not_null'
+                            ? 'is not null'
+                            : assertion.type === 'field_not_empty'
+                              ? 'not empty'
+                              : assertion.type === 'field_is_true'
+                                ? 'is true'
+                                : assertion.type === 'field_is_false'
+                                  ? 'is false'
+                                  : assertion.type === 'security_header_missing'
+                                    ? 'should be present'
+                                    : getOperatorDisplayLabel(
+                                        assertion.operator || 'exists',
+                                      )}
+                    </span>
+                  ) : (
+                    <>
+                      {assertion.operator && (
+                        <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
+                          {getOperatorDisplayLabel(assertion.operator)}
                         </span>
                       )}
-                  </>
-                )}
-              </>
-            )}
-
-            {/* Failed reason inline */}
-            {hasResult &&
-              validationResult.result === 'failed' &&
-              validationResult.failureReason && (
-                <span className='text-xs text-red-700 ml-2 truncate'>
-                  ({validationResult.failureReason})
-                </span>
+                      {assertion.expectedValue !== undefined &&
+                        assertion.expectedValue !== null &&
+                        assertion.expectedValue !== '' && (
+                          <span className='text-sm text-gray-700 font-mono truncate'>
+                            ={' '}
+                            <span className='text-blue-600'>
+                              {String(assertion.expectedValue)}
+                            </span>
+                          </span>
+                        )}
+                    </>
+                  )}
+                </>
               )}
+
+              {hasResult &&
+                validationResult.result === 'failed' &&
+                validationResult.failureReason && (
+                  <span className='text-xs text-red-700 ml-2 truncate'>
+                    ({validationResult.failureReason})
+                  </span>
+                )}
+            </div>
+
+            {(assertion.priority || assertion.impact) && (
+              <div className='flex items-center gap-1.5 flex-wrap'>
+                {assertion.impact && (
+                  <span className='text-xs text-gray-600 mt-1 italic'>
+                    Impact: {assertion.impact}
+                  </span>
+                )}
+
+                {assertion.priority && (
+                  <span
+                    className={`text-xs italic px-1.5 py-0.5 rounded w-fit ${
+                      assertion.priority?.toLowerCase() === 'critical'
+                        ? 'bg-red-100 text-red-700'
+                        : assertion.priority?.toLowerCase() === 'high'
+                          ? 'bg-orange-100 text-orange-700'
+                          : assertion.priority?.toLowerCase() === 'medium'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : assertion.priority?.toLowerCase() === 'low'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {assertion.priority}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
+          {/* Buttons - outside flex-col, stays on the right */}
           <div className='flex items-center gap-2 flex-shrink-0'>
             {assertion.group === 'custom' && appState === 'build' && (
               <>
@@ -1857,7 +1887,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     sm:opacity-0 sm:group-hover:opacity-100
     ${
       expandedEditForm === assertion.id
-        ? 'bg-blue-600 text-white opacity-100' // keep visible when active
+        ? 'bg-blue-600 text-white opacity-100'
         : 'hover:bg-gray-100 text-gray-500'
     }
   `}
@@ -1978,7 +2008,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       <SelectValue placeholder='Choose a variable...' />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Static Variables Section */}
                       {allStaticVariables.length > 0 && (
                         <>
                           <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
@@ -2005,7 +2034,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         </>
                       )}
 
-                      {/* Dynamic Variables Section */}
                       {allDynamicVariables.length > 0 && (
                         <>
                           <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
@@ -2032,7 +2060,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         </>
                       )}
 
-                      {/* Extracted Variables Section */}
                       {allExtractedVariables.length > 0 && (
                         <>
                           <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
@@ -2058,7 +2085,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                           ))}
                         </>
                       )}
-                      {/* No Variables Available */}
                       {allStaticVariables.length === 0 &&
                         allDynamicVariables.length === 0 &&
                         allExtractedVariables.length === 0 && (
@@ -2218,6 +2244,41 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     }
                   />
                 </div>
+
+                <div className='bg-white border border-blue-200 rounded-lg p-3'>
+                  <div className='text-xs font-medium text-gray-600 mb-1'>
+                    Preview
+                  </div>
+                  <div className='font-mono text-sm text-gray-900'>
+                    <span className='text-blue-600'>
+                      {inlineFormData.field === 'response_time'
+                        ? 'responseTime'
+                        : 'payloadSize'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(inlineFormData.operator)}
+                    </span>{' '}
+                    <span className='text-blue-600'>
+                      {inlineFormData.value || '...'}
+                      {inlineFormData.field === 'response_time' ? ' ms' : ' kb'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2 pt-2 border-t border-blue-200'>
+                  <Button onClick={handleCancelInlineAdd} variant='outline'>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() =>
+                      handleSaveInlineAssertion(assertion.category)
+                    }
+                    disabled={!inlineFormData.value}
+                  >
+                    <Plus className='w-4 h-4' />
+                    Add Assertion
+                  </Button>
+                </div>
               </>
             ) : (
               <>
@@ -2301,28 +2362,20 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       </div>
                     )}
                 </div>
-              </>
-            )}
 
-            {/* Show preview and buttons for performance assertions */}
-            {assertion.category === 'performance' && (
-              <>
                 <div className='bg-white border border-blue-200 rounded-lg p-3'>
                   <div className='text-xs font-medium text-gray-600 mb-1'>
                     Preview
                   </div>
                   <div className='font-mono text-sm text-gray-900'>
                     <span className='text-blue-600'>
-                      {inlineFormData.field === 'response_time'
-                        ? 'responseTime'
-                        : 'payloadSize'}
+                      {inlineFormData.field || '...'}
                     </span>{' '}
                     <span className='text-gray-600'>
                       {getOperatorDisplayLabel(inlineFormData.operator)}
                     </span>{' '}
                     <span className='text-blue-600'>
                       {inlineFormData.value || '...'}
-                      {inlineFormData.field === 'response_time' ? ' ms' : ' kb'}
                     </span>
                   </div>
                 </div>
@@ -2335,7 +2388,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                     onClick={() =>
                       handleSaveInlineAssertion(assertion.category)
                     }
-                    disabled={!inlineFormData.value}
+                    disabled={
+                      inlineFormData.dataType !== 'null' &&
+                      inlineFormData.dataType !== 'boolean' &&
+                      !inlineFormData.value
+                    }
                   >
                     <Plus className='w-4 h-4' />
                     Add Assertion
@@ -2343,50 +2400,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 </div>
               </>
             )}
-
-            {/* Only show preview and buttons for regular body fields (not data_presence, status, or performance) */}
-            {/* Only show preview and buttons for regular body fields (not data_presence, status, or performance) */}
-            {assertion.group !== 'data_presence' &&
-              assertion.category !== 'status' &&
-              assertion.category !== 'performance' && (
-                <>
-                  <div className='bg-white border border-blue-200 rounded-lg p-3'>
-                    <div className='text-xs font-medium text-gray-600 mb-1'>
-                      Preview
-                    </div>
-                    <div className='font-mono text-sm text-gray-900'>
-                      <span className='text-blue-600'>
-                        {inlineFormData.field || '...'}
-                      </span>{' '}
-                      <span className='text-gray-600'>
-                        {getOperatorDisplayLabel(inlineFormData.operator)}
-                      </span>{' '}
-                      <span className='text-blue-600'>
-                        {inlineFormData.value || '...'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className='flex justify-end gap-2 pt-2 border-t border-blue-200'>
-                    <Button onClick={handleCancelInlineAdd} variant='outline'>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        handleSaveInlineAssertion(assertion.category)
-                      }
-                      disabled={
-                        inlineFormData.dataType !== 'null' &&
-                        inlineFormData.dataType !== 'boolean' &&
-                        !inlineFormData.value
-                      }
-                    >
-                      <Plus className='w-4 h-4' />
-                      Add Assertion
-                    </Button>
-                  </div>
-                </>
-              )}
           </div>
         )}
 
@@ -2434,7 +2447,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       <SelectValue placeholder='Choose a variable...' />
                     </SelectTrigger>
                     <SelectContent>
-                      {/* Static Variables Section */}
                       {allStaticVariables.length > 0 && (
                         <>
                           <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
@@ -2458,7 +2470,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         </>
                       )}
 
-                      {/* Dynamic Variables Section */}
                       {allDynamicVariables.length > 0 && (
                         <>
                           <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
@@ -2481,7 +2492,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                           ))}
                         </>
                       )}
-                      {/* Extracted Variables Section */}
                       {allExtractedVariables.length > 0 && (
                         <>
                           <div className='px-2 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50'>
@@ -2505,7 +2515,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                         </>
                       )}
 
-                      {/* No Variables Available */}
                       {allStaticVariables.length === 0 &&
                         allDynamicVariables.length === 0 &&
                         allExtractedVariables.length === 0 && (
@@ -2659,31 +2668,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className='block text-xs font-medium text-gray-700 mb-1'>
-                    Expected Value{' '}
-                    {editFormData.field === 'response_time'
-                      ? '(milliseconds)'
-                      : '(kb)'}
-                  </label>
-                  <Input
-                    type='number'
-                    value={editFormData.value}
-                    onChange={(e: any) =>
-                      setEditFormData({
-                        ...editFormData,
-                        value: e.target.value,
-                      })
-                    }
-                    placeholder={
-                      editFormData.field === 'response_time'
-                        ? 'e.g., 500'
-                        : 'e.g., 1024'
-                    }
-                  />
-                </div>
-
-                {/* Add Preview and Buttons for Performance Edit */}
                 <div className='bg-white border border-purple-200 rounded-lg p-3'>
                   <div className='text-xs font-medium text-gray-600 mb-1'>
                     Preview
@@ -2796,55 +2780,48 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       </div>
                     )}
                 </div>
+
+                <div className='bg-white border border-purple-200 rounded-lg p-3'>
+                  <div className='text-xs font-medium text-gray-600 mb-1'>
+                    Preview
+                  </div>
+                  <div className='font-mono text-sm text-gray-900'>
+                    <span className='text-purple-600'>
+                      {editFormData.field || '...'}
+                    </span>{' '}
+                    <span className='text-gray-600'>
+                      {getOperatorDisplayLabel(editFormData.operator)}
+                    </span>{' '}
+                    <span className='text-purple-600'>
+                      {editFormData.value || '...'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className='flex justify-end gap-2 pt-2 border-t border-purple-200'>
+                  <Button onClick={handleCancelEdit} variant='outline'>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => handleSaveEdit(assertion.id)}
+                    disabled={
+                      editFormData.dataType !== 'null' &&
+                      editFormData.dataType !== 'boolean' &&
+                      !editFormData.value
+                    }
+                  >
+                    <Save className='w-4 h-4 mr-1' />
+                    Save Changes
+                  </Button>
+                </div>
               </>
             )}
-
-            {/* Only show preview and buttons for regular body fields (not data_presence, status, or performance) */}
-            {assertion.group !== 'data_presence' &&
-              assertion.category !== 'status' &&
-              assertion.category !== 'performance' && (
-                <>
-                  <div className='bg-white border border-purple-200 rounded-lg p-3'>
-                    <div className='text-xs font-medium text-gray-600 mb-1'>
-                      Preview
-                    </div>
-
-                    <div className='font-mono text-sm text-gray-900'>
-                      <span className='text-purple-600'>
-                        {editFormData.field || '...'}
-                      </span>{' '}
-                      <span className='text-gray-600'>
-                        {getOperatorDisplayLabel(editFormData.operator)}
-                      </span>{' '}
-                      <span className='text-purple-600'>
-                        {editFormData.value || '...'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className='flex justify-end gap-2 pt-2 border-t border-purple-200'>
-                    <Button onClick={handleCancelEdit} variant='outline'>
-                      Cancel
-                    </Button>
-                    <Button
-                      onClick={() => handleSaveEdit(assertion.id)}
-                      disabled={
-                        editFormData.dataType !== 'null' &&
-                        editFormData.dataType !== 'boolean' &&
-                        !editFormData.value
-                      }
-                    >
-                      <Save className='w-4 h-4 mr-1' />
-                      Save Changes
-                    </Button>
-                  </div>
-                </>
-              )}
           </div>
         )}
       </div>
     );
   };
+
   const renderCategorySection = (
     categoryKey: string,
     categoryLabel: string,

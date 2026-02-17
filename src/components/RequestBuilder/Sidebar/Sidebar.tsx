@@ -854,6 +854,8 @@ const Sidebar: React.FC = () => {
                 timestamp: Date.now(),
                 collectionId: collectionId,
                 source: 'response_body',
+                requestName: preRequest.name || '',
+                requestId: preRequest.id || '',
                 path:
                   preRequest.extractVariables.find(
                     (ev: any) => (ev.variableName || ev.name) === varName,
