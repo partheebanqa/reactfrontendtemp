@@ -22,7 +22,7 @@ export function RunResultsTable({
     const [selectedBody, setSelectedBody] = useState<string | null>(null);
 
 
-    console.log("Results:", results);
+    // console.log("Results:", results);
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
         if (!q) return results;
