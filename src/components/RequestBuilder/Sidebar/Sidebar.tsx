@@ -583,12 +583,12 @@ const Sidebar: React.FC = () => {
   const getMethodColor = (method: string) => {
     const colors = {
       GET: 'text-green-600',
-      POST: 'text-orange-600',
-      PUT: 'text-blue-600',
+      POST: 'text-blue-600',
+      PUT: 'text-orange-600',
       DELETE: 'text-red-600',
       PATCH: 'text-purple-600',
       HEAD: 'text-gray-600',
-      OPTIONS: 'text-gray-600',
+      OPTIONS: 'text-indigo-600',
     };
     return colors[method as keyof typeof colors] || 'text-gray-600';
   };
@@ -854,6 +854,8 @@ const Sidebar: React.FC = () => {
                 timestamp: Date.now(),
                 collectionId: collectionId,
                 source: 'response_body',
+                requestName: preRequest.name || '',
+                requestId: preRequest.id || '',
                 path:
                   preRequest.extractVariables.find(
                     (ev: any) => (ev.variableName || ev.name) === varName,
@@ -1879,7 +1881,7 @@ const Sidebar: React.FC = () => {
                     >
                       <Rocket className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Testing {''}
+                        Rate Limit Test {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>

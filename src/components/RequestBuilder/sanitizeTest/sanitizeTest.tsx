@@ -13,6 +13,8 @@ import {
   FileJson,
   FileText,
   Table,
+  AlertCircle,
+  CheckCircle,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -54,6 +56,11 @@ import type { TestResult, TestMetrics } from '@/shared/types/testInsights';
 import { InsightCard } from './InsightCard';
 import { PerformanceCard } from './PerformanceCard';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import {
+  extractDataFromResponse,
+  isBearerToken,
+  shouldRefreshExtractedVariables,
+} from '@/lib/request-utils';
 
 interface CollectionRequest {
   id?: string;
@@ -85,8 +92,9 @@ interface SortableRequestItemProps {
   getStatusBadge: (
     status?: number,
     responseTime?: number,
-    isLoading?: boolean
+    isLoading?: boolean,
   ) => React.ReactNode;
+  isAuthRequest?: boolean;
 }
 
 const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
@@ -95,6 +103,7 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
   onToggle,
   getMethodColor,
   getStatusBadge,
+  isAuthRequest = false,
 }) => {
   const {
     attributes,
@@ -117,7 +126,11 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className='flex items-center gap-3 py-2 border-b border-border hover:bg-muted/50'
+      className={`flex items-center gap-3 py-2 border-b border-border hover:bg-muted/50 ${
+        isAuthRequest
+          ? 'bg-emerald-50 dark:bg-emerald-900/10 border-l-2 border-l-emerald-500'
+          : ''
+      }`}
     >
       <button
         className='cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors'
@@ -131,17 +144,32 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
         type='checkbox'
         checked={request.isSelected}
         onChange={onToggle}
-        className='w-3 h-3 rounded border-border'
+        className='w-4 h-4 rounded border-border'
       />
       <span
         className={`py-1 text-xs font-semibold rounded ${getMethodColor(
-          request.method
+          request.method,
         )}`}
       >
         {request.method}
       </span>
       <span className='flex-1 text-sm text-foreground'>{request.name}</span>
-      {getStatusBadge(request.status, request.responseTime, request.isLoading)}
+
+      {/* Status badge and response time */}
+      <div className='flex items-center gap-2'>
+        {getStatusBadge(
+          request.status,
+          request.responseTime,
+          request.isLoading,
+        )}
+
+        {/* Token Source badge - shown on the right */}
+        {isAuthRequest && (
+          <span className='mr-2 inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded text-[10px] font-bold text-yellow-800 dark:text-yellow-400 whitespace-nowrap uppercase'>
+            Token Source
+          </span>
+        )}
+      </div>
     </div>
   );
 };
@@ -161,6 +189,7 @@ interface SanitizeTestRunnerProps {
   workspaceId?: string;
   environments?: any[];
   activeEnvironment?: any;
+  collections?: any[];
 }
 
 // Export Modal Component
@@ -295,7 +324,7 @@ function ExportModal({
             }
             return cellStr;
           })
-          .join(',')
+          .join(','),
       )
       .join('\n');
 
@@ -316,7 +345,7 @@ function ExportModal({
     collection: Collection,
     results: TestResult[],
     metrics: TestMetrics,
-    elementId: string
+    elementId: string,
   ) => {
     try {
       const element = document.getElementById(elementId);
@@ -355,7 +384,7 @@ function ExportModal({
       pdf.save(
         `${collection.name}_test_report_${
           new Date().toISOString().split('T')[0]
-        }.pdf`
+        }.pdf`,
       );
     } catch (error) {
       console.error('PDF export failed:', error);
@@ -527,6 +556,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   workspaceId,
   environments = [],
   activeEnvironment,
+  collections = [],
 }) => {
   const { currentWorkspace } = useWorkspace();
   const [requests, setRequests] = useState<RequestWithStatus[]>([]);
@@ -535,12 +565,14 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [authRequestName, setAuthRequestName] = useState<string | null>(null);
+  const [isAuthRunning, setIsAuthRunning] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const filteredRequests = useMemo(() => {
@@ -548,7 +580,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       return requests;
     }
     return requests.filter((req) =>
-      req.name.toLowerCase().includes(searchQuery.toLowerCase())
+      req.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
   }, [requests, searchQuery]);
 
@@ -558,10 +590,10 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     if (over && active.id !== over.id) {
       setRequests((items) => {
         const oldIndex = items.findIndex(
-          (item) => (item.id || `request-${items.indexOf(item)}`) === active.id
+          (item) => (item.id || `request-${items.indexOf(item)}`) === active.id,
         );
         const newIndex = items.findIndex(
-          (item) => (item.id || `request-${items.indexOf(item)}`) === over.id
+          (item) => (item.id || `request-${items.indexOf(item)}`) === over.id,
         );
 
         return arrayMove(items, oldIndex, newIndex);
@@ -572,7 +604,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   useEffect(() => {
     const getAllRequests = (
       requests: CollectionRequest[] = [],
-      folders: any[] = []
+      folders: any[] = [],
     ): CollectionRequest[] => {
       let allRequests = [...requests];
       folders.forEach((folder) => {
@@ -588,7 +620,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
     const allRequests = getAllRequests(
       collection.requests || [],
-      (collection as any).folders || []
+      (collection as any).folders || [],
     );
 
     setRequests(
@@ -600,11 +632,17 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         responsePayloadSizeKB: undefined,
         isSelected: true,
         isLoading: false,
-      }))
+      })),
     );
 
     setSearchQuery('');
   }, [collection.id, collection.requests, collection.folders]);
+
+  useEffect(() => {
+    if (collection.preRequestId) {
+      autoRunPreRequest();
+    }
+  }, [collection.id, collection.preRequestId]);
 
   const handleClose = () => {
     collectionActions.closeSanitizeTestRunner();
@@ -628,21 +666,153 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         responsePayloadSizeKB: undefined,
         isSelected: true,
         isLoading: false,
-      }))
+      })),
     );
     setStartTime(null);
+  };
+
+  const autoRunPreRequest = async () => {
+    if (!collection.preRequestId) return;
+
+    // Find the pre-request in collection
+    const findRequest = (requestId: string): any => {
+      const top = (collection.requests || []).find(
+        (r: any) => r.id === requestId,
+      );
+      if (top) return top;
+      const searchFolders = (folders: any[] = []): any => {
+        for (const folder of folders) {
+          const found = (folder.requests || []).find(
+            (r: any) => r.id === requestId,
+          );
+          if (found) return found;
+          if (folder.folders) {
+            const deep = searchFolders(folder.folders);
+            if (deep) return deep;
+          }
+        }
+        return null;
+      };
+      return searchFolders((collection as any).folders || []);
+    };
+
+    const preRequest = findRequest(collection.preRequestId);
+    if (!preRequest) return;
+
+    setAuthRequestName(preRequest.name);
+
+    // Check if already valid
+    const storageKeys = Object.keys(localStorage).filter((key) =>
+      key.startsWith(`extracted_var_${collection.id}_`),
+    );
+    let hasValidToken = false;
+    for (const key of storageKeys) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        if (data.value && isBearerToken(data.value)) {
+          hasValidToken = true;
+          break;
+        }
+      } catch {}
+    }
+
+    if (
+      hasValidToken &&
+      !shouldRefreshExtractedVariables(collection.id, collection.preRequestId)
+    ) {
+      return;
+    }
+
+    setIsAuthRunning(true);
+
+    try {
+      const payload = {
+        request: {
+          workspaceId: currentWorkspace?.id || '',
+          name: preRequest.name,
+          order: 0,
+          method: preRequest.method,
+          url: preRequest.url,
+          bodyType: preRequest.bodyType || 'raw',
+          bodyFormData: preRequest.bodyFormData || null,
+          bodyRawContent: preRequest.bodyRawContent || '',
+          authorizationType: preRequest.authorizationType || 'none',
+          headers: preRequest.headers || [],
+          params: preRequest.params || [],
+        },
+        assertions: [],
+      };
+
+      const response = await executeRequest(payload);
+
+      if (preRequest.extractVariables?.length > 0) {
+        let rawBody =
+          response?.data?.responses?.[0]?.body ||
+          response?.data?.body ||
+          response?.body;
+
+        let responseBody;
+        try {
+          responseBody =
+            typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+        } catch {
+          setIsAuthRunning(false);
+          return;
+        }
+
+        const extractedVariables = extractDataFromResponse(
+          {
+            body: responseBody,
+            headers: response?.data?.responses?.[0]?.headers || {},
+            cookies: response?.data?.responses?.[0]?.cookies || {},
+          },
+          preRequest.extractVariables,
+        );
+
+        Object.entries(extractedVariables).forEach(([varName, value]) => {
+          if (value !== undefined && value !== null) {
+            const storageKey = `extracted_var_${collection.id}_${varName}`;
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({
+                name: varName,
+                value: String(value),
+                timestamp: Date.now(),
+                collectionId: collection.id,
+                source: 'response_body',
+                requestName: preRequest.name || '',
+                requestId: preRequest.id || '',
+              }),
+            );
+            collectionActions.setExtractedVariable(
+              collection.id,
+              varName,
+              String(value),
+            );
+          }
+        });
+
+        const executionKey = `preRequest_executed_${collection.id}_${collection.preRequestId}`;
+        localStorage.setItem(executionKey, Date.now().toString());
+      }
+    } catch (err) {
+      console.error('Auto auth failed in quick test:', err);
+    } finally {
+      setIsAuthRunning(false);
+    }
   };
 
   const handleRunTests = async () => {
     setIsRunning(true);
     setStartTime(new Date());
 
-    const selectedRequests = requests.filter((r) => r.isSelected);
-
+    const selectedRequests = requests.filter(
+      (r) => r.isSelected && r.id !== collection.preRequestId,
+    );
     try {
       for (const req of selectedRequests) {
         setRequests((prev) =>
-          prev.map((r) => (r.id === req.id ? { ...r, isLoading: true } : r))
+          prev.map((r) => (r.id === req.id ? { ...r, isLoading: true } : r)),
         );
 
         const startTime = Date.now();
@@ -658,25 +828,81 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             const parsedUrl = new URL(req.url);
             finalUrl = req.url.replace(
               `${parsedUrl.protocol}//${parsedUrl.host}`,
-              env.baseUrl
+              env.baseUrl,
             );
           } catch {
             finalUrl = req.url;
           }
         }
 
+        let authHeaders = [...(req.headers || [])];
+        let authorizationConfig = req.authorization || {
+          addTo: 'header',
+          key: '',
+          password: '',
+          token: '',
+          username: '',
+          value: '',
+        };
+        let authType = req.authorizationType || 'none';
+
+        if (collection.preRequestId) {
+          const storageKeys = Object.keys(localStorage).filter((key) =>
+            key.startsWith(`extracted_var_${collection.id}_`),
+          );
+
+          let extractedToken: string | null = null;
+          for (const key of storageKeys) {
+            try {
+              const data = JSON.parse(localStorage.getItem(key) || '{}');
+              if (data.value && isBearerToken(data.value)) {
+                extractedToken = data.value;
+                break;
+              }
+            } catch {}
+          }
+
+          if (extractedToken) {
+            authType = 'bearer';
+
+            authorizationConfig = {
+              ...authorizationConfig,
+              token: extractedToken,
+            };
+
+            const authHeaderExists = authHeaders.some(
+              (h) => h.key.toLowerCase() === 'authorization',
+            );
+
+            if (authHeaderExists) {
+              authHeaders = authHeaders.map((h) =>
+                h.key.toLowerCase() === 'authorization'
+                  ? { ...h, value: `Bearer ${extractedToken}`, enabled: true }
+                  : h,
+              );
+            } else {
+              authHeaders.push({
+                key: 'Authorization',
+                value: `Bearer ${extractedToken}`,
+                enabled: true,
+                description: 'Auto-injected from pre-request',
+              });
+            }
+          }
+        }
+
         const payload = {
           request: {
-            workspaceId: currentWorkspace.id,
+            workspaceId: currentWorkspace?.id,
             name: req.name,
             method: req.method,
             url: finalUrl,
             bodyType: req.bodyType,
             bodyRawContent: req.bodyRawContent || '',
             bodyFormData: req.bodyFormData || [],
-            authorizationType: req.authorizationType,
-            authorization: req.authorization,
-            headers: req.headers || [],
+            authorizationType: authType, // Use modified auth type
+            authorization: authorizationConfig, // Use modified authorization with token
+            headers: authHeaders, // Use modified headers with injected token
             params: req.params || [],
           },
           environmentId: selectedEnvironment?.id ?? null,
@@ -696,7 +922,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           const responsePayloadBytes =
             result?.data?.responses?.[0]?.metrics?.bytesReceived ?? 0;
           const responsePayloadSizeKB = (responsePayloadBytes / 1024).toFixed(
-            2
+            2,
           );
           setRequests((prev) =>
             prev.map((r) =>
@@ -709,8 +935,8 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                     responsePayloadSizeKB,
                     isLoading: false,
                   }
-                : r
-            )
+                : r,
+            ),
           );
         } catch (error) {
           console.error('Error executing request:', req.name, error);
@@ -726,8 +952,8 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                     responsePayloadSizeKB: '0',
                     isLoading: false,
                   }
-                : r
-            )
+                : r,
+            ),
           );
         }
       }
@@ -741,12 +967,12 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const getMethodColor = (method: string) => {
     const colors = {
       GET: 'text-green-600',
-      POST: 'text-orange-600',
-      PUT: 'text-blue-600',
+      POST: 'text-blue-600',
+      PUT: 'text-orange-600',
       DELETE: 'text-red-600',
       PATCH: 'text-purple-600',
       HEAD: 'text-gray-600',
-      OPTIONS: 'text-gray-600',
+      OPTIONS: 'text-indigo-600',
     };
     return colors[method as keyof typeof colors] || 'text-gray-600';
   };
@@ -754,7 +980,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const getStatusBadge = (
     status?: number,
     responseTime?: number,
-    isLoading?: boolean
+    isLoading?: boolean,
   ) => {
     if (isLoading) {
       return (
@@ -836,8 +1062,8 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         r.status && r.status >= 200 && r.status < 300
           ? 'passed'
           : r.status
-          ? 'failed'
-          : 'skipped',
+            ? 'failed'
+            : 'skipped',
       statusCode: r.status || 0,
       responseTime: r.responseTime || 0,
       payloadSize: Number(r.responsePayloadSizeKB || 0) * 1024,
@@ -849,14 +1075,14 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
     const totalExecuted = executedRequests.length;
     const pass = executedRequests.filter(
-      (r) => r.status && r.status >= 200 && r.status < 300
+      (r) => r.status && r.status >= 200 && r.status < 300,
     ).length;
     const fail = executedRequests.filter(
-      (r) => r.status && r.status >= 400
+      (r) => r.status && r.status >= 400,
     ).length;
     const skipped = requests.filter((r) => !r.isSelected).length;
     const authApis = requests.filter(
-      (r) => r.authorizationType !== 'none'
+      (r) => r.authorizationType !== 'none',
     ).length;
 
     const responseTimes = executedRequests
@@ -869,25 +1095,28 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       responseTimes.length > 0 ? Math.min(...responseTimes) : 0;
 
     const slowest = executedRequests.find(
-      (r) => r.responseTime === maxResponseTime
+      (r) => r.responseTime === maxResponseTime,
     );
     const fastest = executedRequests.find(
-      (r) => r.responseTime === minResponseTime
+      (r) => r.responseTime === minResponseTime,
     );
 
     // Calculate most failed status code
     const failedRequests = executedRequests.filter(
-      (r) => r.status && r.status >= 400
+      (r) => r.status && r.status >= 400,
     );
-    const statusCodeCounts = failedRequests.reduce((acc, r) => {
-      if (r.status) {
-        acc[r.status] = (acc[r.status] || 0) + 1;
-      }
-      return acc;
-    }, {} as Record<number, number>);
+    const statusCodeCounts = failedRequests.reduce(
+      (acc, r) => {
+        if (r.status) {
+          acc[r.status] = (acc[r.status] || 0) + 1;
+        }
+        return acc;
+      },
+      {} as Record<number, number>,
+    );
 
     const mostFailedEntry = Object.entries(statusCodeCounts).sort(
-      ([, a], [, b]) => b - a
+      ([, a], [, b]) => b - a,
     )[0];
 
     const metrics: TestMetrics = {
@@ -964,14 +1193,97 @@ Max Response Time: ${
         <Panel defaultSize={65} minSize={30}>
           <div className='h-full flex flex-col'>
             <div className='border-b border-border p-3 flex items-center justify-between'>
-              <h2 className='text-muted-foreground text-sm'>
+              <h2 className='text-muted-foreground text-sm flex items-center gap-2'>
                 Quick Test :
                 <span className='text-lg font-semibold text-foreground ml-1'>
                   {collection.name}
                 </span>
+                <span className='text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full'>
+                  {isRunning
+                    ? `${requests.filter((r) => r.status !== undefined && r.isSelected).length}/${requests.filter((r) => r.isSelected).length} running`
+                    : `${requests.filter((r) => r.isSelected).length}/${requests.length} selected`}
+                </span>
               </h2>
 
               <div className='flex items-center gap-3'>
+                {/* Auth Status Badge */}
+                {collection.preRequestId ? (
+                  authRequestName ? (
+                    <div className='flex items-center gap-1.5 text-green-600 text-sm font-medium'>
+                      <div className='flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
+                        <CheckCircle className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
+
+                        <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
+                          Auto Auth Enabled -
+                        </span>
+
+                        <span className='text-xs text-gray-500 dark:text-gray-400'>
+                          {authRequestName.length > 15
+                            ? authRequestName.slice(0, 15) + '…'
+                            : authRequestName}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='flex items-center gap-1.5 text-blue-500 text-sm font-medium'>
+                      <svg
+                        className='w-4 h-4 animate-spin'
+                        fill='none'
+                        viewBox='0 0 24 24'
+                      >
+                        <circle
+                          className='opacity-25'
+                          cx='12'
+                          cy='12'
+                          r='10'
+                          stroke='currentColor'
+                          strokeWidth='4'
+                        />
+                        <path
+                          className='opacity-75'
+                          fill='currentColor'
+                          d='M4 12a8 8 0 018-8v8z'
+                        />
+                      </svg>
+                      Setting up auth...
+                    </div>
+                  )
+                ) : (
+                  <button
+                    onClick={() => {
+                      toast({
+                        title: 'No Auto-Auth Request',
+                        description:
+                          'Please create an Auto-Auth request in your collection',
+                        variant: 'destructive',
+                      });
+                      handleClose();
+                    }}
+                    className='flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer whitespace-nowrap'
+                  >
+                    <svg
+                      className='w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0'
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        d='M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z'
+                      />
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
+                      />
+                    </svg>
+                    <span className='text-xs font-semibold text-blue-700 dark:text-blue-400'>
+                      Setup Auto Auth
+                    </span>
+                  </button>
+                )}
                 <Select
                   value={
                     selectedEnvironment
@@ -982,15 +1294,13 @@ Max Response Time: ${
                     if (value === 'No Environment') {
                       setSelectedEnvironment(null);
                     } else {
-                      const envObject = JSON.parse(value);
-                      setSelectedEnvironment(envObject);
+                      setSelectedEnvironment(JSON.parse(value));
                     }
                   }}
                 >
                   <SelectTrigger className='w-[160px]'>
                     <SelectValue placeholder='Select environment' />
                   </SelectTrigger>
-
                   <SelectContent>
                     <SelectItem value='No Environment'>
                       No Environment
@@ -1008,6 +1318,17 @@ Max Response Time: ${
                 </Select>
               </div>
             </div>
+            {!collection.preRequestId && (
+              <div className='p-3 border-b border-border'>
+                <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start'>
+                  <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
+                  <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
+                    Without authentication, The APIs might return 401 consider
+                    adding authentication API.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className='p-3 border-b border-border'>
               <div className='relative'>
                 <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
@@ -1034,7 +1355,6 @@ Max Response Time: ${
                   >
                     {filteredRequests.map((request, index) => {
                       const displayIndex = index;
-
                       return (
                         <SortableRequestItem
                           key={request.id || `request-${displayIndex}`}
@@ -1046,12 +1366,16 @@ Max Response Time: ${
                                 r.id === request.id ||
                                 (!r.id && !request.id && i === displayIndex)
                                   ? { ...r, isSelected: !r.isSelected }
-                                  : r
-                              )
+                                  : r,
+                              ),
                             );
                           }}
                           getMethodColor={getMethodColor}
                           getStatusBadge={getStatusBadge}
+                          isAuthRequest={
+                            !!collection.preRequestId &&
+                            request.id === collection.preRequestId
+                          }
                         />
                       );
                     })}
