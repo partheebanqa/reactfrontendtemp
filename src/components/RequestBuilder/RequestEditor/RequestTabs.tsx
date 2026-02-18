@@ -64,7 +64,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
     if (request.collectionId) {
       const requestCollection = collections.find(
-        (col) => col.id === request.collectionId
+        (col) => col.id === request.collectionId,
       );
       if (requestCollection) {
         setActiveCollection(requestCollection);
@@ -77,7 +77,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   const handleCloseTab = (
     e: React.MouseEvent,
-    requestId: string | undefined
+    requestId: string | undefined,
   ) => {
     e.stopPropagation();
     if (requestId === undefined || requestId === null) return;
@@ -157,9 +157,9 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
       case 'GET':
         return 'text-green-600';
       case 'POST':
-        return 'text-yellow-600';
-      case 'PUT':
         return 'text-blue-600';
+      case 'PUT':
+        return 'text-orange-600';
       case 'DELETE':
         return 'text-red-600';
       case 'PATCH':
@@ -204,7 +204,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   if (!openedRequests.length) return null;
 
   const requestToClose = openedRequests.find(
-    (r) => r.id === pendingCloseRequestId
+    (r) => r.id === pendingCloseRequestId,
   );
 
   return (
@@ -230,7 +230,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                 >
                   <span
                     className={`text-xs font-semibold ${methodColor(
-                      request.method
+                      request.method,
                     )}`}
                   >
                     {(() => {

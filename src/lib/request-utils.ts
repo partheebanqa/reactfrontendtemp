@@ -1266,3 +1266,27 @@ export const validateBaseUrl = (url: string): boolean => {
     /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%.\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%\+.~#?&\/=]*)$/;
   return baseUrlRegex.test(url);
 };
+
+const getAuthRequestName = () => {
+  if (!preRequestId || !activeCollection?.id) return null;
+
+  const storageKeys = Object.keys(localStorage).filter((key) =>
+    key.startsWith(`extracted_var_${activeCollection.id}_`),
+  );
+
+  for (const key of storageKeys) {
+    try {
+      const data = JSON.parse(localStorage.getItem(key) || '{}');
+      if (data.requestName) return data.requestName;
+    } catch {}
+  }
+
+  const collection = collections.find((c) => c.id === activeCollection?.id);
+  const allRequests = [
+    ...(collection?.requests || []),
+    ...((collection as any)?.folders || []).flatMap(
+      (f: any) => f.requests || [],
+    ),
+  ];
+  return allRequests.find((r) => r.id === preRequestId)?.name || null;
+};

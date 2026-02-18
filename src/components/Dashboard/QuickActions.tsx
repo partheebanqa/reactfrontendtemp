@@ -39,7 +39,8 @@ export default function QuickActions() {
                   Request Builder
                 </p>
                 <p className='text-xs text-slate-500'>
-                  Create a collection of tests
+                  Start building your first API request with variables and
+                  assertions.
                 </p>
               </div>
             </div>
@@ -56,10 +57,10 @@ export default function QuickActions() {
               </div>
               <div className='text-left'>
                 <p className='text-sm font-medium text-slate-900'>
-                  New Test Suite
+                  Create Test Suite
                 </p>
                 <p className='text-xs text-slate-500'>
-                  Create a collection of tests
+                  Group your tests together for better organization and reuse.
                 </p>
               </div>
             </div>
@@ -79,7 +80,7 @@ export default function QuickActions() {
                   Create Request Chain
                 </p>
                 <p className='text-xs text-slate-500'>
-                  Link multiple API calls
+                  Connect multiple API calls to simulate end‑to‑end workflows.
                 </p>
               </div>
             </div>
@@ -96,7 +97,10 @@ export default function QuickActions() {
               </div>
               <div className='text-left'>
                 <p className='text-sm font-medium text-slate-900'>Schedule</p>
-                <p className='text-xs text-slate-500'>Set up automated runs</p>
+                <p className='text-xs text-slate-500'>
+                  {' '}
+                  Automate test runs by setting up recurring execution jobs.
+                </p>
               </div>
             </div>
           </Button>
@@ -111,7 +115,9 @@ export default function QuickActions() {
               </div>
               <div className='text-left'>
                 <p className='text-sm font-medium text-slate-900'>Executions</p>
-                <p className='text-xs text-slate-500'>Get execution results</p>
+                <p className='text-xs text-slate-500'>
+                  Check how your tests performed and see what's next.
+                </p>
               </div>
             </div>
           </Button>

@@ -29,7 +29,7 @@ import {
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
-import WelcomeImage from '../../assests/images/Welcome.webp';
+import WelcomeImage from '../../assests/images/Welcome_optra.webp';
 import { SanitizeTestRunner } from '@/components/RequestBuilder/sanitizeTest/sanitizeTest';
 import SecurityScanView from '@/components/RequestBuilder/SecurityScan/SecurityScanView';
 import SecurityScanWizard from '@/components/RequestBuilder/SecurityScan/Securityscanwizard';
@@ -338,7 +338,12 @@ const RequestBuilder = () => {
           >
             {sanitizeTestRunner.isOpen && sanitizeCollection ? (
               <div className='flex-1 w-full h-full'>
-                <SanitizeTestRunner collection={sanitizeCollection} />
+                <SanitizeTestRunner
+                  collection={sanitizeCollection}
+                  collections={collections}
+                  environments={[]}
+                  activeEnvironment={activeEnvironment}
+                />
               </div>
             ) : securityScan.isOpen && securityScan.request ? (
               <div className='flex-1 w-full h-full overflow-auto'>
@@ -533,13 +538,6 @@ const RequestBuilder = () => {
                       <h2 className='text-2xl sm:text-3xl font-bold text-slate-900 mb-4'>
                         Welcome to Optraflow.com
                       </h2>
-
-                      <p className='text-slate-600 mb-4'>
-                        your low-code platform for API testing and automation.
-                        We've set up a workspace called{' '}
-                        <strong>"My workspace"</strong> to help you get started
-                        quickly.
-                      </p>
 
                       <p className='text-slate-600 mb-4'>
                         Inside your workspace, you can:

@@ -238,7 +238,7 @@ export default function PerformanceScanView({
         setScanStatus('authRequired');
         setTimeout(() => {
           startAnalysisWithAuth();
-        }, 4000);
+        }, 8000);
       } else {
         setScanStatus('setupAuth');
       }
@@ -904,12 +904,13 @@ export default function PerformanceScanView({
                 </div>
 
                 <h3 className='text-2xl font-semibold text-gray-900 dark:text-white mb-3'>
-                  Using Configured Authentication
+                  Using Configured Authentication from the API -{' '}
+                  {getAuthRequestName() || 'Auto Auth Request'}
                 </h3>
                 <p className='text-gray-600 dark:text-gray-400 mb-8'>
                   We'll use your Auto Auth configuration to authenticate
                   requests during the performance analysis. This ensures
-                  accurate results for protected endpoints.
+                  authentication is used for protected endpoints.
                 </p>
 
                 <div className='p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-3 max-w-md mx-auto'>
@@ -934,7 +935,7 @@ export default function PerformanceScanView({
                 </h3>
                 <p className='text-gray-600 dark:text-gray-400 mb-8'>
                   Does your API require authentication headers, tokens, or
-                  credentials to access endpoints?
+                  credentials to access this endpoint?
                 </p>
 
                 <div className='space-y-3 max-w-md mx-auto'>
@@ -1040,9 +1041,8 @@ export default function PerformanceScanView({
                 <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start max-w-xl mx-auto mb-6'>
                   <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
                   <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
-                    Without authentication, the analysis may report inaccurate
-                    performance metrics for protected endpoints and miss
-                    authentication-specific optimizations.
+                    To test protected endpoints, We’ll use your Auto Auth
+                    configuration to authenticate requests during the analysis.
                   </p>
                 </div>
 

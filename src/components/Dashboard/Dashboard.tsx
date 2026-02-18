@@ -18,7 +18,7 @@ import {
 } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { navigate } from 'wouter/use-browser-location';
-import WelcomeImage from '../../assests/images/Welcome.webp';
+import WelcomeImage from '../../assests/images/Welcome_optra.webp';
 
 export interface DashboardStats {
   totalTestSuites: number;
@@ -159,13 +159,6 @@ export default function Dashboard() {
                       <h2 className='text-2xl sm:text-3xl font-bold text-slate-900 mb-4'>
                         Welcome to Optraflow.com
                       </h2>
-
-                      <p className='text-slate-600 mb-4'>
-                        your low-code platform for API testing and automation.
-                        We’ve set up a workspace called{' '}
-                        <strong>“My workspace”</strong> to help you get started
-                        quickly.
-                      </p>
 
                       <p className='text-slate-600 mb-4'>
                         Inside your workspace, you can:
