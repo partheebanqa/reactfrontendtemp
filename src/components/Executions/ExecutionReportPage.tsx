@@ -771,21 +771,32 @@ const ExecutionReportPage: React.FC = () => {
 
   const { data: reportData, isLoading } = useQuery({
     queryKey: ['execution-report', entityId, type, executionId],
-    queryFn: () => {
-      if (!entityId || !type || !executionId) return null;
-      return type === 'test_suite'
-        ? executionService?.getTestSuiteReport(
+    queryFn: async () => {
+      if (!entityId || !type || !executionId || !currentWorkspace?.id) {
+        throw new Error("Missing required parameters");
+      }
+
+      if (type === "test_suite") {
+        return executionService.getTestSuiteReport(
           entityId,
           executionId,
-          currentWorkspace!.id
-        )
-        : executionService?.getRequestChainReport(
-          entityId,
-          executionId,
-          currentWorkspace!.id
+          currentWorkspace.id
         );
+      }
+
+      return executionService.getRequestChainReport(
+        entityId,
+        executionId,
+        currentWorkspace.id
+      );
     },
-    enabled: !!entityId && !!type && !!executionId,
+
+    enabled:
+      Boolean(entityId) &&
+      Boolean(type) &&
+      Boolean(executionId) &&
+      Boolean(currentWorkspace?.id),
+
   });
 
   useEffect(() => {

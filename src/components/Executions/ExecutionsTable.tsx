@@ -99,30 +99,21 @@ export const ExecutionsTable = ({
     }
   };
 
-  const goToReport = (execution: any, environment: string) => {
+  const getReportUrl = (execution: any) => {
     const type = execution?.executionType;
+
     const entityId =
-      type === 'test_suite'
+      type === "test_suite"
         ? execution?.testSuite?.id ?? execution?.entityId
         : execution?.requestChain?.id ?? execution?.entityId;
 
-    if (!type || !entityId) {
-      console.warn('Missing type or entityId for report navigation', {
-        type,
-        entityId,
-        execution,
-      });
-      return;
-    }
+    const executionId = execution?.id;
 
-    const env = encodeURIComponent(environment || '');
-    const started = encodeURIComponent(String(execution?.startTime ?? ''));
-    const executionId = encodeURIComponent(execution?.id ?? '');
+    if (!type || !entityId || !executionId) return "#";
 
-    setLocation(
-      `/executions/report/${type}/${entityId}?executionId=${executionId}`
-    );
+    return `/executions/report/${type}/${entityId}?executionId=${executionId}`;
   };
+
 
   return (
     <Table>
@@ -267,8 +258,8 @@ export const ExecutionsTable = ({
                     execution.status === 'success'
                       ? 'active'
                       : execution.status === 'failed'
-                      ? 'destructive'
-                      : 'secondary'
+                        ? 'destructive'
+                        : 'secondary'
                   }
                 >
                   <span className='mr-1'>
@@ -317,13 +308,15 @@ export const ExecutionsTable = ({
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button
-                          size='sm'
-                          variant='outline'
-                          onClick={() => goToReport(execution, environment)}
+                        <a
+                          href={getReportUrl(execution)}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          <Eye size={14} />
-                        </Button>
+                          <Button size="sm" variant="outline">
+                            <Eye size={14} />
+                          </Button>
+                        </a>
                       </TooltipTrigger>
                       <TooltipContent>View execution details</TooltipContent>
                     </Tooltip>
