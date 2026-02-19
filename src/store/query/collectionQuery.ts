@@ -44,7 +44,9 @@ export const useCollectionQuery = (enabled = true) => {
         console.error('Collection fetch error:', error);
         collectionActions.setIsLoading(false);
         collectionActions.setError(
-          error instanceof Error ? error.message : 'Failed to fetch collections'
+          error instanceof Error
+            ? error.message
+            : 'Failed to fetch collections',
         );
         return null;
       }
@@ -85,7 +87,7 @@ export const useSetFavouriteCollectionMutation = () => {
     onSuccess: async (data, variables) => {
       collectionActions.setFavouriteCollection(
         variables.collectionId,
-        variables.IsImportant
+        variables.IsImportant,
       );
 
       await queryClient.invalidateQueries({
@@ -155,7 +157,7 @@ export const useCollectionRequestsQuery = () => {
         (collection) => {
           if (collection.id === collectionId) {
             const unsavedRequests = collection.requests.filter(
-              (req) => !req.id
+              (req) => !req.id,
             );
 
             if (unsavedRequests.length > 0) {
@@ -183,7 +185,7 @@ export const useCollectionRequestsQuery = () => {
             };
           }
           return collection;
-        }
+        },
       );
 
       collectionActions.setCollections(updatedCollection);
@@ -261,7 +263,7 @@ export const useMarkAuthRequestMutation = () => {
       requestId,
       collectionId,
     }: {
-      requestId: string;
+      requestId: any;
       collectionId: string;
     }) => {
       return await markRequestAsAuth(requestId, collectionId);

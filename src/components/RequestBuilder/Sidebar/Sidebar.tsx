@@ -485,7 +485,7 @@ const Sidebar: React.FC = () => {
     if (!selectedCollection?.id) return;
     try {
       await markAuthRequestMutation.mutateAsync({
-        requestId: '',
+        requestId: null,
         collectionId: selectedCollection.id,
       });
       setCollection(
