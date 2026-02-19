@@ -84,6 +84,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { RunSummaryCard } from './RunSummaryCard';
+import RateLimitDashboard, { RateLimitRequest, RateLimitSummary } from './RateLimitDashboard';
 
 export interface PerformanceTestProps {
   request: {
@@ -98,6 +99,112 @@ export interface PerformanceTestProps {
   onClose: () => void;
 }
 type ScanStatus = 'idle' | 'initializing' | 'scanning' | 'completed' | 'error';
+
+
+function computePercentile(values: number[], p: number) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, Math.min(sorted.length - 1, idx))];
+}
+
+function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
+  summary: RateLimitSummary;
+  requests: RateLimitRequest[];
+} {
+  const results = runResultsResponse?.results ?? [];
+  const s = runResultsResponse?.summary ?? {};
+
+  const requests: RateLimitRequest[] = results.map((r: any, idx: number) => {
+    const statusCode = Number(r.statusCode ?? r.status ?? 0);
+    const responseTime = Number(r.responseTime ?? r.latencyMs ?? 0);
+    const ttfbTime = Number(r.ttfbTime ?? r.ttfb ?? 0);
+    const size = Number(r.size ?? r.bytes ?? 0);
+
+    return {
+      id: String(r.id ?? r.requestId ?? idx),
+      url: String(r.url ?? r.requestUrl ?? ""),
+      method: String(r.method ?? "GET"),
+      statusCode,
+      responseTime,
+      size,
+      success: Boolean(r.success ?? (statusCode >= 200 && statusCode < 300)),
+      requestHeaders: (r.requestHeaders ?? {}) as any,
+      responseHeaders: (r.responseHeaders ?? {}) as any,
+      responseBody: typeof r.responseBody === "string" ? r.responseBody : JSON.stringify(r.responseBody ?? ""),
+      curlCommand: String(r.curlCommand ?? ""),
+      dnsTime: Number(r.dnsTime ?? 0),
+      tcpTime: Number(r.tcpTime ?? 0),
+      tlsTime: Number(r.tlsTime ?? 0),
+      ttfbTime,
+      timestamp: String(r.timestamp ?? r.time ?? new Date().toISOString()),
+    };
+  });
+
+  const responseTimes = requests.map((x) => x.responseTime).filter((n) => Number.isFinite(n));
+  const ttfbs = requests.map((x) => x.ttfbTime).filter((n) => Number.isFinite(n));
+
+  const startTime = String(s.startTime ?? s.startedAt ?? s.start ?? requests[0]?.timestamp ?? new Date().toISOString());
+  const endTime = String(s.endTime ?? s.endedAt ?? s.end ?? requests[requests.length - 1]?.timestamp ?? new Date().toISOString());
+
+  const totalRequests = Number(s.totalRequests ?? requests.length);
+  const successfulRequests = Number(s.successfulRequests ?? requests.filter((r) => r.success).length);
+  const failedRequests = Number(s.failedRequests ?? (totalRequests - successfulRequests));
+
+  const avgResp =
+    Number(s.avgResponseTime) ||
+    (responseTimes.reduce((a, b) => a + b, 0) / (responseTimes.length || 1));
+
+  const avgTtfb =
+    Number(s.avgTtfb) ||
+    (ttfbs.reduce((a, b) => a + b, 0) / (ttfbs.length || 1));
+
+  const minResp = Number(s.minResponseTime ?? Math.min(...(responseTimes.length ? responseTimes : [0])));
+  const maxResp = Number(s.maxResponseTime ?? Math.max(...(responseTimes.length ? responseTimes : [0])));
+
+  const p50 = Number(s.p50ResponseTime ?? computePercentile(responseTimes, 50));
+  const p90 = Number(s.p90ResponseTime ?? computePercentile(responseTimes, 90));
+  const p95 = Number(s.p95ResponseTime ?? computePercentile(responseTimes, 95));
+  const p99 = Number(s.p99ResponseTime ?? computePercentile(responseTimes, 99));
+
+  const durationSec =
+    Number(s.totalDuration) ||
+    Math.max(0, (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000);
+
+  const totalDataTransferred =
+    Number(s.totalDataTransferred) ||
+    requests.reduce((acc, r) => acc + (Number(r.size) || 0), 0);
+
+  const rps =
+    Number(s.requestsPerSecond) ||
+    (durationSec > 0 ? totalRequests / durationSec : 0);
+
+  const summary: RateLimitSummary = {
+    id: String(s.id ?? s.executionId ?? "unknown"),
+    status: String(s.status ?? "COMPLETED"),
+    startTime,
+    endTime,
+    totalRequests,
+    successfulRequests,
+    failedRequests,
+    rateLimitDetected: Boolean(s.rateLimitDetected ?? s.rateLimited ?? false),
+    rateLimitThreshold: Number(s.rateLimitThreshold ?? s.threshold ?? 0),
+    avgResponseTime: avgResp,
+    maxResponseTime: maxResp,
+    minResponseTime: minResp,
+    p50ResponseTime: p50,
+    p90ResponseTime: p90,
+    p95ResponseTime: p95,
+    p99ResponseTime: p99,
+    avgTtfb,
+    totalDataTransferred,
+    requestsPerSecond: rps,
+    throughput: Number(s.throughput ?? rps),
+    totalDuration: durationSec,
+  };
+
+  return { summary, requests };
+}
 
 export default function PerformanceTesting({
   request,
@@ -397,7 +504,7 @@ export default function PerformanceTesting({
             <div className='flex items-center gap-2 mb-1'>
               <Rocket className='w-5 h-5 text-blue-500' />
               <h2 className='text-lg font-semibold text-gray-900 dark:text-white'>
-                Performance Testing
+                Rate Limit Test
               </h2>
             </div>
             <p className='text-sm text-gray-600 dark:text-gray-400'>
@@ -467,7 +574,7 @@ export default function PerformanceTesting({
         <div className='flex-1 overflow-auto scrollbar-thin p-3'>
           <Card className='flex justify-between p-3 mb-2'>
             <div>
-              <CardTitle>Configurations</CardTitle>
+              <CardTitle>Rate Limit Configurations</CardTitle>
               <CardDescription>
                 Manage your performance test configurations
               </CardDescription>
@@ -509,7 +616,6 @@ export default function PerformanceTesting({
               {isRunFinished && (
                 <Button
                   size='sm'
-                  variant='secondary'
                   onClick={async () => {
                     setShowResults(true);
                     await refetchResults();
@@ -591,13 +697,22 @@ export default function PerformanceTesting({
             </div>
           ) : (
             <div className='space-y-4'>
-              <RunSummaryCard summary={runResultsResponse.summary} />
-              <RunResultsTable results={runResultsResponse.results} />
+              {/* <RunSummaryCard summary={runResultsResponse.summary} />
+              <RunResultsTable results={runResultsResponse.results} /> */}
+              {(() => {
+                const mapped = mapRunResultsToRateLimitDashboard(runResultsResponse);
+                return (
+                  <RateLimitDashboard
+                    summary={mapped.summary}
+                    requests={mapped.requests}
+                  />
+                );
+              })()}
             </div>
           )}
         </div>
       )}
-      ``
+
     </div>
   );
 }

@@ -374,7 +374,7 @@ const Sidebar: React.FC = () => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Link href='/help-support'>
+                    <a href='/help-support' target="_blank" rel="noopener noreferrer">
                       <Button
                         variant='outline'
                         size='icon'
@@ -382,18 +382,18 @@ const Sidebar: React.FC = () => {
                       >
                         <HelpCircle className='h-5 w-5' />
                       </Button>
-                    </Link>
+                    </a>
                   </TooltipTrigger>
                   <TooltipContent side='right'>Help</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             ) : (
-              <Link href='/help-support'>
+              <a href='/help-support' target="_blank" rel="noopener noreferrer">
                 <Button variant='outline' className='w-full justify-start'>
                   <HelpCircle className='mr-2 h-4 w-4' />
                   Help
                 </Button>
-              </Link>
+              </a>
             )}
           </div>
         </div>

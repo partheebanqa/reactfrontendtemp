@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 
 import RadipTest from "../../assests/images/RapidTest.gif";
-import Security from "../../assests/images/security.gif";
+import Security from "../../assests/images/security3.gif";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import CICD from "../../assests/images/CICD.gif";
@@ -198,7 +198,7 @@ const ProductFeatures = () => {
                     <img
                         src={features[activeIndex].image}
                         alt={features[activeIndex].title}
-                        className="w-full h-full object-cover max-h-[550px]"
+                        className="w-full h-full object-cover  rounded-tl-[20px] rounded-bl-[20px] md:rounded-l-[20px] md:rounded-r-0"
                     />
                 </div>
 
