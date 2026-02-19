@@ -29,9 +29,7 @@ import {
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
 
-/* =========================
-   Types
-========================= */
+
 
 type TestStatus = "COMPLETED" | "FAILED" | "RUNNING" | "CANCELLED" | "STOPPED" | string;
 
@@ -371,8 +369,7 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
         getExpandedRowModel: getExpandedRowModel(),
     });
 
-    // ✅ keep your existing UI JSX exactly as-is below
-    // Only change: remove const testData usage and use props summary/requests (already done)
+
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-gray-100 rounded-lg overflow-hidden">
@@ -833,7 +830,6 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                                 </div>
                             </div>
                         )}
-
                         <Dialog.Close asChild>
                             <Button className="mt-6 w-full">Close</Button>
                         </Dialog.Close>
