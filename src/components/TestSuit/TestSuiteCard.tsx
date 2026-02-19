@@ -304,98 +304,101 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               <TooltipContent>Edit Suite</TooltipContent>
             </Tooltip>
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenu>
+            <TooltipProvider>
+              <DropdownMenu>
+                {/* Trigger with Tooltip */}
+                <Tooltip>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant='ghost'
-                      size='icon'
-                      className='text-muted-foreground hover:text-foreground'
-                    >
-                      <EllipsisVertical className='w-4 h-4' />
-                    </Button>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='ghost'
+                        size='icon'
+                        className='text-muted-foreground hover:text-foreground'
+                      >
+                        <EllipsisVertical className='w-4 h-4' />
+                      </Button>
+                    </TooltipTrigger>
                   </DropdownMenuTrigger>
 
-                  <DropdownMenuContent
-                    align='end'
-                    className='
-              bg-white dark:bg-gray-900
-              border border-gray-200 dark:border-gray-700
-              shadow-lg
-              rounded-lg
-              min-w-[200px]
-              py-1
-            '
+                  <TooltipContent side='top'>Suite Actions</TooltipContent>
+                </Tooltip>
+
+                {/* Menu */}
+                <DropdownMenuContent
+                  align='end'
+                  className='
+      bg-white dark:bg-gray-900
+      border border-gray-200 dark:border-gray-700
+      shadow-lg
+      rounded-lg
+      min-w-[200px]
+      py-1
+    '
+                >
+                  {/* Duplicate */}
+                  <button
+                    onClick={() => onClone(suite.id)}
+                    className='flex items-center w-full px-4 py-2 text-sm
+        hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
-                    {/* Duplicate */}
-                    <button
-                      onClick={() => onClone(suite.id)}
-                      className='flex items-center w-full px-4 py-2 text-sm
-                hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <CopyPlus className='h-4 w-4 mr-2' />
-                      Duplicate
-                    </button>
+                    <CopyPlus className='h-4 w-4 mr-2' />
+                    Duplicate
+                  </button>
 
-                    <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                  <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
 
-                    {/* CI/CD */}
-                    <button
-                      className='flex items-center w-full px-4 py-2 text-sm
-                hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <Workflow className='h-4 w-4 mr-2' />
-                      CI/CD
-                    </button>
+                  {/* CI/CD */}
+                  <button
+                    className='flex items-center w-full px-4 py-2 text-sm
+        hover:bg-gray-100 dark:hover:bg-gray-700'
+                  >
+                    <Workflow className='h-4 w-4 mr-2' />
+                    CI/CD
+                  </button>
 
-                    {/* Reports */}
-                    <button
-                      onClick={handleClickReport}
-                      className='flex items-center w-full px-4 py-2 text-sm
-                hover:bg-gray-100 dark:hover:bg-gray-700'
-                    >
-                      <ChartNoAxesCombined className='h-4 w-4 mr-2' />
-                      Reports
-                    </button>
+                  {/* Reports */}
+                  <button
+                    onClick={handleClickReport}
+                    className='flex items-center w-full px-4 py-2 text-sm
+        hover:bg-gray-100 dark:hover:bg-gray-700'
+                  >
+                    <ChartNoAxesCombined className='h-4 w-4 mr-2' />
+                    Reports
+                  </button>
 
-                    <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                  <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
 
-                    {/* Delete */}
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <button
-                          className='flex items-center w-full px-4 py-2 text-sm
-                    text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        >
-                          <Trash2 className='h-4 w-4 mr-2' />
+                  {/* Delete */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <button
+                        className='flex items-center w-full px-4 py-2 text-sm
+            text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      >
+                        <Trash2 className='h-4 w-4 mr-2' />
+                        Delete
+                      </button>
+                    </AlertDialogTrigger>
+
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this chain?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete “{suite.name}”. This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <Button onClick={() => onDelete(suite.id)}>
                           Delete
-                        </button>
-                      </AlertDialogTrigger>
-
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Delete this chain?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete “{suite.name}”. This
-                            action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <Button onClick={() => onDelete(suite.id)}>
-                            Delete
-                          </Button>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TooltipTrigger>
-              <TooltipContent>More</TooltipContent>
-            </Tooltip>
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TooltipProvider>
           </TooltipProvider>
         </div>
       </div>

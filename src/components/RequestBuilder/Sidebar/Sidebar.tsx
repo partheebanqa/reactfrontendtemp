@@ -1160,25 +1160,27 @@ const Sidebar: React.FC = () => {
             </div>
 
             <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
-              <button
-                onMouseDown={(e) => e.stopPropagation()}
-                className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                onClick={(e) => {
-                  e.stopPropagation();
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  setMenuPosition({
-                    top: rect.bottom,
-                    left: rect.left,
-                    anchorTop: rect.top,
-                  });
-                  setSelectedCollection(parentCollection);
-                  setSelectedFolder(folder);
-                  setShowMenu(`folder-${folder.id}`);
-                }}
-                aria-label='Folder options'
-              >
-                <MoreVertical className='h-3 w-3' />
-              </button>
+              <TooltipContainer text='Folder Actions'>
+                <button
+                  onMouseDown={(e) => e.stopPropagation()}
+                  className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setMenuPosition({
+                      top: rect.bottom,
+                      left: rect.left,
+                      anchorTop: rect.top,
+                    });
+                    setSelectedCollection(parentCollection);
+                    setSelectedFolder(folder);
+                    setShowMenu(`folder-${folder.id}`);
+                  }}
+                  aria-label='Folder options'
+                >
+                  <MoreVertical className='h-3 w-3' />
+                </button>
+              </TooltipContainer>
             </div>
           </div>
         </SortableFolder>
@@ -1255,32 +1257,34 @@ const Sidebar: React.FC = () => {
                       </div>
 
                       <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                        <button
-                          onMouseDown={(e) => e.stopPropagation()}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const rect = (
-                              e.currentTarget as HTMLButtonElement
-                            ).getBoundingClientRect();
-                            setMenuPosition({
-                              top: rect.bottom,
-                              left: rect.left,
-                              anchorTop: rect.top,
-                            });
-                            setSelectedRequest(request);
-                            setSelectedCollection(parentCollection);
-                            setSelectedFolder(folder);
-                            setRequestId(request.id || '');
-                            setRequestIndex(index);
-                            setShowMenu(
-                              `request-${request.id || `${folder.id}-${index}`}`,
-                            );
-                          }}
-                          className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                          aria-label='More options'
-                        >
-                          <MoreVertical className='h-3 w-3' />
-                        </button>
+                        <TooltipContainer text='Request Actions'>
+                          <button
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const rect = (
+                                e.currentTarget as HTMLButtonElement
+                              ).getBoundingClientRect();
+                              setMenuPosition({
+                                top: rect.bottom,
+                                left: rect.left,
+                                anchorTop: rect.top,
+                              });
+                              setSelectedRequest(request);
+                              setSelectedCollection(parentCollection);
+                              setSelectedFolder(folder);
+                              setRequestId(request.id || '');
+                              setRequestIndex(index);
+                              setShowMenu(
+                                `request-${request.id || `${folder.id}-${index}`}`,
+                              );
+                            }}
+                            className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                            aria-label='More options'
+                          >
+                            <MoreVertical className='h-3 w-3' />
+                          </button>
+                        </TooltipContainer>
                       </div>
                     </div>
                   </SortableRequest>
@@ -1440,25 +1444,27 @@ const Sidebar: React.FC = () => {
                                   </TooltipContainer>
                                 )}
                                 <div className='opacity-0 group-hover:opacity-100 transition-opacity'>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      const rect = (
-                                        e.currentTarget as HTMLButtonElement
-                                      ).getBoundingClientRect();
-                                      setMenuPosition({
-                                        top: rect.bottom,
-                                        left: rect.left,
-                                        anchorTop: rect.top,
-                                      });
-                                      setSelectedCollection(collection);
-                                      setShowMenu(collection.id);
-                                    }}
-                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                    aria-label='More options'
-                                  >
-                                    <MoreVertical className='h-3 w-3' />
-                                  </button>
+                                  <TooltipContainer text='Collection Actions'>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const rect = (
+                                          e.currentTarget as HTMLButtonElement
+                                        ).getBoundingClientRect();
+                                        setMenuPosition({
+                                          top: rect.bottom,
+                                          left: rect.left,
+                                          anchorTop: rect.top,
+                                        });
+                                        setSelectedCollection(collection);
+                                        setShowMenu(collection.id);
+                                      }}
+                                      className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                      aria-label='More options'
+                                    >
+                                      <MoreVertical className='h-3 w-3' />
+                                    </button>
+                                  </TooltipContainer>
                                 </div>
                               </div>
                             </div>
@@ -1544,34 +1550,38 @@ const Sidebar: React.FC = () => {
                                             </TooltipProvider>
                                           </div>
                                           <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                                            <button
-                                              draggable={false}
-                                              onMouseDown={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                const rect = (
-                                                  e.currentTarget as HTMLButtonElement
-                                                ).getBoundingClientRect();
-                                                setMenuPosition({
-                                                  top: rect.bottom,
-                                                  left: rect.left,
-                                                  anchorTop: rect.top,
-                                                });
-                                                setSelectedRequest(request);
-                                                setSelectedCollection(
-                                                  collection,
-                                                );
-                                                setRequestId(request.id || '');
-                                                setShowMenu(
-                                                  `request-${request.id}`,
-                                                );
-                                              }}
-                                              className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                            >
-                                              <MoreVertical className='h-3 w-3' />
-                                            </button>
+                                            <TooltipContainer text='Request Actions'>
+                                              <button
+                                                draggable={false}
+                                                onMouseDown={(e) =>
+                                                  e.stopPropagation()
+                                                }
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const rect = (
+                                                    e.currentTarget as HTMLButtonElement
+                                                  ).getBoundingClientRect();
+                                                  setMenuPosition({
+                                                    top: rect.bottom,
+                                                    left: rect.left,
+                                                    anchorTop: rect.top,
+                                                  });
+                                                  setSelectedRequest(request);
+                                                  setSelectedCollection(
+                                                    collection,
+                                                  );
+                                                  setRequestId(
+                                                    request.id || '',
+                                                  );
+                                                  setShowMenu(
+                                                    `request-${request.id}`,
+                                                  );
+                                                }}
+                                                className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                              >
+                                                <MoreVertical className='h-3 w-3' />
+                                              </button>
+                                            </TooltipContainer>
                                           </div>
                                         </div>
                                       </SortableRequest>
@@ -2254,25 +2264,22 @@ const Sidebar: React.FC = () => {
           open={showMarkAuthDialog}
           onOpenChange={setShowMarkAuthDialog}
         >
-          <AlertDialogContent className='max-w-3xl'>
+          <AlertDialogContent className='max-w-3xl bg-[#0d1117] border border-gray-700 text-white'>
             <AlertDialogHeader>
-              <AlertDialogTitle>
+              <AlertDialogTitle className='text-cyan-400 text-xl'>
                 Set "{selectedRequest?.name}" as Auto Auth?
               </AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogDescription className='text-gray-400'>
                 The token extracted from this API will be used for all requests
                 in this collection.
               </AlertDialogDescription>
             </AlertDialogHeader>
-
-            {/* WHY USE AUTO AUTH */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
-              {/* Without Auto Auth */}
-              <div className='border border-red-500/30 bg-red-500/5 rounded-xl p-4'>
-                <h3 className='text-sm font-semibold text-red-500 mb-3'>
+              <div className='border border-red-500/30 bg-red-500/10 rounded-xl p-4'>
+                <h3 className='text-sm font-semibold text-red-400 mb-3'>
                   ● WITHOUT AUTO AUTH
                 </h3>
-                <ul className='space-y-2 text-sm text-muted-foreground'>
+                <ul className='space-y-2 text-sm text-gray-400'>
                   <li>1️⃣ Run login API</li>
                   <li>2️⃣ Copy token from response</li>
                   <li>3️⃣ Paste into each request header</li>
@@ -2280,47 +2287,50 @@ const Sidebar: React.FC = () => {
                 </ul>
               </div>
 
-              {/* With Auto Auth */}
-              <div className='border border-emerald-500/30 bg-emerald-500/5 rounded-xl p-4'>
-                <h3 className='text-sm font-semibold text-emerald-500 mb-3'>
+              <div className='border border-emerald-500/30 bg-emerald-500/10 rounded-xl p-4'>
+                <h3 className='text-sm font-semibold text-emerald-400 mb-3'>
                   ● WITH AUTO AUTH
                 </h3>
-                <ul className='space-y-2 text-sm text-muted-foreground'>
+                <ul className='space-y-2 text-sm text-gray-400'>
                   <li>✔ Run any API in the collection</li>
                   <li>✔ Token is fetched & injected automatically</li>
                 </ul>
-
-                <div className='mt-3 text-xs bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full w-fit'>
+                <div className='mt-3 text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-full w-fit border border-emerald-500/30'>
                   Saves minutes every session
                 </div>
               </div>
             </div>
 
-            {/* HOW TO ENABLE */}
             <div className='mt-6'>
-              <h4 className='text-sm font-semibold mb-4'>
+              <h4 className='text-sm font-semibold mb-4 text-cyan-400'>
                 HOW TO ENABLE IT — 3 STEPS
               </h4>
 
               <div className='space-y-3 text-sm'>
-                <div className='border rounded-lg p-3'>
-                  <p className='font-medium'>Step 1: Find your Login Request</p>
-                  <p className='text-muted-foreground text-xs mt-1'>
+                <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
+                  <p className='font-medium text-white'>
+                    Step 1: Find your Login Request
+                  </p>
+                  <p className='text-gray-400 text-xs mt-1'>
                     Open the API request that handles login and returns a token.
                   </p>
                 </div>
 
-                <div className='border rounded-lg p-3'>
-                  <p className='font-medium'>Step 2: Set a Token Extraction</p>
-                  <p className='text-muted-foreground text-xs mt-1'>
+                <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
+                  <p className='font-medium text-white'>
+                    Step 2: Set a Token Extraction
+                  </p>
+                  <p className='text-gray-400 text-xs mt-1'>
                     Extract the token from response body and store it as a
                     variable.
                   </p>
                 </div>
 
-                <div className='border rounded-lg p-3'>
-                  <p className='font-medium'>Step 3: Enable Auto Auth</p>
-                  <p className='text-muted-foreground text-xs mt-1'>
+                <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
+                  <p className='font-medium text-white'>
+                    Step 3: Enable Auto Auth
+                  </p>
+                  <p className='text-gray-400 text-xs mt-1'>
                     Mark this request as Auto Auth to apply token automatically.
                   </p>
                 </div>
@@ -2328,12 +2338,15 @@ const Sidebar: React.FC = () => {
             </div>
 
             <AlertDialogFooter className='mt-6'>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel className='bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'>
+                Cancel
+              </AlertDialogCancel>
 
               {/* Condition 1: No extraction set */}
               {selectedRequest &&
                 getAutoAuthState(selectedRequest) === 'no-extraction' && (
                   <Button
+                    className='bg-cyan-500 hover:bg-cyan-400 text-black font-semibold'
                     onClick={() => {
                       if (selectedRequest && selectedCollection) {
                         selectRequest(selectedRequest, selectedCollection);
@@ -2350,6 +2363,7 @@ const Sidebar: React.FC = () => {
               {selectedRequest &&
                 getAutoAuthState(selectedRequest) === 'has-extraction' && (
                   <Button
+                    className='bg-cyan-500 hover:bg-cyan-400 text-black font-semibold'
                     onClick={() =>
                       selectedRequest && handleMarkAuth(selectedRequest)
                     }
@@ -2362,7 +2376,11 @@ const Sidebar: React.FC = () => {
               {/* Condition 3: Already the auth request */}
               {selectedRequest &&
                 getAutoAuthState(selectedRequest) === 'is-auth' && (
-                  <Button onClick={handleRemoveAuth}>
+                  <Button
+                    variant='destructive'
+                    className='bg-red-600 hover:bg-red-500'
+                    onClick={handleRemoveAuth}
+                  >
                     <Trash2 className='h-4 w-4 mr-2' />
                     Remove Auto Auth
                   </Button>

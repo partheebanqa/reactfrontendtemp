@@ -13,6 +13,7 @@ import {
   AlertCircle,
   X,
   Wand2,
+  FlaskConical,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -1178,7 +1179,8 @@ export function ResponseExplorer({
               onClick={() => setShowAssertionUI(true)}
               className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
             >
-              <CheckCircle className='w-4 h-4' />
+              <FlaskConical className='w-4 h-4' />
+
               <span>Manage Assertions</span>
             </button>
 
