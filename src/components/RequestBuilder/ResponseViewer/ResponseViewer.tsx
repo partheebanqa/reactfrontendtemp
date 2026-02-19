@@ -28,6 +28,7 @@ import {
 import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
 import { useCollection } from '@/hooks/useCollection';
 import { collectionActions } from '@/store/collectionStore';
+import { Button } from '@/components/ui/button';
 
 interface JsonNode {
   key: string;
@@ -851,7 +852,7 @@ const ResponseViewer = ({
                 onClick={(e) =>
                   handleAddAssertionClick(node.path, node.value, e)
                 }
-                className='px-1.5 py-0.5 text-xs font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors'
+                className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
               >
                 + Assert
               </button>
@@ -1598,7 +1599,7 @@ const ResponseViewer = ({
               >
                 Cancel
               </button>
-              <button
+              <Button
                 onClick={() => {
                   const transform = (
                     document.getElementById('transform') as HTMLInputElement
@@ -1608,10 +1609,9 @@ const ResponseViewer = ({
                   }
                 }}
                 disabled={!variableName}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 Extract Variable
-              </button>
+              </Button>
             </div>
           </div>
         </div>

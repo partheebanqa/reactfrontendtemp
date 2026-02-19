@@ -318,6 +318,21 @@ const Sidebar: React.FC = () => {
     setMenuPosition(null);
   };
 
+  const getAutoAuthState = (
+    request: CollectionRequest,
+  ): 'no-extraction' | 'has-extraction' | 'is-auth' => {
+    if (!request.id || !request.collectionId) return 'no-extraction';
+
+    // Condition 3: already set as auth request
+    if (isAuthRequest(request.id, request.collectionId)) return 'is-auth';
+
+    // Condition 2: extraction is configured and has valid token
+    if (hasExtractedVariables(request)) return 'has-extraction';
+
+    // Condition 1: no extraction set
+    return 'no-extraction';
+  };
+
   const handleOpenPerformanceTesting = (request: CollectionRequest) => {
     collectionActions.openPerformanceTesting(request);
     setShowMenu(null);
@@ -461,6 +476,35 @@ const Sidebar: React.FC = () => {
       toast({
         title: 'Error',
         description: 'Failed to mark request for auth. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleRemoveAuth = async () => {
+    if (!selectedCollection?.id) return;
+    try {
+      await markAuthRequestMutation.mutateAsync({
+        requestId: '',
+        collectionId: selectedCollection.id,
+      });
+      setCollection(
+        collections.map((col) =>
+          col.id === selectedCollection.id
+            ? { ...col, preRequestId: undefined }
+            : col,
+        ),
+      );
+      toast({
+        title: 'Auto Auth removed',
+        description: 'Auto Auth has been disabled for this collection.',
+        variant: 'success',
+      });
+      setShowMarkAuthDialog(false);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to remove Auto Auth. Please try again.',
         variant: 'destructive',
       });
     }
@@ -1797,48 +1841,39 @@ const Sidebar: React.FC = () => {
                       Duplicate
                     </button>
                     <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-
                     {selectedRequest.method === 'POST' && (
                       <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div>
-                                <button
-                                  onClick={() => {
-                                    if (
-                                      hasExtractedVariables(selectedRequest)
-                                    ) {
-                                      setShowMarkAuthDialog(true);
-                                      setShowMenu(null);
-                                      setMenuPosition(null);
-                                    }
-                                  }}
-                                  disabled={
-                                    !hasExtractedVariables(selectedRequest)
-                                  }
-                                  className={`flex items-center w-full px-4 py-1 text-sm text-left ${
-                                    hasExtractedVariables(selectedRequest)
-                                      ? 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                                      : 'opacity-50 cursor-not-allowed'
-                                  }`}
-                                >
-                                  <KeyRound className='h-4 w-4 mr-2' />
-                                  Set Auto Auth
-                                </button>
-                              </div>
-                            </TooltipTrigger>
-                            {!hasExtractedVariables(selectedRequest) && (
-                              <TooltipContent side='right'>
-                                <p className='text-xs'>
-                                  Extract a valid Bearer token
-                                  <br />
-                                  to enable Auto Auth for this collection.
-                                </p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        {getAutoAuthState(selectedRequest) === 'is-auth' ? (
+                          <button
+                            onClick={() => {
+                              setShowMarkAuthDialog(true);
+                              setShowMenu(null);
+                              setMenuPosition(null);
+                            }}
+                            className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                          >
+                            <KeyRound className='h-4 w-4 mr-2' />
+                            Remove Auto Auth
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setShowMarkAuthDialog(true);
+                              setShowMenu(null);
+                              setMenuPosition(null);
+                            }}
+                            className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
+                          >
+                            <div className='flex items-center'>
+                              <KeyRound className='h-4 w-4 mr-2' />
+                              Set Auto Auth
+                            </div>
+
+                            <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'>
+                              Setup needed
+                            </span>
+                          </button>
+                        )}
                         <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
                       </>
                     )}
@@ -1855,8 +1890,6 @@ const Sidebar: React.FC = () => {
                       </span>
                     </button>
 
-                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-
                     <button
                       onClick={() =>
                         handleOpenPerformanceScanning(selectedRequest)
@@ -1871,7 +1904,6 @@ const Sidebar: React.FC = () => {
                         </span>
                       </span>
                     </button>
-                    <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
 
                     <button
                       onClick={() =>
@@ -2216,37 +2248,128 @@ const Sidebar: React.FC = () => {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-
-          <AlertDialog
-            open={showMarkAuthDialog}
-            onOpenChange={setShowMarkAuthDialog}
-          >
-            <AlertDialogTrigger asChild></AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  Set "{selectedRequest?.name}" as a pre-request API?
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  The token extracted from this API will be used for all
-                  requests in this collection.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <Button
-                  onClick={() => {
-                    if (selectedRequest) {
-                      handleMarkAuth(selectedRequest);
-                    }
-                  }}
-                >
-                  Enable Pre-request
-                </Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
+
+        <AlertDialog
+          open={showMarkAuthDialog}
+          onOpenChange={setShowMarkAuthDialog}
+        >
+          <AlertDialogContent className='max-w-3xl'>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Set "{selectedRequest?.name}" as Auto Auth?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                The token extracted from this API will be used for all requests
+                in this collection.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+
+            {/* WHY USE AUTO AUTH */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 mt-4'>
+              {/* Without Auto Auth */}
+              <div className='border border-red-500/30 bg-red-500/5 rounded-xl p-4'>
+                <h3 className='text-sm font-semibold text-red-500 mb-3'>
+                  ● WITHOUT AUTO AUTH
+                </h3>
+                <ul className='space-y-2 text-sm text-muted-foreground'>
+                  <li>1️⃣ Run login API</li>
+                  <li>2️⃣ Copy token from response</li>
+                  <li>3️⃣ Paste into each request header</li>
+                  <li>4️⃣ Repeat every time token expires</li>
+                </ul>
+              </div>
+
+              {/* With Auto Auth */}
+              <div className='border border-emerald-500/30 bg-emerald-500/5 rounded-xl p-4'>
+                <h3 className='text-sm font-semibold text-emerald-500 mb-3'>
+                  ● WITH AUTO AUTH
+                </h3>
+                <ul className='space-y-2 text-sm text-muted-foreground'>
+                  <li>✔ Run any API in the collection</li>
+                  <li>✔ Token is fetched & injected automatically</li>
+                </ul>
+
+                <div className='mt-3 text-xs bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full w-fit'>
+                  Saves minutes every session
+                </div>
+              </div>
+            </div>
+
+            {/* HOW TO ENABLE */}
+            <div className='mt-6'>
+              <h4 className='text-sm font-semibold mb-4'>
+                HOW TO ENABLE IT — 3 STEPS
+              </h4>
+
+              <div className='space-y-3 text-sm'>
+                <div className='border rounded-lg p-3'>
+                  <p className='font-medium'>Step 1: Find your Login Request</p>
+                  <p className='text-muted-foreground text-xs mt-1'>
+                    Open the API request that handles login and returns a token.
+                  </p>
+                </div>
+
+                <div className='border rounded-lg p-3'>
+                  <p className='font-medium'>Step 2: Set a Token Extraction</p>
+                  <p className='text-muted-foreground text-xs mt-1'>
+                    Extract the token from response body and store it as a
+                    variable.
+                  </p>
+                </div>
+
+                <div className='border rounded-lg p-3'>
+                  <p className='font-medium'>Step 3: Enable Auto Auth</p>
+                  <p className='text-muted-foreground text-xs mt-1'>
+                    Mark this request as Auto Auth to apply token automatically.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <AlertDialogFooter className='mt-6'>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+
+              {/* Condition 1: No extraction set */}
+              {selectedRequest &&
+                getAutoAuthState(selectedRequest) === 'no-extraction' && (
+                  <Button
+                    onClick={() => {
+                      if (selectedRequest && selectedCollection) {
+                        selectRequest(selectedRequest, selectedCollection);
+                      }
+                      setShowMarkAuthDialog(false);
+                    }}
+                  >
+                    <KeyRound className='h-4 w-4 mr-2' />
+                    Extract Token
+                  </Button>
+                )}
+
+              {/* Condition 2: Extraction set, not yet auth */}
+              {selectedRequest &&
+                getAutoAuthState(selectedRequest) === 'has-extraction' && (
+                  <Button
+                    onClick={() =>
+                      selectedRequest && handleMarkAuth(selectedRequest)
+                    }
+                  >
+                    <KeyRound className='h-4 w-4 mr-2' />
+                    Enable Auto Auth
+                  </Button>
+                )}
+
+              {/* Condition 3: Already the auth request */}
+              {selectedRequest &&
+                getAutoAuthState(selectedRequest) === 'is-auth' && (
+                  <Button onClick={handleRemoveAuth}>
+                    <Trash2 className='h-4 w-4 mr-2' />
+                    Remove Auto Auth
+                  </Button>
+                )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <DragOverlay>
           {activeDragItem ? (
