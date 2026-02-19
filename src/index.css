@@ -145,6 +145,66 @@
   --sidebar-ring: hsl(270, 80%, 50%);
 }
 
+.monochrome {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(0, 0%, 4%);
+  --muted: hsl(0, 0%, 94%);
+  --muted-foreground: hsl(0, 0%, 40%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(0, 0%, 4%);
+  --card: hsl(0, 0%, 98%);
+  --card-foreground: hsl(0, 0%, 4%);
+  --border: hsl(0, 0%, 85%);
+  --input: hsl(0, 0%, 85%);
+  --primary: hsl(0, 0%, 9%);
+  --primary-foreground: hsl(0, 0%, 98%);
+  --secondary: hsl(0, 0%, 94%);
+  --secondary-foreground: hsl(0, 0%, 9%);
+  --accent: hsl(0, 0%, 90%);
+  --accent-foreground: hsl(0, 0%, 9%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(0, 0%, 9%);
+  --sidebar-background: hsl(0, 0%, 96%);
+  --sidebar-foreground: hsl(0, 0%, 20%);
+  --sidebar-primary: hsl(0, 0%, 9%);
+  --sidebar-primary-foreground: hsl(0, 0%, 98%);
+  --sidebar-accent: hsl(0, 0%, 90%);
+  --sidebar-accent-foreground: hsl(0, 0%, 9%);
+  --sidebar-border: hsl(0, 0%, 85%);
+  --sidebar-ring: hsl(0, 0%, 9%);
+}
+
+.monochrome.dark {
+  --background: hsl(0, 0%, 6%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(0, 0%, 14%);
+  --muted-foreground: hsl(0, 0%, 60%);
+  --popover: hsl(0, 0%, 8%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(0, 0%, 10%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(0, 0%, 20%);
+  --input: hsl(0, 0%, 18%);
+  --primary: hsl(0, 0%, 98%);
+  --primary-foreground: hsl(0, 0%, 6%);
+  --secondary: hsl(0, 0%, 16%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(0, 0%, 18%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62%, 40%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(0, 0%, 70%);
+  --sidebar-background: hsl(0, 0%, 8%);
+  --sidebar-foreground: hsl(0, 0%, 90%);
+  --sidebar-primary: hsl(0, 0%, 98%);
+  --sidebar-primary-foreground: hsl(0, 0%, 6%);
+  --sidebar-accent: hsl(0, 0%, 16%);
+  --sidebar-accent-foreground: hsl(0, 0%, 98%);
+  --sidebar-border: hsl(0, 0%, 20%);
+  --sidebar-ring: hsl(0, 0%, 70%);
+}
+
 @layer base {
   * {
     @apply border-border;

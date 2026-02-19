@@ -28,6 +28,13 @@ import {
 import ApiAssertionInterface from '../../Shared/Assertion/ApiAssertionInterface';
 import { useCollection } from '@/hooks/useCollection';
 import { collectionActions } from '@/store/collectionStore';
+import { Button } from '@/components/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface JsonNode {
   key: string;
@@ -851,7 +858,7 @@ const ResponseViewer = ({
                 onClick={(e) =>
                   handleAddAssertionClick(node.path, node.value, e)
                 }
-                className='px-1.5 py-0.5 text-xs font-medium text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded transition-colors'
+                className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
               >
                 + Assert
               </button>
@@ -1113,22 +1120,44 @@ const ResponseViewer = ({
       <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
         <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
           <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                  activeTab === tab.id
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                }`}
-              >
-                <span>{tab.label}</span>
-                {tab.hasIndicator && (
-                  <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
-                )}
-              </button>
-            ))}
+            <TooltipProvider>
+              {tabs.map((tab) => {
+                const isTooltipTab =
+                  tab.id === 'test-results' || tab.id === 'schema';
+
+                const tooltipText =
+                  tab.id === 'test-results'
+                    ? 'Assertion results'
+                    : tab.id === 'schema'
+                      ? 'Schema comparison results'
+                      : '';
+
+                const button = (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
+                      activeTab === tab.id
+                        ? 'border-blue-600 text-blue-600'
+                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    {tab.hasIndicator && (
+                      <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
+                    )}
+                  </button>
+                );
+
+                if (!isTooltipTab) return button;
+                return (
+                  <Tooltip key={tab.id}>
+                    <TooltipTrigger asChild>{button}</TooltipTrigger>
+                    <TooltipContent>{tooltipText}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </TooltipProvider>
           </nav>
 
           <div className='px-4'>
@@ -1151,7 +1180,7 @@ const ResponseViewer = ({
               className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200'
             >
               <FlaskConical className='w-4 h-4' />
-              <span>Assertions</span>
+              <span>Manage Assertions</span>
             </button>
           </div>
 
@@ -1598,7 +1627,7 @@ const ResponseViewer = ({
               >
                 Cancel
               </button>
-              <button
+              <Button
                 onClick={() => {
                   const transform = (
                     document.getElementById('transform') as HTMLInputElement
@@ -1608,10 +1637,9 @@ const ResponseViewer = ({
                   }
                 }}
                 disabled={!variableName}
-                className='px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
               >
                 Extract Variable
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -698,90 +698,96 @@ export function RequestChainsList({
                           <TooltipContent>Edit Chain</TooltipContent>
                         </Tooltip>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <DropdownMenu>
+                        <TooltipProvider>
+                          <DropdownMenu>
+                            <Tooltip>
                               <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant='ghost'
-                                  size='icon'
-                                  className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
-                                >
-                                  <EllipsisVertical className='w-4 h-4' />
-                                </Button>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant='ghost'
+                                    size='icon'
+                                    className='h-8 w-8 p-0 text-muted-foreground hover:text-foreground'
+                                  >
+                                    <EllipsisVertical className='w-4 h-4' />
+                                  </Button>
+                                </TooltipTrigger>
                               </DropdownMenuTrigger>
 
-                              <DropdownMenuContent
-                                align='end'
-                                className='
-          bg-white dark:bg-gray-900
-          border border-gray-200 dark:border-gray-700
-          shadow-lg
-          rounded-lg
-          min-w-[180px]
-          py-1
-        '
+                              <TooltipContent side='top'>
+                                Chain Actions
+                              </TooltipContent>
+                            </Tooltip>
+
+                            {/* Menu Content */}
+                            <DropdownMenuContent
+                              align='end'
+                              className='
+        bg-white dark:bg-gray-900
+        border border-gray-200 dark:border-gray-700
+        shadow-lg
+        rounded-lg
+        min-w-[180px]
+        py-1
+      '
+                            >
+                              <DropdownMenuItem
+                                onClick={() => onCloneChain(chain.id)}
+                                className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
                               >
-                                {/* Clone */}
-                                <DropdownMenuItem
-                                  onClick={() => onCloneChain(chain.id)}
-                                  className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
-                                >
-                                  <CopyPlus className='w-4 h-4 mr-2' />{' '}
-                                  Duplicate
-                                </DropdownMenuItem>
+                                <CopyPlus className='w-4 h-4 mr-2' />
+                                Duplicate
+                              </DropdownMenuItem>
 
-                                <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                              <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
 
-                                {/* Reports */}
-                                <DropdownMenuItem
-                                  onClick={() => handleClickReport(chain.id)}
-                                  className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
-                                >
-                                  <ChartNoAxesCombined className='w-4 h-4 mr-2' />{' '}
-                                  Reports
-                                </DropdownMenuItem>
+                              {/* Reports */}
+                              <DropdownMenuItem
+                                onClick={() => handleClickReport(chain.id)}
+                                className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
+                              >
+                                <ChartNoAxesCombined className='w-4 h-4 mr-2' />
+                                Reports
+                              </DropdownMenuItem>
 
-                                <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                              <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
 
-                                {/* Delete */}
-                                <AlertDialog>
-                                  <AlertDialogTrigger asChild>
-                                    <button className='flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'>
-                                      <Trash2 className='w-4 h-4 mr-2' /> Delete
-                                    </button>
-                                  </AlertDialogTrigger>
+                              {/* Delete with AlertDialog */}
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <button className='flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'>
+                                    <Trash2 className='w-4 h-4 mr-2' />
+                                    Delete
+                                  </button>
+                                </AlertDialogTrigger>
 
-                                  <AlertDialogContent className='max-w-md'>
-                                    <AlertDialogHeader>
-                                      <AlertDialogTitle>
-                                        Delete this chain?
-                                      </AlertDialogTitle>
-                                      <AlertDialogDescription>
-                                        This will permanently delete "
-                                        {chain.name}". This action cannot be
-                                        undone.
-                                      </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                      <AlertDialogCancel>
-                                        Cancel
-                                      </AlertDialogCancel>
-                                      <Button
-                                        onClick={() => onDeleteChain(chain.id)}
-                                        variant='destructive'
-                                      >
-                                        Delete
-                                      </Button>
-                                    </AlertDialogFooter>
-                                  </AlertDialogContent>
-                                </AlertDialog>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TooltipTrigger>
+                                <AlertDialogContent className='max-w-md'>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>
+                                      Delete this chain?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      This will permanently delete "{chain.name}
+                                      ". This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
 
-                          <TooltipContent>More</TooltipContent>
-                        </Tooltip>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>
+                                      Cancel
+                                    </AlertDialogCancel>
+
+                                    <Button
+                                      variant='destructive'
+                                      onClick={() => onDeleteChain(chain.id)}
+                                    >
+                                      Delete
+                                    </Button>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TooltipProvider>
                       </TooltipProvider>
                     </div>
                   </div>

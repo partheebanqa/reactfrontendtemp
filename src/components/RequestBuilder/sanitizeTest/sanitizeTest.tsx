@@ -155,19 +155,18 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
       </span>
       <span className='flex-1 text-sm text-foreground'>{request.name}</span>
 
-      {/* Status badge and response time */}
+      {/* Token Source badge - shown on the right */}
+      {isAuthRequest && (
+        <span className='mr-2 inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded text-[10px] font-bold text-yellow-800 dark:text-yellow-400 whitespace-nowrap uppercase'>
+          Token Source
+        </span>
+      )}
+
       <div className='flex items-center gap-2'>
         {getStatusBadge(
           request.status,
           request.responseTime,
           request.isLoading,
-        )}
-
-        {/* Token Source badge - shown on the right */}
-        {isAuthRequest && (
-          <span className='mr-2 inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded text-[10px] font-bold text-yellow-800 dark:text-yellow-400 whitespace-nowrap uppercase'>
-            Token Source
-          </span>
         )}
       </div>
     </div>
@@ -567,6 +566,13 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [authRequestName, setAuthRequestName] = useState<string | null>(null);
   const [isAuthRunning, setIsAuthRunning] = useState(false);
+  const [preRequestStatus, setPreRequestStatus] = useState<number | undefined>(
+    undefined,
+  );
+  const [preRequestResponseTime, setPreRequestResponseTime] = useState<
+    number | undefined
+  >(undefined);
+  const [isPreRequestLoading, setIsPreRequestLoading] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -669,6 +675,9 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       })),
     );
     setStartTime(null);
+    setPreRequestStatus(undefined);
+    setPreRequestResponseTime(undefined);
+    setIsPreRequestLoading(false);
   };
 
   const autoRunPreRequest = async () => {
@@ -809,6 +818,103 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     const selectedRequests = requests.filter(
       (r) => r.isSelected && r.id !== collection.preRequestId,
     );
+
+    // Fetch fresh token once before running all requests
+    let freshToken: string | null = null;
+
+    if (collection.preRequestId) {
+      try {
+        const findRequest = (requestId: string): any => {
+          const top = (collection.requests || []).find(
+            (r: any) => r.id === requestId,
+          );
+          if (top) return top;
+          const searchFolders = (folders: any[] = []): any => {
+            for (const folder of folders) {
+              const found = (folder.requests || []).find(
+                (r: any) => r.id === requestId,
+              );
+              if (found) return found;
+              if (folder.folders) {
+                const deep = searchFolders(folder.folders);
+                if (deep) return deep;
+              }
+            }
+            return null;
+          };
+          return searchFolders((collection as any).folders || []);
+        };
+
+        const preRequest = findRequest(collection.preRequestId);
+
+        if (preRequest) {
+          setIsPreRequestLoading(true);
+          setPreRequestStatus(undefined);
+          setPreRequestResponseTime(undefined);
+          const preReqStart = Date.now();
+          const authPayload = {
+            request: {
+              workspaceId: currentWorkspace?.id || '',
+              name: preRequest.name,
+              order: 0,
+              method: preRequest.method,
+              url: preRequest.url,
+              bodyType: preRequest.bodyType || 'raw',
+              bodyFormData: preRequest.bodyFormData || null,
+              bodyRawContent: preRequest.bodyRawContent || '',
+              authorizationType: preRequest.authorizationType || 'none',
+              headers: preRequest.headers || [],
+              params: preRequest.params || [],
+            },
+            assertions: [],
+          };
+
+          const authResponse = await executeRequest(authPayload);
+
+          setPreRequestStatus(
+            authResponse?.data?.responses?.[0]?.statusCode ?? 0,
+          );
+          setPreRequestResponseTime(Date.now() - preReqStart);
+          setIsPreRequestLoading(false);
+
+          let rawBody =
+            authResponse?.data?.responses?.[0]?.body ||
+            authResponse?.data?.body ||
+            authResponse?.body;
+
+          let responseBody;
+          try {
+            responseBody =
+              typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
+          } catch {
+            responseBody = null;
+          }
+
+          if (responseBody && preRequest.extractVariables?.length > 0) {
+            const extractedVariables = extractDataFromResponse(
+              {
+                body: responseBody,
+                headers: authResponse?.data?.responses?.[0]?.headers || {},
+                cookies: authResponse?.data?.responses?.[0]?.cookies || {},
+              },
+              preRequest.extractVariables,
+            );
+
+            for (const value of Object.values(extractedVariables)) {
+              if (value && isBearerToken(String(value))) {
+                freshToken = String(value);
+                break;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch fresh token from pre-request:', err);
+        setPreRequestStatus(500);
+        setIsPreRequestLoading(false);
+      }
+    }
+
     try {
       for (const req of selectedRequests) {
         setRequests((prev) =>
@@ -846,48 +952,30 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         };
         let authType = req.authorizationType || 'none';
 
-        if (collection.preRequestId) {
-          const storageKeys = Object.keys(localStorage).filter((key) =>
-            key.startsWith(`extracted_var_${collection.id}_`),
+        if (freshToken) {
+          authType = 'bearer';
+          authorizationConfig = {
+            ...authorizationConfig,
+            token: freshToken,
+          };
+
+          const authHeaderExists = authHeaders.some(
+            (h) => h.key.toLowerCase() === 'authorization',
           );
 
-          let extractedToken: string | null = null;
-          for (const key of storageKeys) {
-            try {
-              const data = JSON.parse(localStorage.getItem(key) || '{}');
-              if (data.value && isBearerToken(data.value)) {
-                extractedToken = data.value;
-                break;
-              }
-            } catch {}
-          }
-
-          if (extractedToken) {
-            authType = 'bearer';
-
-            authorizationConfig = {
-              ...authorizationConfig,
-              token: extractedToken,
-            };
-
-            const authHeaderExists = authHeaders.some(
-              (h) => h.key.toLowerCase() === 'authorization',
+          if (authHeaderExists) {
+            authHeaders = authHeaders.map((h) =>
+              h.key.toLowerCase() === 'authorization'
+                ? { ...h, value: `Bearer ${freshToken}`, enabled: true }
+                : h,
             );
-
-            if (authHeaderExists) {
-              authHeaders = authHeaders.map((h) =>
-                h.key.toLowerCase() === 'authorization'
-                  ? { ...h, value: `Bearer ${extractedToken}`, enabled: true }
-                  : h,
-              );
-            } else {
-              authHeaders.push({
-                key: 'Authorization',
-                value: `Bearer ${extractedToken}`,
-                enabled: true,
-                description: 'Auto-injected from pre-request',
-              });
-            }
+          } else {
+            authHeaders.push({
+              key: 'Authorization',
+              value: `Bearer ${freshToken}`,
+              enabled: true,
+              description: 'Auto-injected from pre-request',
+            });
           }
         }
 
@@ -900,9 +988,9 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             bodyType: req.bodyType,
             bodyRawContent: req.bodyRawContent || '',
             bodyFormData: req.bodyFormData || [],
-            authorizationType: authType, // Use modified auth type
-            authorization: authorizationConfig, // Use modified authorization with token
-            headers: authHeaders, // Use modified headers with injected token
+            authorizationType: authType,
+            authorization: authorizationConfig,
+            headers: authHeaders,
             params: req.params || [],
           },
           environmentId: selectedEnvironment?.id ?? null,
@@ -924,6 +1012,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           const responsePayloadSizeKB = (responsePayloadBytes / 1024).toFixed(
             2,
           );
+
           setRequests((prev) =>
             prev.map((r) =>
               r.id === req.id
@@ -1094,12 +1183,23 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     const minResponseTime =
       responseTimes.length > 0 ? Math.min(...responseTimes) : 0;
 
-    const slowest = executedRequests.find(
-      (r) => r.responseTime === maxResponseTime,
-    );
-    const fastest = executedRequests.find(
-      (r) => r.responseTime === minResponseTime,
-    );
+    const SLOW_THRESHOLD_MS = 500;
+
+    const slowest =
+      executedRequests.length > 1
+        ? executedRequests.find((r) => r.responseTime === maxResponseTime)
+        : executedRequests[0]?.responseTime &&
+            executedRequests[0].responseTime >= SLOW_THRESHOLD_MS
+          ? executedRequests[0]
+          : undefined;
+
+    const fastest =
+      executedRequests.length > 1
+        ? executedRequests.find((r) => r.responseTime === minResponseTime)
+        : executedRequests[0]?.responseTime &&
+            executedRequests[0].responseTime < SLOW_THRESHOLD_MS
+          ? executedRequests[0]
+          : undefined;
 
     // Calculate most failed status code
     const failedRequests = executedRequests.filter(
@@ -1127,8 +1227,8 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       authAPIs: authApis,
       maxResponseTime,
       minResponseTime,
-      slowestAPI: slowest?.name || 'N/A',
-      fastestAPI: fastest?.name || 'N/A',
+      slowestAPI: slowest?.name || '',
+      fastestAPI: fastest?.name || '',
       totalExecutionTime: responseTimes.reduce((a, b) => a + b, 0),
       mostFailedStatusCode: mostFailedEntry
         ? { code: parseInt(mostFailedEntry[0]), count: mostFailedEntry[1] }
@@ -1355,10 +1455,23 @@ Max Response Time: ${
                   >
                     {filteredRequests.map((request, index) => {
                       const displayIndex = index;
+                      const isAuth =
+                        !!collection.preRequestId &&
+                        request.id === collection.preRequestId;
+
+                      const requestWithAuthStatus: RequestWithStatus = isAuth
+                        ? {
+                            ...request,
+                            status: preRequestStatus,
+                            responseTime: preRequestResponseTime,
+                            isLoading: isPreRequestLoading,
+                          }
+                        : request;
+
                       return (
                         <SortableRequestItem
                           key={request.id || `request-${displayIndex}`}
-                          request={request}
+                          request={requestWithAuthStatus}
                           index={displayIndex}
                           onToggle={() => {
                             setRequests((prev) =>
@@ -1372,10 +1485,7 @@ Max Response Time: ${
                           }}
                           getMethodColor={getMethodColor}
                           getStatusBadge={getStatusBadge}
-                          isAuthRequest={
-                            !!collection.preRequestId &&
-                            request.id === collection.preRequestId
-                          }
+                          isAuthRequest={isAuth}
                         />
                       );
                     })}
@@ -1519,23 +1629,27 @@ Max Response Time: ${
                     Performance Insights
                   </h3>
                   <div className='grid grid-cols-1 gap-3'>
-                    <PerformanceCard
-                      title='Fastest API'
-                      value={metrics.fastestAPI}
-                      subtitle={`${metrics.minResponseTime}ms`}
-                      variant='fastest'
-                    />
-                    <PerformanceCard
-                      title='Slowest API'
-                      value={metrics.slowestAPI}
-                      subtitle={`${metrics.maxResponseTime}ms`}
-                      variant='slowest'
-                    />
+                    {metrics.fastestAPI && (
+                      <PerformanceCard
+                        title='Fastest API'
+                        value={metrics.fastestAPI}
+                        subtitle={`${metrics.minResponseTime}ms`}
+                        variant='fastest'
+                      />
+                    )}
+                    {metrics.slowestAPI && (
+                      <PerformanceCard
+                        title='Slowest API'
+                        value={metrics.slowestAPI}
+                        subtitle={`${metrics.maxResponseTime}ms`}
+                        variant='slowest'
+                      />
+                    )}
                     {metrics.mostFailedStatusCode && (
                       <PerformanceCard
                         title='Most Failed Status'
                         value={metrics.mostFailedStatusCode.code.toString()}
-                        subtitle={`${metrics.mostFailedStatusCode.count} times`}
+                        subtitle={`${metrics.mostFailedStatusCode.count} APIs`}
                         variant='failed'
                       />
                     )}
@@ -1567,9 +1681,9 @@ Max Response Time: ${
                 </div>
               )}
 
-              <div className='pt-4 text-xs text-muted-foreground text-center border-t border-border'>
+              {/* <div className='pt-4 text-xs text-muted-foreground text-center border-t border-border'>
                 Exported on {new Date().toLocaleString()}
-              </div>
+              </div> */}
             </div>
           </div>
         </Panel>

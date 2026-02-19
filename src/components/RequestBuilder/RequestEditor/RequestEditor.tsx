@@ -3009,79 +3009,89 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
         <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
           <nav className='flex overflow-x-auto scrollbar-thin px-4'>
-            {[
-              {
-                id: 'params',
-                label: 'Params',
-                count: params.filter((p) => p.enabled).length,
-              },
-              {
-                id: 'headers',
-                label: 'Headers',
-                count: headers.filter((h) => h.enabled).length,
-              },
-              { id: 'body', label: 'Body', count: getBodyCount() },
-              { id: 'auth', label: 'Auth', count: getAuthCount() },
-              {
-                id: 'pre-request',
-                label: 'Pre-request',
-                count: 0,
-              },
-              {
-                id: 'post-response',
-                label: 'Post-response',
-                count: 0,
-              },
-              {
-                id: 'schemas',
-                label: 'Schemas',
-                count: Array.isArray(schemas) ? schemas.length : 0,
-              },
-              { id: 'settings', label: 'Settings' },
-              // { id: 'performance', label: 'Performance' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as any);
-                  onTabChange?.(tab.id);
-                  if (tab.id === 'schemas') {
-                    fetchSchemas();
-                  }
-                }}
-                className={`
-                    pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
-                  ${
-                    activeTab === tab.id
-                      ? 'border-[#136fb0] text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }
-                `}
-              >
-                {tab.label}
-                {(tab.id === 'auth' ||
-                  tab.id === 'body' ||
-                  tab.id === 'schemas') &&
-                  (tab.count ?? 0) > 0 && (
-                    <span
-                      className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
-                      style={{
-                        backgroundColor:
-                          'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
-                      }}
-                    ></span>
-                  )}
-                {tab.id !== 'auth' &&
-                  tab.id !== 'body' &&
-                  tab.id !== 'schemas' &&
-                  tab.count !== undefined &&
-                  tab.count > 0 && (
-                    <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
-                      {tab.count}
-                    </span>
-                  )}
-              </button>
-            ))}
+            <TooltipProvider>
+              {[
+                {
+                  id: 'params',
+                  label: 'Params',
+                  count: params.filter((p) => p.enabled).length,
+                },
+                {
+                  id: 'headers',
+                  label: 'Headers',
+                  count: headers.filter((h) => h.enabled).length,
+                },
+                { id: 'body', label: 'Body', count: getBodyCount() },
+                { id: 'auth', label: 'Auth', count: getAuthCount() },
+                { id: 'pre-request', label: 'Pre-request', count: 0 },
+                { id: 'post-response', label: 'Post-response', count: 0 },
+                {
+                  id: 'schemas',
+                  label: 'Schemas',
+                  count: Array.isArray(schemas) ? schemas.length : 0,
+                },
+                { id: 'settings', label: 'Settings' },
+              ].map((tab) => {
+                const button = (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setActiveTab(tab.id as any);
+                      onTabChange?.(tab.id);
+                      if (tab.id === 'schemas') {
+                        fetchSchemas();
+                      }
+                    }}
+                    className={`
+              pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
+              ${
+                activeTab === tab.id
+                  ? 'border-[#136fb0] text-[#136fb0]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }
+            `}
+                  >
+                    {tab.label}
+
+                    {(tab.id === 'auth' ||
+                      tab.id === 'body' ||
+                      tab.id === 'schemas') &&
+                      (tab.count ?? 0) > 0 && (
+                        <span
+                          className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
+                          style={{
+                            backgroundColor:
+                              'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
+                          }}
+                        />
+                      )}
+
+                    {tab.id !== 'auth' &&
+                      tab.id !== 'body' &&
+                      tab.id !== 'schemas' &&
+                      tab.count !== undefined &&
+                      tab.count > 0 && (
+                        <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
+                          {tab.count}
+                        </span>
+                      )}
+                  </button>
+                );
+
+                if (tab.id === 'post-response') {
+                  return (
+                    <Tooltip key={tab.id}>
+                      <TooltipTrigger asChild>{button}</TooltipTrigger>
+                      <TooltipContent>
+                        Manage assertions and extracted variable
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return button;
+              })}
+            </TooltipProvider>
           </nav>
         </div>
 
