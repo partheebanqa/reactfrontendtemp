@@ -100,10 +100,10 @@ export function ConfigList({
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead className="hidden md:table-cell">
-                    RateLimitPeriod
+                    Period
                   </TableHead>
-                  <TableHead className="hidden lg:table-cell">RateLimitRequests</TableHead>
-                  <TableHead className="hidden lg:table-cell">RateLimitType</TableHead>
+                  <TableHead className="hidden lg:table-cell">Requests</TableHead>
+                  <TableHead className="hidden lg:table-cell">Type</TableHead>
                   <TableHead className="hidden xl:table-cell">Updated</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>

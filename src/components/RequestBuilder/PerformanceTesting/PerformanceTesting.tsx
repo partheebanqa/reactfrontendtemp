@@ -574,7 +574,7 @@ export default function PerformanceTesting({
         <div className='flex-1 overflow-auto scrollbar-thin p-3'>
           <Card className='flex justify-between p-3 mb-2'>
             <div>
-              <CardTitle>Configurations</CardTitle>
+              <CardTitle>Rate Limit Configurations</CardTitle>
               <CardDescription>
                 Manage your performance test configurations
               </CardDescription>
