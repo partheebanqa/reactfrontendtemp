@@ -9,11 +9,27 @@ function formatMs(ms: number) {
     return `${(ms / 1000).toFixed(2)} s`;
 }
 
+// function statusVariant(status: string) {
+//     if (status === "COMPLETED") return "secondary";
+//     if (status === "FAILED") return "destructive";
+//     if (status === "RUNNING") return "secondary";
+//     return "outline";
+// }
+
 function statusVariant(status: string) {
-    if (status === "COMPLETED") return "secondary";
-    if (status === "FAILED") return "destructive";
-    if (status === "RUNNING") return "secondary";
-    return "outline";
+    switch (status) {
+        case "COMPLETED":
+            return "bg-emerald-100 text-emerald-700 border-emerald-200";
+
+        case "FAILED":
+            return "bg-rose-100 text-rose-700 border-rose-200";
+
+        case "RUNNING":
+            return "bg-blue-500 text-white border-blue-800 animate-pulse shadow-sm";
+
+        default:
+            return "bg-gray-100 text-gray-600 border-gray-200";
+    }
 }
 
 export function RunDetailsInline({
@@ -39,12 +55,17 @@ export function RunDetailsInline({
         <div className="space-y-4">
             {/* Status Row */}
             <div className="flex items-center gap-2">
-                <Badge variant={statusVariant(data.status)}>{data.status}</Badge>
-                {loading && (
-                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                {loading ? (
+                    <Badge className={statusVariant(data.status)}>
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         Updating...
-                    </span>
+                    </Badge>
+                ) : (
+                    <Badge
+                        className={statusVariant(data.status)}
+                    >
+                        {data.status}
+                    </Badge>
                 )}
             </div>
 

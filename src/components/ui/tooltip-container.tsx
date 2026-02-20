@@ -12,7 +12,7 @@ interface TooltipContainerProps {
 
 const TooltipContainer = ({ children, text, position = "top" }: TooltipContainerProps) => {
   return (
-    <TooltipProvider>
+    <TooltipProvider delayDuration={0} transition-all>
       <Tooltip>
         <TooltipTrigger asChild>
           {children}

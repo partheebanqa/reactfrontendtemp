@@ -115,6 +115,8 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
   const results = runResultsResponse?.results ?? [];
   const s = runResultsResponse?.summary ?? {};
 
+  console.log(results, "results");
+
   const requests: RateLimitRequest[] = results.map((r: any, idx: number) => {
     const statusCode = Number(r.statusCode ?? r.status ?? 0);
     const responseTime = Number(r.responseTime ?? r.latencyMs ?? 0);
@@ -132,7 +134,7 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
       requestHeaders: (r.requestHeaders ?? {}) as any,
       responseHeaders: (r.responseHeaders ?? {}) as any,
       responseBody: typeof r.responseBody === "string" ? r.responseBody : JSON.stringify(r.responseBody ?? ""),
-      curlCommand: String(r.curlCommand ?? ""),
+      requestCurl: String(r.requestCurl ?? ""),
       dnsTime: Number(r.dnsTime ?? 0),
       tcpTime: Number(r.tcpTime ?? 0),
       tlsTime: Number(r.tlsTime ?? 0),
@@ -197,7 +199,7 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
     p95ResponseTime: p95,
     p99ResponseTime: p99,
     avgTtfb,
-    totalDataTransferred,
+    avgDownloadSize: Number(s.avgDownloadSize ?? (totalDataTransferred / totalRequests || 0)),
     requestsPerSecond: rps,
     throughput: Number(s.throughput ?? rps),
     totalDuration: durationSec,
