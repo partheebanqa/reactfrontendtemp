@@ -59,6 +59,7 @@ interface TestSuite {
     name: string;
   };
   status: 'Not Run' | 'Running' | 'Passed' | 'Failed';
+  tags?: string[];
 }
 
 interface TestSuiteCardProps {
@@ -81,6 +82,23 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
   refreshing,
 }) => {
   const { error: showError, success: showSuccess, toast } = useToast();
+
+  const getTagColor = (tag: string) => {
+    const colors: Record<string, string> = {
+      sanity: 'bg-blue-100 text-blue-700 border-blue-200',
+      regression: 'bg-purple-100 text-purple-700 border-purple-200',
+      smoke: 'bg-orange-100 text-orange-700 border-orange-200',
+      uat: 'bg-green-100 text-green-700 border-green-200',
+      integration: 'bg-pink-100 text-pink-700 border-pink-200',
+      e2e: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    };
+
+    return (
+      colors[tag.toLowerCase()] ||
+      'bg-gray-100 text-gray-700 border-gray-200'
+    );
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'generated':
@@ -170,52 +188,44 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               variant='outline'
               className={`
     flex items-center gap-1
-    ${
-      suite?.environment?.name?.toLowerCase().includes('prod')
-        ? 'bg-green-100 text-green-800 border-green-200'
-        : ''
-    }
-    ${
-      suite?.environment?.name?.toLowerCase().includes('stage')
-        ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-        : ''
-    }
-    ${
-      suite?.environment?.name?.toLowerCase().includes('dev')
-        ? 'bg-blue-100 text-blue-800 border-blue-200'
-        : ''
-    }
-    ${
-      !suite?.environment?.name || suite?.environment?.name === 'No Environment'
-        ? 'bg-gray-100 text-gray-700 border-gray-200'
-        : ''
-    }
+    ${suite?.environment?.name?.toLowerCase().includes('prod')
+                  ? 'bg-green-100 text-green-800 border-green-200'
+                  : ''
+                }
+    ${suite?.environment?.name?.toLowerCase().includes('stage')
+                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                  : ''
+                }
+    ${suite?.environment?.name?.toLowerCase().includes('dev')
+                  ? 'bg-blue-100 text-blue-800 border-blue-200'
+                  : ''
+                }
+    ${!suite?.environment?.name || suite?.environment?.name === 'No Environment'
+                  ? 'bg-gray-100 text-gray-700 border-gray-200'
+                  : ''
+                }
   `}
             >
               {/* Dot */}
               <span
                 className={`h-2 w-2 rounded-full 
-      ${
-        suite?.environment?.name?.toLowerCase().includes('prod')
-          ? 'bg-green-600'
-          : ''
-      }
-      ${
-        suite?.environment?.name?.toLowerCase().includes('stage')
-          ? 'bg-yellow-600'
-          : ''
-      }
-      ${
-        suite?.environment?.name?.toLowerCase().includes('dev')
-          ? 'bg-blue-600'
-          : ''
-      }
-      ${
-        !suite?.environment?.name ||
-        suite?.environment?.name === 'No Environment'
-          ? 'bg-gray-500'
-          : ''
-      }
+      ${suite?.environment?.name?.toLowerCase().includes('prod')
+                    ? 'bg-green-600'
+                    : ''
+                  }
+      ${suite?.environment?.name?.toLowerCase().includes('stage')
+                    ? 'bg-yellow-600'
+                    : ''
+                  }
+      ${suite?.environment?.name?.toLowerCase().includes('dev')
+                    ? 'bg-blue-600'
+                    : ''
+                  }
+      ${!suite?.environment?.name ||
+                    suite?.environment?.name === 'No Environment'
+                    ? 'bg-gray-500'
+                    : ''
+                  }
     `}
               />
 
@@ -240,7 +250,22 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
             </div>
           </div>
 
-          <div className='flex items-center space-x-4'>
+
+          {
+            (suite?.tags?.length ?? 0) > 0 && (
+              <div className='flex items-center space-x-2'>
+                {suite.tags!.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant='outline'
+                    className={getTagColor(tag)}
+                  >
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          {/* <div className='flex items-center space-x-4'>
             <Badge
               variant='outline'
               className='text-blue-600 bg-blue-50 border-blue-200'
@@ -259,7 +284,7 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
             >
               {suite.securityTests} Security
             </Badge>
-          </div>
+          </div> */}
         </div>
 
         <div className='flex items-center space-x-2'>

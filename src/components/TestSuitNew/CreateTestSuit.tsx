@@ -47,6 +47,7 @@ import { ImportModal } from '@/components/TestSuit/ImportModal';
 
 import type { WorkflowStep } from '@/types';
 import { RequestTestDialog } from '../TestSuit/RequestTestDialog';
+import TagInput from './Tags';
 
 interface Request {
   id: string;
@@ -129,6 +130,7 @@ const CreateTestSuit: React.FC = () => {
   const [selectedEnvName, setSelectedEnvName] = useState<string>('');
   const [requests, setRequests] = useState<Request[]>([]);
   const [originalRequestIds, setOriginalRequestIds] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
 
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
@@ -221,6 +223,7 @@ const CreateTestSuit: React.FC = () => {
       requestIds: string[];
       preRequestId?: string;
       extractVariables?: ExtractedVariable[];
+      tags?: string[];
     }) => createTestSuite({ ...data, workspaceId: currentWorkspace!.id }),
     onMutate: () => {
       toast({
@@ -273,6 +276,7 @@ const CreateTestSuit: React.FC = () => {
       removeRequestIds?: string[];
       preRequestId?: string;
       extractVariables?: ExtractedVariable[];
+      tags?: string[];
     }) =>
       updateTestSuite(data.id, {
         name: data.name,
@@ -282,6 +286,7 @@ const CreateTestSuit: React.FC = () => {
         removeRequestIds: data.removeRequestIds,
         preRequestId: data.preRequestId,
         extractVariables: data.extractVariables,
+        tags: data.tags,
       }),
     onSuccess: () => {
       toast({
@@ -355,8 +360,8 @@ const CreateTestSuit: React.FC = () => {
       params: Array.isArray(req.params)
         ? req.params
         : Array.isArray(req.parameters)
-        ? req.parameters
-        : [],
+          ? req.parameters
+          : [],
       order: req.order || 0,
       testCases: {
         functional: req.testCases?.functional || 0,
@@ -365,15 +370,15 @@ const CreateTestSuit: React.FC = () => {
       selectedTestCases: req.selectedTestCases || [],
       meta: req.meta
         ? {
-            totalTests: req.meta.totalTests,
-            selectedTests: req.meta.selectedTests,
-            positive: req.meta.positive,
-            negative: req.meta.negative,
-            semantic: req.meta.semantic,
-            edgeCase: req.meta.edgeCase,
-            security: req.meta.security,
-            advancedSecurity: req.meta.advancedSecurity,
-          }
+          totalTests: req.meta.totalTests,
+          selectedTests: req.meta.selectedTests,
+          positive: req.meta.positive,
+          negative: req.meta.negative,
+          semantic: req.meta.semantic,
+          edgeCase: req.meta.edgeCase,
+          security: req.meta.security,
+          advancedSecurity: req.meta.advancedSecurity,
+        }
         : undefined,
     };
   };
@@ -383,6 +388,7 @@ const CreateTestSuit: React.FC = () => {
     if (testSuite && !isCreateMode) {
       setTestSuiteName(testSuite.name || '');
       setDescription(testSuite.description || '');
+      setTags(Array.isArray(testSuite.tags) ? testSuite.tags : []);
       if (testSuite.environment?.id) {
         setSelectedEnvironment(testSuite.environment?.id);
       }
@@ -412,13 +418,13 @@ const CreateTestSuit: React.FC = () => {
             headers: hasHeaders
               ? req.headers
               : Array.isArray(imported.headers)
-              ? imported.headers
-              : [],
+                ? imported.headers
+                : [],
             params: hasParams
               ? req.params
               : Array.isArray(imported.params)
-              ? imported.params
-              : [],
+                ? imported.params
+                : [],
             bodyRawContent: hasBody
               ? req.bodyRawContent
               : imported.bodyRawContent ?? imported.body ?? '',
@@ -618,17 +624,19 @@ const CreateTestSuit: React.FC = () => {
           extractVariables: extractVariables.length
             ? extractVariables
             : undefined,
+          tags: tags.length ? tags : undefined,
         },
+
         opts?.goToNextAfterSave
           ? {
-              onSuccess: (created: any) => {
-                if (created?.id) {
-                  setLocation(`/test-suites/${created.id}?step=select-tests`);
-                } else {
-                  moveToNextStep();
-                }
-              },
-            }
+            onSuccess: (created: any) => {
+              if (created?.id) {
+                setLocation(`/test-suites/${created.id}?step=select-tests`);
+              } else {
+                moveToNextStep();
+              }
+            },
+          }
           : undefined
       );
     } else {
@@ -648,13 +656,14 @@ const CreateTestSuit: React.FC = () => {
           extractVariables: extractVariables.length
             ? extractVariables
             : undefined,
+          tags: tags.length ? tags : [],
         },
         opts?.goToNextAfterSave
           ? {
-              onSuccess: () => {
-                moveToNextStep();
-              },
-            }
+            onSuccess: () => {
+              moveToNextStep();
+            },
+          }
           : undefined
       );
     }
@@ -673,13 +682,13 @@ const CreateTestSuit: React.FC = () => {
     () =>
       isCreateMode
         ? requests.reduce(
-            (total, req) => total + (req.selectedTestCases?.length || 0),
-            0
-          )
+          (total, req) => total + (req.selectedTestCases?.length || 0),
+          0
+        )
         : requests.reduce(
-            (total, req) => total + (req.meta?.selectedTests ?? 0),
-            0
-          ),
+          (total, req) => total + (req.meta?.selectedTests ?? 0),
+          0
+        ),
     [requests, isCreateMode]
   );
 
@@ -1133,6 +1142,10 @@ const CreateTestSuit: React.FC = () => {
                     rows={3}
                   />
                 </div>
+                <div>
+                  <TagInput tags={tags} setTags={setTags} />
+                </div>
+
 
                 <div className='space-y-1'>
                   <label
