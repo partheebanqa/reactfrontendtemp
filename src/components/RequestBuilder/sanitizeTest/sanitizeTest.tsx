@@ -191,7 +191,6 @@ interface SanitizeTestRunnerProps {
   collections?: any[];
 }
 
-// Export Modal Component
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -683,7 +682,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   const autoRunPreRequest = async () => {
     if (!collection.preRequestId) return;
 
-    // Find the pre-request in collection
     const findRequest = (requestId: string): any => {
       const top = (collection.requests || []).find(
         (r: any) => r.id === requestId,
@@ -710,7 +708,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
     setAuthRequestName(preRequest.name);
 
-    // Check if already valid
     const storageKeys = Object.keys(localStorage).filter((key) =>
       key.startsWith(`extracted_var_${collection.id}_`),
     );
@@ -819,7 +816,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       (r) => r.isSelected && r.id !== collection.preRequestId,
     );
 
-    // Fetch fresh token once before running all requests
     let freshToken: string | null = null;
 
     if (collection.preRequestId) {
@@ -870,12 +866,26 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           };
 
           const authResponse = await executeRequest(authPayload);
+          const preReqResponseTime = Date.now() - preReqStart;
+          const preReqStatus =
+            authResponse?.data?.responses?.[0]?.statusCode ?? 0;
 
-          setPreRequestStatus(
-            authResponse?.data?.responses?.[0]?.statusCode ?? 0,
-          );
-          setPreRequestResponseTime(Date.now() - preReqStart);
+          setPreRequestStatus(preReqStatus);
+          setPreRequestResponseTime(preReqResponseTime);
           setIsPreRequestLoading(false);
+
+          setRequests((prev) =>
+            prev.map((r) =>
+              r.id === collection.preRequestId
+                ? {
+                    ...r,
+                    status: preReqStatus,
+                    responseTime: preReqResponseTime,
+                    isLoading: false,
+                  }
+                : r,
+            ),
+          );
 
           let rawBody =
             authResponse?.data?.responses?.[0]?.body ||
@@ -912,6 +922,14 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         console.error('Failed to fetch fresh token from pre-request:', err);
         setPreRequestStatus(500);
         setIsPreRequestLoading(false);
+
+        setRequests((prev) =>
+          prev.map((r) =>
+            r.id === collection.preRequestId
+              ? { ...r, status: 500, isLoading: false }
+              : r,
+          ),
+        );
       }
     }
 
@@ -1138,12 +1156,21 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     );
   };
 
-  // Calculate metrics and insights
   const { metrics, testResults, insights } = useMemo(() => {
-    const executedRequests = requests.filter((r) => r.status !== undefined);
+    const preRequest = collection.preRequestId
+      ? requests.find((r) => r.id === collection.preRequestId)
+      : null;
 
-    // Convert to TestResult format for insights
-    const testResults: TestResult[] = executedRequests.map((r) => ({
+    const executedRequests = requests.filter(
+      (r) => r.status !== undefined && r.id !== collection.preRequestId,
+    );
+
+    const preRequestExecuted =
+      preRequest && preRequest.status !== undefined ? [preRequest] : [];
+
+    const allExecutedRequests = [...preRequestExecuted, ...executedRequests];
+
+    const testResults: TestResult[] = allExecutedRequests.map((r) => ({
       id: r.id || r.name,
       name: r.name,
       method: r.method,
@@ -1162,19 +1189,21 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       responseHeaders: {},
     }));
 
-    const totalExecuted = executedRequests.length;
-    const pass = executedRequests.filter(
+    const pass = allExecutedRequests.filter(
       (r) => r.status && r.status >= 200 && r.status < 300,
     ).length;
-    const fail = executedRequests.filter(
+
+    const fail = allExecutedRequests.filter(
       (r) => r.status && r.status >= 400,
     ).length;
+
     const skipped = requests.filter((r) => !r.isSelected).length;
+
     const authApis = requests.filter(
       (r) => r.authorizationType !== 'none',
     ).length;
 
-    const responseTimes = executedRequests
+    const responseTimes = allExecutedRequests
       .map((r) => r.responseTime || 0)
       .filter((t) => t > 0);
 
@@ -1186,25 +1215,25 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     const SLOW_THRESHOLD_MS = 500;
 
     const slowest =
-      executedRequests.length > 1
-        ? executedRequests.find((r) => r.responseTime === maxResponseTime)
-        : executedRequests[0]?.responseTime &&
-            executedRequests[0].responseTime >= SLOW_THRESHOLD_MS
-          ? executedRequests[0]
+      allExecutedRequests.length > 1
+        ? allExecutedRequests.find((r) => r.responseTime === maxResponseTime)
+        : allExecutedRequests[0]?.responseTime &&
+            allExecutedRequests[0].responseTime >= SLOW_THRESHOLD_MS
+          ? allExecutedRequests[0]
           : undefined;
 
     const fastest =
-      executedRequests.length > 1
-        ? executedRequests.find((r) => r.responseTime === minResponseTime)
-        : executedRequests[0]?.responseTime &&
-            executedRequests[0].responseTime < SLOW_THRESHOLD_MS
-          ? executedRequests[0]
+      allExecutedRequests.length > 1
+        ? allExecutedRequests.find((r) => r.responseTime === minResponseTime)
+        : allExecutedRequests[0]?.responseTime &&
+            allExecutedRequests[0].responseTime < SLOW_THRESHOLD_MS
+          ? allExecutedRequests[0]
           : undefined;
 
-    // Calculate most failed status code
-    const failedRequests = executedRequests.filter(
+    const failedRequests = allExecutedRequests.filter(
       (r) => r.status && r.status >= 400,
     );
+
     const statusCodeCounts = failedRequests.reduce(
       (acc, r) => {
         if (r.status) {
@@ -1241,7 +1270,9 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         : [];
 
     return { metrics, testResults, insights };
-  }, [requests]);
+  }, [requests, collection.preRequestId]);
+
+  console.log('metrics:', metrics);
 
   const handleShare = async () => {
     const summaryText = `

@@ -1783,46 +1783,6 @@ const Sidebar: React.FC = () => {
                       <Trash2 className='h-4 w-4 mr-2' />
                       Delete
                     </button>
-                    {selectedCollection.preRequestId && (
-                      <>
-                        <div className='border-t border-gray-200 dark:border-gray-700 my-1'></div>
-                        <button
-                          onClick={async () => {
-                            if (
-                              selectedCollection &&
-                              selectedCollection.preRequestId
-                            ) {
-                              const executionKey = `preRequest_executed_${selectedCollection.id}_${selectedCollection.preRequestId}`;
-                              localStorage.removeItem(executionKey);
-
-                              const storageKeys = Object.keys(
-                                localStorage,
-                              ).filter((key) =>
-                                key.startsWith(
-                                  `extracted_var_${selectedCollection.id}_`,
-                                ),
-                              );
-
-                              storageKeys.forEach((key) => {
-                                localStorage.removeItem(key);
-                              });
-
-                              await autoRunPreRequest(
-                                selectedCollection.id,
-                                selectedCollection.preRequestId,
-                                collections,
-                              );
-                            }
-                            setShowMenu(null);
-                            setMenuPosition(null);
-                          }}
-                          className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
-                        >
-                          <KeyRound className='h-4 w-4 mr-2' />
-                          Re-run Auth Request
-                        </button>
-                      </>
-                    )}
                   </div>
                 )}
 
@@ -1874,13 +1834,13 @@ const Sidebar: React.FC = () => {
                             }}
                             className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                           >
-                            <div className='flex items-center'>
+                            <div className='flex items-center text-blue-600 dark:text-blue-400'>
                               <KeyRound className='h-4 w-4 mr-2' />
                               Set Auto Auth
                             </div>
 
-                            <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300'>
-                              Setup needed
+                            <span className='ml-2 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'>
+                              Setup
                             </span>
                           </button>
                         )}
