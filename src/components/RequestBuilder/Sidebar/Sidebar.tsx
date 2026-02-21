@@ -170,7 +170,7 @@ const Sidebar: React.FC = () => {
   ) => {
     try {
       setResponseData(null);
-    } catch {}
+    } catch { }
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
@@ -455,9 +455,9 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-                ...col,
-                preRequestId: request.id,
-              }
+              ...col,
+              preRequestId: request.id,
+            }
             : col,
         ),
       );
@@ -673,14 +673,14 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection?.id
             ? {
-                ...col,
-                requests: col.requests,
-                folders: removeRequestAtIndexFromFolderTree(
-                  (col as any).folders || [],
-                  selectedFolder.id,
-                  requestIndex,
-                ),
-              }
+              ...col,
+              requests: col.requests,
+              folders: removeRequestAtIndexFromFolderTree(
+                (col as any).folders || [],
+                selectedFolder.id,
+                requestIndex,
+              ),
+            }
             : col,
         ),
       );
@@ -689,11 +689,11 @@ const Sidebar: React.FC = () => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-                ...col,
-                requests: col.requests.filter(
-                  (_, index) => index !== requestIndex,
-                ),
-              }
+              ...col,
+              requests: col.requests.filter(
+                (_, index) => index !== requestIndex,
+              ),
+            }
             : col,
         ),
       );
@@ -984,12 +984,12 @@ const Sidebar: React.FC = () => {
           collections.map((col) =>
             col.id === collectionId
               ? {
-                  ...col,
-                  preRequestId: collectionData?.preRequestId,
-                  hasFetchedRequests: true,
-                  requests: collectionData.requests || col.requests,
-                  folders: collectionData.folders || col.folders,
-                }
+                ...col,
+                preRequestId: collectionData?.preRequestId,
+                hasFetchedRequests: true,
+                requests: collectionData.requests || col.requests,
+                folders: collectionData.folders || col.folders,
+              }
               : col,
           ),
         );
@@ -1186,9 +1186,8 @@ const Sidebar: React.FC = () => {
         </SortableFolder>
 
         <div
-          className={`ml-4 transition-all ${
-            isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
-          }`}
+          className={`ml-4 transition-all ${isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
+            }`}
         >
           <SortableContext
             items={sortableIds}
@@ -1204,15 +1203,13 @@ const Sidebar: React.FC = () => {
                     collectionId={parentCollection.id}
                   >
                     <div
-                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                        activeRequest?.id === request.id
+                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
                           ? 'bg-blue-50 dark:bg-blue-900/20'
                           : ''
-                      } ${
-                        isAuthRequest(request.id, parentCollection.id)
+                        } ${isAuthRequest(request.id, parentCollection.id)
                           ? 'border-2 border-blue-500 rounded-lg shadow-sm'
                           : ''
-                      }`}
+                        }`}
                     >
                       <div
                         className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1413,7 +1410,7 @@ const Sidebar: React.FC = () => {
                                   <ChevronRight className='h-4 w-4 text-gray-500' />
                                 )}
                                 <Folder className='h-4 w-4 text-orange-500' />
-                                <TooltipProvider>
+                                <TooltipProvider >
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span
@@ -1471,13 +1468,12 @@ const Sidebar: React.FC = () => {
                           </div>
 
                           <div
-                            className={`ml-4 sm:ml-6 overflow-hidden ${
-                              expanded
+                            className={`ml-4 sm:ml-6 overflow-hidden ${expanded
                                 ? isSearching
                                   ? 'max-h-none'
                                   : 'max-h-[1000px]'
                                 : 'max-h-0'
-                            }`}
+                              }`}
                           >
                             {expanded && (
                               <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
@@ -1495,18 +1491,16 @@ const Sidebar: React.FC = () => {
                                         collectionId={collection.id}
                                       >
                                         <div
-                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                            activeRequest?.id === request.id
+                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
                                               ? 'bg-blue-50 dark:bg-blue-900/20'
                                               : ''
-                                          } ${
-                                            isAuthRequest(
+                                            } ${isAuthRequest(
                                               request.id,
                                               collection.id,
                                             )
                                               ? 'border-2 border-blue-500 rounded-lg'
                                               : ''
-                                          }`}
+                                            }`}
                                         >
                                           <div
                                             className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1518,17 +1512,17 @@ const Sidebar: React.FC = () => {
                                               request.id,
                                               collection.id,
                                             ) && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent side='top'>
-                                                    Auto Auth
-                                                  </TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side='top'>
+                                                      Auto Auth
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              )}
                                             <span
                                               className={`text-xs font-medium ${getMethodColor(
                                                 request.method,

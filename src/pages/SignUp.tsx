@@ -177,7 +177,7 @@ export default function SignUp() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className='space-y-4'>
+            <form onSubmit={handleSubmit} className='space-y-4' autoComplete="off">
               <div className='grid grid-cols-2 gap-4'>
                 <div>
                   <Label htmlFor='firstName'>First name</Label>
@@ -196,6 +196,7 @@ export default function SignUp() {
                           firstName: e.target.value.trim(),
                         })
                       }
+                      autoComplete='given-name'
                     />
                   </div>
                 </div>
@@ -214,6 +215,7 @@ export default function SignUp() {
                         lastName: e.target.value.trim(),
                       })
                     }
+                    autoComplete='family-name'
                   />
                 </div>
               </div>
@@ -232,6 +234,7 @@ export default function SignUp() {
                     onChange={(e) =>
                       setFormData({ ...formData, email: e.target.value.trim() })
                     }
+                    autoComplete='email'
                   />
                 </div>
 
@@ -259,6 +262,7 @@ export default function SignUp() {
                         organization: e.target.value,
                       })
                     }
+                    autoComplete='off'
                   />
                 </div>
               </div>
@@ -280,6 +284,7 @@ export default function SignUp() {
                         password: e.target.value.trim(),
                       })
                     }
+                    autoComplete='new-password'
                   />
                   <button
                     type='button'
@@ -312,6 +317,7 @@ export default function SignUp() {
                         confirmPassword: e.target.value.trim(),
                       })
                     }
+                    autoComplete='new-password'
                   />
                   <button
                     type='button'

@@ -28,6 +28,7 @@ import {
 } from "recharts";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/button";
+import jsPDF from "jspdf";
 
 
 
@@ -54,11 +55,17 @@ export type RateLimitSummary = {
     p95ResponseTime: number;
     p99ResponseTime: number;
     avgTtfb: number;
-    totalDataTransferred: number;
+    avgDownloadSize: number;
     requestsPerSecond: number;
     throughput: number;
     totalDuration: number;
 };
+export type typeColors = {
+    critical: string;
+    warning: string;
+    info: string;
+    success: string;
+}
 
 export type RateLimitRequest = {
     id: string;
@@ -71,7 +78,7 @@ export type RateLimitRequest = {
     requestHeaders: RequestHeaders;
     responseHeaders: ResponseHeaders;
     responseBody: string;
-    curlCommand: string;
+    requestCurl: string;
     dnsTime: number;
     tcpTime: number;
     tlsTime: number;
@@ -121,6 +128,11 @@ function exportToExcel(data: RateLimitRequest[]) {
         String(req.responseTime),
         String(req.size),
         String(req.statusCode),
+        String(req.requestCurl),
+        String(req.dnsTime),
+        String(req.tcpTime),
+        String(req.tlsTime),
+        String(req.ttfbTime),
     ]);
 
     const csvContent = [headers, ...rows]
@@ -145,46 +157,72 @@ function exportToExcel(data: RateLimitRequest[]) {
 }
 
 function exportToPDF(data: RateLimitRequest[], summary: RateLimitSummary) {
-    const content = `
-RATE LIMIT TEST REPORT
-======================
+    const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "pt",
+        format: "a4",
+    });
 
-Test ID: ${summary.id}
-Status: ${summary.status}
-Duration: ${new Date(summary.startTime).toLocaleString()} - ${new Date(summary.endTime).toLocaleString()}
+    const marginX = 40;
+    let y = 40;
 
-SUMMARY
--------
-Total Requests: ${summary.totalRequests}
-Successful: ${summary.successfulRequests}
-Rate Limit Detected: ${summary.rateLimitDetected ? "YES" : "NO"}
-Threshold: ${summary.rateLimitThreshold}
-Avg Response Time: ${summary.avgResponseTime}ms
-Requests/Second: ${summary.requestsPerSecond}
+    const lineHeight = 16;
+    const pageHeight = doc.internal.pageSize.height;
 
-DETAILED REQUESTS
------------------
-${data
-            .map(
-                (req, idx) => `
-${idx + 1}. ${req.method} ${req.url}
-   Status: ${req.statusCode}
-   Response Time: ${req.responseTime}ms
-   TTFB: ${req.ttfbTime}ms
-   Size: ${req.size} bytes
-   Time: ${new Date(req.timestamp).toLocaleString()}
-`
-            )
-            .join("\n")}
-  `;
+    const addLine = (text: string, bold = false) => {
+        if (y > pageHeight - 40) {
+            doc.addPage();
+            y = 40;
+        }
 
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rate-limit-test-report-${Date.now()}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+        doc.setFont("helvetica", bold ? "bold" : "normal");
+        const split = doc.splitTextToSize(text, 520);
+        doc.text(split, marginX, y);
+        y += split.length * lineHeight;
+    };
+
+    // ===== HEADER =====
+    doc.setFontSize(18);
+    addLine("RATE LIMIT TEST REPORT", true);
+    y += 10;
+
+    doc.setFontSize(11);
+
+    addLine(`Test ID: ${summary.id}`);
+    addLine(`Status: ${summary.status}`);
+    addLine(
+        `Duration: ${new Date(summary.startTime).toLocaleString()} - ${new Date(
+            summary.endTime
+        ).toLocaleString()}`
+    );
+
+    y += 10;
+
+    // ===== SUMMARY =====
+    addLine("SUMMARY", true);
+    addLine(`Total Requests: ${summary.totalRequests}`);
+    addLine(`Successful: ${summary.successfulRequests}`);
+    addLine(`Rate Limit Detected: ${summary.rateLimitDetected ? "YES" : "NO"}`);
+    addLine(`Threshold: ${summary.rateLimitThreshold}`);
+    addLine(`Avg Response Time: ${summary.avgResponseTime}ms`);
+    addLine(`Requests/Second: ${summary.requestsPerSecond}`);
+
+    y += 10;
+
+    // ===== DETAILS =====
+    addLine("DETAILED REQUESTS", true);
+
+    data.forEach((req, idx) => {
+        addLine(`${idx + 1}. ${req.method} ${req.url}`, true);
+        addLine(`Status: ${req.statusCode}`);
+        addLine(`Response Time: ${req.responseTime}ms`);
+        addLine(`TTFB: ${req.ttfbTime}ms`);
+        addLine(`Size: ${req.size} bytes`);
+        addLine(`Time: ${new Date(req.timestamp).toLocaleString()}`);
+        y += 6;
+    });
+
+    doc.save(`rate-limit-test-report-${Date.now()}.pdf`);
 }
 
 /* =========================
@@ -217,8 +255,17 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
     const [responseTimeFilter, setResponseTimeFilter] = useState<RangeFilter>({ min: "", max: "" });
     const [selectedRequest, setSelectedRequest] = useState<RateLimitRequest | null>(null);
 
+
+    // console.log(selectedRequest, "selectedRequest");
+
     const [sorting, setSorting] = useState<SortingState>([]);
     const [expanded, setExpanded] = useState<ExpandedState>({});
+
+    const [openSmartInsights, setOpenSmartInsights] = useState(false);
+
+    const handleSmartInsightsToggle = () => {
+        setOpenSmartInsights((prev) => !prev);
+    };
 
     const filteredData = useMemo<RateLimitRequest[]>(() => {
         return requests.filter((req) => {
@@ -370,6 +417,23 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
     });
 
 
+    const formatCurl = (curl?: string) => {
+        if (!curl) return "";
+
+        // Split by - flags while keeping them
+        const parts = curl
+            .replace(/\s+-/g, "\n  -") // break before each flag
+            .replace(/^curl\s+/, "curl \\\n  "); // first line
+
+        // Add backslash continuation
+        const lines = parts.split("\n").map((line, i, arr) => {
+            if (i === arr.length - 1) return line; // last line no \
+            return line + " \\";
+        });
+
+        return lines.join("\n");
+    };
+
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-gray-100 rounded-lg overflow-hidden">
@@ -411,15 +475,25 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                             </h1>
                             <p className="text-sm text-gray-400 font-mono">Test ID: {summary.id}</p>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-col text-center flex-wrap gap-5">
                             <span
                                 className={`status-badge ${summary.status === "COMPLETED" ? "status-completed" : "status-warning"
                                     }`}
                             >
                                 {summary.status}
                             </span>
+                            <button
+                                onClick={handleSmartInsightsToggle}
+                                className={`status-badge ${summary.status === "COMPLETED" ? "status-completed" : "status-warning"
+                                    }`}
+                            >
+                                Smart insights
+                            </button>
+
                             {summary.rateLimitDetected && <span className="status-badge status-warning">Rate Limit Hit</span>}
+
                         </div>
+
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-4 text-xs font-mono text-gray-400">
@@ -474,13 +548,13 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
 
                     <div className="kpi-card">
                         <div className="text-xs font-bold text-gray-400 uppercase mb-2">Data Transfer</div>
-                        <div className="text-3xl font-bold text-purple-400">{(summary.totalDataTransferred / 1024).toFixed(1)}KB</div>
+                        <div className="text-3xl font-bold text-purple-400">{(summary.avgDownloadSize / 1024).toFixed(1)}KB</div>
                         <div className="text-xs text-gray-500 mt-1">Total transferred</div>
                     </div>
                 </div>
 
                 {/* Charts Row 1 */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
                     {/* Timeline Chart */}
                     <div className="lg:col-span-2 card animate-fadeInUp" style={{ animationDelay: "0.1s" }}>
                         <h3 className="text-lg font-bold mb-4 text-cyan-400">Response Time Timeline</h3>
@@ -520,6 +594,31 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                             </ResponsiveContainer>
                         </div>
                     </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.3s" }}>
+                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Timing Breakdown (Avg)</h3>
+                        <div className="chart-container">
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={timingBreakdown} layout="horizontal">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                                    <XAxis type="number" stroke="#6b7280" style={{ fontSize: "11px" }} />
+                                    <YAxis dataKey="name" type="category" stroke="#6b7280" style={{ fontSize: "11px" }} width={80} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: "rgba(20, 20, 20, 0.95)",
+                                            border: "1px solid rgba(6, 182, 212, 0.3)",
+                                            borderRadius: "8px",
+                                            fontSize: "12px",
+                                        }}
+                                    />
+                                    <Bar dataKey="value" fill="#06b6d4" radius={[0, 4, 4, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
 
                     {/* Status Distribution */}
                     <div className="card animate-fadeInUp" style={{ animationDelay: "0.2s" }}>
@@ -554,31 +653,8 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                         </div>
                     </div>
                 </div>
-
                 {/* Charts Row 2 */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                    {/* Timing Breakdown */}
-                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.3s" }}>
-                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Timing Breakdown (Avg)</h3>
-                        <div className="chart-container">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={timingBreakdown} layout="horizontal">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis type="number" stroke="#6b7280" style={{ fontSize: "11px" }} />
-                                    <YAxis dataKey="name" type="category" stroke="#6b7280" style={{ fontSize: "11px" }} width={80} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            background: "rgba(20, 20, 20, 0.95)",
-                                            border: "1px solid rgba(6, 182, 212, 0.3)",
-                                            borderRadius: "8px",
-                                            fontSize: "12px",
-                                        }}
-                                    />
-                                    <Bar dataKey="value" fill="#06b6d4" radius={[0, 4, 4, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
 
                     {/* Response Time Analysis */}
                     <div className="card animate-fadeInUp" style={{ animationDelay: "0.4s" }}>
@@ -607,11 +683,17 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                             </div>
                             <div className="bg-pink-500/10 border border-pink-500/30 rounded p-2">
                                 <div className="text-xs text-gray-400 mb-1">P99</div>
-                                <div className="text-xl font-bold text-pink-400">{summary.p99ResponseTime}ms</div>
+                                <div className="text-xl font-bold text-pink-400">{summary.p99ResponseTime.toFixed(2)}ms</div>
+                            </div>
+                            <div className="bg-pink-500/10 border border-pink-500/30 rounded p-2">
+                                <div className="text-xs text-gray-400 mb-1">Throughput</div>
+                                <div className="text-xl font-bold text-pink-400">{summary.throughput.toFixed(2)}ms</div>
                             </div>
                         </div>
-
-                        <div className="text-xs text-gray-400 mb-2 font-bold">Distribution</div>
+                    </div>
+                    {/* Timing Breakdown */}
+                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.3s" }}>
+                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Distribution</h3>
                         <div className="chart-container">
                             <ResponsiveContainer width="100%" height={140}>
                                 <BarChart
@@ -638,6 +720,8 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                             </ResponsiveContainer>
                         </div>
                     </div>
+
+
                 </div>
 
                 {/* Table */}
@@ -778,13 +862,379 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                 </div>
             </div>
 
+            <Dialog.Root open={openSmartInsights} onOpenChange={setOpenSmartInsights}>
+                <Dialog.Portal>
+
+                    <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
+                    <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-5xl max-h-[80vh] overflow-y-auto scrollbar-thin">
+                        <Dialog.Close asChild>
+                            <button className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                                ✕
+                            </button>
+                        </Dialog.Close>
+                        <div className="container mx-auto px-4 py-8 grid-pattern">
+                            {/* Smart Insights Section */}
+                            <div className="card mb-8 animate-fadeInUp border-2 border-cyan-500/30">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-cyan-400">Smart Insights</h2>
+                                        <p className="text-xs text-gray-400">AI-powered analysis for QA and Development teams</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {/* Performance Health */}
+                                    {(() => {
+                                        const avgResponseTime = summary.avgResponseTime;
+                                        const p95 = summary.p95ResponseTime;
+                                        const performanceStatus = avgResponseTime < 200 ? 'excellent' : avgResponseTime < 300 ? 'good' : avgResponseTime < 500 ? 'warning' : 'critical';
+                                        const statusColors = {
+                                            excellent: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' },
+                                            good: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' },
+                                            warning: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' },
+                                            critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' }
+                                        };
+                                        const colors = statusColors[performanceStatus];
+
+                                        return (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
+                                                    <div className="flex-1">
+                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Performance Health</h3>
+                                                        <p className="text-xs text-gray-300 mb-2">
+                                                            {performanceStatus === 'excellent' && 'Excellent response times! API is performing optimally.'}
+                                                            {performanceStatus === 'good' && 'Good response times. API is performing within acceptable range.'}
+                                                            {performanceStatus === 'warning' && 'Response times are elevated. Consider optimization.'}
+                                                            {performanceStatus === 'critical' && 'Critical: Response times are too high. Immediate attention needed.'}
+                                                        </p>
+                                                        <div className="text-xs text-gray-400">
+                                                            <div>Avg: <span className={`font-mono ${colors.text}`}>{avgResponseTime.toFixed(0)}ms</span></div>
+                                                            <div>P95: <span className={`font-mono ${colors.text}`}>{p95}ms</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Rate Limit Status */}
+                                    {(() => {
+                                        const rateLimitStatus = !summary.rateLimitDetected ? 'safe' : 'triggered';
+                                        const utilizationPercent = (summary.totalRequests / summary.rateLimitThreshold) * 100;
+                                        const colors = rateLimitStatus === 'safe'
+                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
+                                            : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
+
+                                        return (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
+                                                    <div className="flex-1">
+                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Rate Limit Status</h3>
+                                                        <p className="text-xs text-gray-300 mb-2">
+                                                            {rateLimitStatus === 'safe'
+                                                                ? `No rate limiting detected. Using ${utilizationPercent.toFixed(0)}% of threshold capacity.`
+                                                                : 'Rate limit was triggered during test. Requests were throttled.'}
+                                                        </p>
+                                                        <div className="text-xs text-gray-400">
+                                                            <div>Threshold: <span className={`font-mono ${colors.text}`}>{summary.rateLimitThreshold} req/window</span></div>
+                                                            <div>Actual: <span className={`font-mono ${colors.text}`}>{summary.totalRequests} requests</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Reliability Score */}
+                                    {(() => {
+                                        const successRate = (summary.successfulRequests / summary.totalRequests) * 100;
+                                        const reliabilityStatus = successRate === 100 ? 'perfect' : successRate >= 99 ? 'excellent' : successRate >= 95 ? 'good' : 'poor';
+                                        const colors = reliabilityStatus === 'perfect' || reliabilityStatus === 'excellent'
+                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
+                                            : reliabilityStatus === 'good'
+                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '⚠' }
+                                                : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
+
+                                        return (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
+                                                    <div className="flex-1">
+                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Reliability Score</h3>
+                                                        <p className="text-xs text-gray-300 mb-2">
+                                                            {reliabilityStatus === 'perfect' && 'Perfect! All requests succeeded without errors.'}
+                                                            {reliabilityStatus === 'excellent' && 'Excellent reliability. Minimal failures detected.'}
+                                                            {reliabilityStatus === 'good' && 'Good reliability but some failures occurred.'}
+                                                            {reliabilityStatus === 'poor' && 'Poor reliability. High failure rate needs investigation.'}
+                                                        </p>
+                                                        <div className="text-xs text-gray-400">
+                                                            <div>Success: <span className={`font-mono ${colors.text}`}>{successRate.toFixed(2)}%</span></div>
+                                                            <div>Failed: <span className={`font-mono ${colors.text}`}>{summary.failedRequests} requests</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Response Time Consistency */}
+                                    {(() => {
+                                        const variance = summary.maxResponseTime - summary.minResponseTime;
+                                        const variancePercent = (variance / summary.avgResponseTime) * 100;
+                                        const consistencyStatus = variancePercent < 20 ? 'excellent' : variancePercent < 50 ? 'good' : variancePercent < 100 ? 'moderate' : 'poor';
+                                        const colors = consistencyStatus === 'excellent'
+                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
+                                            : consistencyStatus === 'good'
+                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' }
+                                                : consistencyStatus === 'moderate'
+                                                    ? { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' }
+                                                    : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
+
+                                        return (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
+                                                    <div className="flex-1">
+                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Response Consistency</h3>
+                                                        <p className="text-xs text-gray-300 mb-2">
+                                                            {consistencyStatus === 'excellent' && 'Excellent consistency! Minimal variance in response times.'}
+                                                            {consistencyStatus === 'good' && 'Good consistency with acceptable variance.'}
+                                                            {consistencyStatus === 'moderate' && 'Moderate variance detected. May indicate inconsistent backend performance.'}
+                                                            {consistencyStatus === 'poor' && 'High variance! Investigate performance bottlenecks and caching issues.'}
+                                                        </p>
+                                                        <div className="text-xs text-gray-400">
+                                                            <div>Variance: <span className={`font-mono ${colors.text}`}>{variance}ms ({variancePercent.toFixed(0)}%)</span></div>
+                                                            <div>Range: <span className={`font-mono ${colors.text}`}>{summary.minResponseTime}-{summary.maxResponseTime}ms</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Throughput Analysis */}
+                                    {(() => {
+                                        const throughput = summary.throughput;
+                                        const throughputStatus = throughput >= 10 ? 'excellent' : throughput >= 5 ? 'good' : throughput >= 2 ? 'moderate' : 'low';
+                                        const colors = throughputStatus === 'excellent'
+                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
+                                            : throughputStatus === 'good'
+                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' }
+                                                : throughputStatus === 'moderate'
+                                                    ? { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' }
+                                                    : { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', icon: '!' };
+
+                                        return (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
+                                                    <div className="flex-1">
+                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Throughput Analysis</h3>
+                                                        <p className="text-xs text-gray-300 mb-2">
+                                                            {throughputStatus === 'excellent' && 'Excellent throughput! API can handle high concurrent loads.'}
+                                                            {throughputStatus === 'good' && 'Good throughput for moderate traffic patterns.'}
+                                                            {throughputStatus === 'moderate' && 'Moderate throughput. Consider load testing at higher rates.'}
+                                                            {throughputStatus === 'low' && 'Low throughput detected. May indicate rate limiting or client-side delays.'}
+                                                        </p>
+                                                        <div className="text-xs text-gray-400">
+                                                            <div>Rate: <span className={`font-mono ${colors.text}`}>{throughput.toFixed(2)} req/sec</span></div>
+                                                            <div>Duration: <span className={`font-mono ${colors.text}`}>{summary.totalDuration.toFixed(2)}s</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* P95/P99 Tail Latency */}
+                                    {(() => {
+                                        const p95Gap = summary.p95ResponseTime - summary.p50ResponseTime;
+                                        const p99Gap = summary.p99ResponseTime - summary.p50ResponseTime;
+                                        const tailLatencyStatus = p95Gap < 50 ? 'excellent' : p95Gap < 100 ? 'good' : p95Gap < 200 ? 'moderate' : 'poor';
+                                        const colors = tailLatencyStatus === 'excellent'
+                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
+                                            : tailLatencyStatus === 'good'
+                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' }
+                                                : tailLatencyStatus === 'moderate'
+                                                    ? { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' }
+                                                    : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
+
+                                        return (
+                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
+                                                <div className="flex items-start gap-3">
+                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
+                                                    <div className="flex-1">
+                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Tail Latency (P95/P99)</h3>
+                                                        <p className="text-xs text-gray-300 mb-2">
+                                                            {tailLatencyStatus === 'excellent' && 'Excellent! Minimal tail latency. Consistent performance for all users.'}
+                                                            {tailLatencyStatus === 'good' && 'Good tail latency. Most users experience consistent performance.'}
+                                                            {tailLatencyStatus === 'moderate' && 'Moderate tail latency. Some users may experience delays.'}
+                                                            {tailLatencyStatus === 'poor' && 'High tail latency! Worst-case scenarios significantly slower than median.'}
+                                                        </p>
+                                                        <div className="text-xs text-gray-400">
+                                                            <div>P95-P50: <span className={`font-mono ${colors.text}`}>+{p95Gap}ms</span></div>
+                                                            <div>P99-P50: <span className={`font-mono ${colors.text}`}>+{p99Gap}ms</span></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                {/* Key Recommendations */}
+                                <div className="mt-6 pt-6 border-t border-gray-700">
+                                    <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2">
+                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Key Recommendations for QA/Development
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {(() => {
+                                            const recommendations = [];
+
+                                            // Performance recommendations
+                                            if (summary.avgResponseTime > 300) {
+                                                recommendations.push({
+                                                    type: 'critical',
+                                                    title: 'Optimize Response Time',
+                                                    message: 'Average response time exceeds 300ms. Check database queries, API calls, and add caching.',
+                                                    icon: '🔥'
+                                                });
+                                            } else if (summary.avgResponseTime > 200) {
+                                                recommendations.push({
+                                                    type: 'warning',
+                                                    title: 'Monitor Performance',
+                                                    message: 'Response times are acceptable but could be optimized. Consider adding CDN or edge caching.',
+                                                    icon: '⚡'
+                                                });
+                                            }
+
+                                            // Consistency recommendations
+                                            const variance = summary.maxResponseTime - summary.minResponseTime;
+                                            const variancePercent = (variance / summary.avgResponseTime) * 100;
+                                            if (variancePercent > 100) {
+                                                recommendations.push({
+                                                    type: 'warning',
+                                                    title: 'High Response Variance',
+                                                    message: `${variance}ms variance detected. Investigate cold starts, database connection pooling, and resource contention.`,
+                                                    icon: '📊'
+                                                });
+                                            }
+
+                                            // Rate limit recommendations
+                                            if (summary.rateLimitDetected) {
+                                                recommendations.push({
+                                                    type: 'critical',
+                                                    title: 'Rate Limit Triggered',
+                                                    message: 'Rate limiting was hit during test. Implement exponential backoff and request queueing in production.',
+                                                    icon: '🚦'
+                                                });
+                                            } else if ((summary.totalRequests / summary.rateLimitThreshold) > 0.8) {
+                                                recommendations.push({
+                                                    type: 'warning',
+                                                    title: 'Approaching Rate Limit',
+                                                    message: `Using ${((summary.totalRequests / summary.rateLimitThreshold) * 100).toFixed(0)}% of rate limit. Monitor usage and implement client-side throttling.`,
+                                                    icon: '⚠️'
+                                                });
+                                            }
+
+                                            // Reliability recommendations
+                                            if (summary.failedRequests > 0) {
+                                                recommendations.push({
+                                                    type: 'critical',
+                                                    title: 'Request Failures Detected',
+                                                    message: `${summary.failedRequests} requests failed. Check error logs, implement retry logic, and add circuit breakers.`,
+                                                    icon: '❌'
+                                                });
+                                            }
+
+                                            // Tail latency recommendations
+                                            const p95Gap = summary.p95ResponseTime - summary.p50ResponseTime;
+                                            if (p95Gap > 100) {
+                                                recommendations.push({
+                                                    type: 'warning',
+                                                    title: 'High Tail Latency',
+                                                    message: `P95 is ${p95Gap}ms slower than median. This affects 5% of users. Look for resource exhaustion or GC pauses.`,
+                                                    icon: '📈'
+                                                });
+                                            }
+
+                                            // Throughput recommendations
+                                            if (summary.throughput < 2) {
+                                                recommendations.push({
+                                                    type: 'info',
+                                                    title: 'Low Test Throughput',
+                                                    message: 'Test throughput is low. Consider load testing at higher rates to validate production readiness.',
+                                                    icon: '🔄'
+                                                });
+                                            }
+
+                                            // Good news if everything is fine
+                                            if (recommendations.length === 0) {
+                                                recommendations.push({
+                                                    type: 'success',
+                                                    title: 'All Checks Passed',
+                                                    message: 'API is performing optimally with no critical issues detected. Continue monitoring in production.',
+                                                    icon: '✅'
+                                                });
+                                                recommendations.push({
+                                                    type: 'info',
+                                                    title: 'Next Steps',
+                                                    message: 'Consider testing with: 1) Higher load, 2) Different payload sizes, 3) Various network conditions, 4) Concurrent users.',
+                                                    icon: '📋'
+                                                });
+                                            }
+
+                                            const typeColors = {
+                                                critical: 'bg-red-500/10 border-red-500/30 text-red-400',
+                                                warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+                                                info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+                                                success: 'bg-green-500/10 border-green-500/30 text-green-400'
+                                            };
+
+                                            return recommendations.map((rec, idx) => (
+                                                <div key={idx} className={`${typeColors[rec.type as keyof typeof typeColors]} border rounded-lg p-3`}>
+                                                    <div className="flex items-start gap-2">
+                                                        <span className="text-lg">{rec.icon}</span>
+                                                        <div className="flex-1">
+                                                            <h4 className="font-bold text-sm mb-1">{rec.title}</h4>
+                                                            <p className="text-xs text-gray-300">{rec.message}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </Dialog.Content>
+                </Dialog.Portal>
+            </Dialog.Root>
+
+
             {/* Radix Dialog */}
             <Dialog.Root open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
                 <Dialog.Portal>
                     <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
-                    <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-3xl max-h-[80vh] overflow-y-auto scrollbar-thin">
+                    <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-4xl max-h-[80vh] overflow-y-auto scrollbar-thin">
+                        <Dialog.Close asChild>
+                            <button className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                                ✕
+                            </button>
+                        </Dialog.Close>
                         <Dialog.Title className="text-2xl font-bold mb-4 text-cyan-400">Request Details</Dialog.Title>
-
                         {selectedRequest && (
                             <div className="space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
@@ -815,7 +1265,7 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                                     <div className="text-xs font-bold text-gray-400 mb-2">cURL Command</div>
                                     <div className="bg-gray-800/50 p-3 rounded">
                                         <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap break-all">
-                                            {selectedRequest.curlCommand}
+                                            {formatCurl(selectedRequest?.requestCurl)}
                                         </pre>
                                     </div>
                                 </div>
@@ -830,9 +1280,7 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
                                 </div>
                             </div>
                         )}
-                        <Dialog.Close asChild>
-                            <Button className="mt-6 w-full">Close</Button>
-                        </Dialog.Close>
+
                     </Dialog.Content>
                 </Dialog.Portal>
             </Dialog.Root>

@@ -273,20 +273,20 @@ export default function SpecViewer({
   const cleanedComponents = validateAndCleanComponents(
     originalSpec?.components || originalSpec?.definitions
       ? {
-          ...originalSpec.components,
-          definitions: originalSpec.definitions,
-        }
+        ...originalSpec.components,
+        definitions: originalSpec.definitions,
+      }
       : {}
   );
 
   const transformedParameters = endpoint.parameters?.map(transformParameter);
   const transformedResponses = endpoint.responses
     ? Object.fromEntries(
-        Object.entries(endpoint.responses).map(([code, response]) => [
-          code,
-          transformResponse(response),
-        ])
-      )
+      Object.entries(endpoint.responses).map(([code, response]) => [
+        code,
+        transformResponse(response),
+      ])
+    )
     : undefined;
 
   const transformedRequestBody = endpoint.requestBody
@@ -346,19 +346,17 @@ export default function SpecViewer({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${
-      endpoint.operationId ||
+    a.download = `${endpoint.operationId ||
       `${endpoint.method}-${endpoint.path.replace(/\//g, '-')}`
-    }.${exportFormat}`;
+      }.${exportFormat}`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast({
       title: 'Copied',
-      description: `Downloaded ${endpoint.method.toUpperCase()} ${
-        endpoint.path
-      }`,
+      description: `Downloaded ${endpoint.method.toUpperCase()} ${endpoint.path
+        }`,
       variant: 'success',
     });
   };
@@ -375,10 +373,9 @@ export default function SpecViewer({
             <CardDescription className='flex items-center gap-2'>
               <Badge
                 variant='outline'
-                className={`font-mono text-xs ${
-                  methodColors[endpoint.method as keyof typeof methodColors] ||
+                className={`font-mono text-xs ${methodColors[endpoint.method as keyof typeof methodColors] ||
                   'bg-gray-100 text-gray-800'
-                }`}
+                  }`}
               >
                 {endpoint.method.toUpperCase()}
               </Badge>
@@ -433,7 +430,7 @@ export default function SpecViewer({
 
             <div className='px-6 pb-6'>
               <TabsContent value='overview' className='mt-4 space-y-4'>
-                <ScrollArea className='h-[60vh]'>
+                <ScrollArea className='h-[65vh] overflow-auto rounded'>
                   <div className='space-y-6'>
                     {/* Basic Info */}
                     <div className='space-y-3'>
@@ -448,11 +445,10 @@ export default function SpecViewer({
                           <p className='mt-1'>
                             <Badge
                               variant='outline'
-                              className={`font-mono ${
-                                methodColors[
-                                  endpoint.method as keyof typeof methodColors
-                                ] || 'bg-gray-100 text-gray-800'
-                              }`}
+                              className={`font-mono ${methodColors[
+                                endpoint.method as keyof typeof methodColors
+                              ] || 'bg-gray-100 text-gray-800'
+                                }`}
                             >
                               {endpoint.method.toUpperCase()}
                             </Badge>
@@ -632,8 +628,8 @@ export default function SpecViewer({
                                       code.startsWith('2')
                                         ? 'default'
                                         : code.startsWith('4')
-                                        ? 'destructive'
-                                        : 'secondary'
+                                          ? 'destructive'
+                                          : 'secondary'
                                     }
                                     className='text-xs'
                                   >
@@ -660,7 +656,7 @@ export default function SpecViewer({
               </TabsContent>
 
               <TabsContent value='details' className='mt-4'>
-                <ScrollArea className='h-[60vh]'>
+                <ScrollArea className='h-[65vh] overflow-auto rounded'>
                   <div className='space-y-4'>
                     <CollapsibleSection
                       title='Parameters'
@@ -716,7 +712,7 @@ export default function SpecViewer({
               </TabsContent>
 
               <TabsContent value='spec' className='mt-4'>
-                <ScrollArea className='h-[60vh]'>
+                <ScrollArea className='h-[65vh] overflow-auto rounded'>
                   <div className='relative'>
                     <pre className='text-xs bg-gray-900 text-gray-100 p-4 rounded overflow-x-auto scrollbar-thin'>
                       {specContent}
