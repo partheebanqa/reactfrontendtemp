@@ -48,6 +48,7 @@ const TestSuites: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All statuses');
   const [environmentFilter, setEnvironmentFilter] = useState<string>('all');
+  const [tagsFilter, setTagsFilter] = useState<string>('all');
   const { environments, activeEnvironment } = useDataManagement();
 
   const [sortBy, setSortBy] = useState<
@@ -169,6 +170,14 @@ const TestSuites: React.FC = () => {
     return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [environments]);
 
+  const tagsOptions = useMemo(() => {
+    const set = new Set<string>();
+    testSuitListData?.forEach((suite) => {
+      suite.tags?.forEach((tag) => tag && set.add(tag));
+    });
+    return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [testSuitListData]);
+
   const filteredSuites = (testSuitListData ?? []).filter((suite) => {
     const term = searchQuery.toLowerCase();
     const matchesSearch =
@@ -181,13 +190,17 @@ const TestSuites: React.FC = () => {
     const matchesStatus =
       statusFilter === 'All statuses' || suite.status === statusFilter;
 
+    // Tags filter
+    const matchesTags =
+      tagsFilter === 'all' || suite.tags?.includes(tagsFilter);
+
     // Environment filter
     const envName = (suite.environment?.name ?? 'No Environment').toLowerCase();
     const matchesEnvironment =
       environmentFilter === 'all' ||
       envName === environmentFilter.toLowerCase();
 
-    return matchesSearch && matchesStatus && matchesEnvironment;
+    return matchesSearch && matchesStatus && matchesEnvironment && matchesTags;
   });
 
   const filteredAndSortedSuites = useMemo(() => {
@@ -390,6 +403,9 @@ const TestSuites: React.FC = () => {
           </SelectContent>
         </Select>
 
+
+
+
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className='w-48'>
             {/* <Filter className='w-4 h-4 mr-2' /> */}
@@ -399,6 +415,25 @@ const TestSuites: React.FC = () => {
             <SelectItem value='All statuses'>All status</SelectItem>
             <SelectItem value='generated'>Generated</SelectItem>
             <SelectItem value='generating'>Generating</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={tagsFilter} onValueChange={setTagsFilter}>
+          <SelectTrigger className='w-48'>
+            <SelectValue placeholder='All tags' />
+          </SelectTrigger>
+          <SelectContent>
+            {tagsOptions.map((name) => (
+              <SelectItem key={name} value={name}>
+                {name === 'all' ? (
+                  'All Tags'
+                ) : (
+                  <div className='flex items-center gap-2'>
+                    <span>{name}</span>
+                  </div>
+                )}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 

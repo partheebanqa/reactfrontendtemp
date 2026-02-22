@@ -3,7 +3,7 @@
 export interface TestSuiteRequest {
   id: string;
   name: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
+  method: "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
   url: string;
   description?: string;
 }
@@ -17,7 +17,7 @@ export interface RequestStat {
   requestId: string;
   startTime?: string;
   endTime?: string;
-  status?: 'pending' | 'running' | 'completed' | 'failed';
+  status?: "pending" | "running" | "completed" | "failed";
   lastGeneratedAt?: string;
   meta?: RequestStatMeta;
 }
@@ -42,9 +42,10 @@ export interface TestSuite {
   functionalTests: number;
   performanceTests: number;
   securityTests: number;
-  status: 'Not Run' | 'Running' | 'Passed' | 'Failed';
+  status: "Not Run" | "Running" | "Passed" | "Failed";
   requests: TestSuiteRequest[];
   stats?: TestSuiteStats;
+  tags?: string[];
 }
 
 export interface CreateTestSuitePayload {
@@ -79,15 +80,15 @@ export interface Request {
   url: string;
   endpoint: string;
   order: number;
-  bodyType: 'none' | 'raw' | 'form-data' | 'x-www-form-urlencoded';
+  bodyType: "none" | "raw" | "form-data" | "x-www-form-urlencoded";
   bodyFormData?: Array<{
     key: string;
     value: string;
     enabled: boolean;
-    type: 'text' | 'file';
+    type: "text" | "file";
   }> | null;
   bodyRawContent: string;
-  authorizationType: 'none' | 'bearer' | 'basic' | 'api-key';
+  authorizationType: "none" | "bearer" | "basic" | "api-key";
   authorization: RequestAuth;
   headers: RequestHeader[];
   params: RequestParam[];
@@ -102,7 +103,7 @@ export interface RequestStat {
   requestId: string;
   startTime?: string;
   endTime?: string;
-  status?: 'pending' | 'running' | 'completed' | 'failed' | undefined;
+  status?: "pending" | "running" | "completed" | "failed" | undefined;
   lastGeneratedAt?: string;
   meta?: {
     totalTests?: number;

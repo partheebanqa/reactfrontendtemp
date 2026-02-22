@@ -51,7 +51,7 @@ const formSchema = z
 
     stopOnError: z.boolean(),
 
-    rateLimitRequests: z.coerce.number().min(1).max(100_000).optional(),
+    rateLimitRequests: z.coerce.number().min(1).max(200).optional(),
 
     rateLimitPeriod: z.coerce.number().min(1).max(3_600).optional(),
 
