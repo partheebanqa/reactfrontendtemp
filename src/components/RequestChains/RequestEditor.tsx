@@ -120,6 +120,80 @@ interface RequestEditorProps {
   extractedVariablesByRequest?: Record<string, Record<string, any>>;
 }
 
+// Add after imports
+type SegmentKind = 'delimiter' | 'value';
+
+interface UrlSegment {
+  kind: SegmentKind;
+  content: string;
+  index: number;
+}
+
+type VariableType = 'static' | 'dynamic' | 'extracted';
+
+interface TypeColorConfig {
+  bg: string;
+  border: string;
+  text: string;
+  preview: string;
+}
+
+const TYPE_COLORS: Record<VariableType, TypeColorConfig> = {
+  static: {
+    bg: 'rgba(14,165,233,0.15)',
+    border: 'rgba(14,165,233,0.3)',
+    text: '#7dd3fc',
+    preview: '#38bdf8',
+  },
+  dynamic: {
+    bg: 'rgba(139,92,246,0.18)',
+    border: 'rgba(139,92,246,0.35)',
+    text: '#c4b5fd',
+    preview: '#a78bfa',
+  },
+  extracted: {
+    bg: 'rgba(245,158,11,0.15)',
+    border: 'rgba(245,158,11,0.3)',
+    text: '#fcd34d',
+    preview: '#f59e0b',
+  },
+};
+
+function tokenizeUrl(raw: string): UrlSegment[] {
+  const tokens: UrlSegment[] = [];
+  try {
+    // First, temporarily replace {{varName}} with a placeholder so it
+    // survives the split as a single token
+    const varPattern = /\{\{(\w+)\}\}/g;
+    const placeholders: string[] = [];
+    const withPlaceholders = raw.replace(varPattern, (match) => {
+      placeholders.push(match);
+      return `__VAR${placeholders.length - 1}__`;
+    });
+
+    // Now split on URL delimiters
+    const parts = withPlaceholders.split(/(?=[/:?&=])|(?<=[/:?&=])/);
+
+    parts.forEach((part) => {
+      if (!part) return;
+      // Restore placeholders back to {{varName}}
+      const restored = part.replace(
+        /__VAR(\d+)__/g,
+        (_, idx) => placeholders[Number(idx)],
+      );
+      const isDelimiter = /^[/:?&=]$/.test(part) || part === '//';
+      tokens.push({
+        kind: isDelimiter ? 'delimiter' : 'value',
+        content: restored,
+        index: tokens.length,
+      });
+    });
+  } catch {
+    tokens.push({ kind: 'value', content: raw, index: 0 });
+  }
+  return tokens.filter((t) => t.content !== '');
+}
+
 export function RequestEditor({
   request: initialRequest,
   onUpdate,
@@ -1595,6 +1669,382 @@ export function RequestEditor({
     });
   };
 
+  const UrlSubstitutionBar: React.FC = () => {
+    const allAvailableVars: Variable[] = getAllAvailableVariables();
+
+    const filteredVars: Variable[] = allAvailableVars.filter((v) => {
+      const matchesSearch =
+        v.name.toLowerCase().includes(segmentSearch.toLowerCase()) ||
+        String(v.value ?? '')
+          .toLowerCase()
+          .includes(segmentSearch.toLowerCase());
+
+      if (segmentTab === 'all') return matchesSearch;
+
+      const vType = getVariableType(v.name);
+      return matchesSearch && vType === segmentTab;
+    });
+
+    return (
+      <div style={{ position: 'relative' }} ref={urlBarRef}>
+        {/* Toggle */}
+        <button
+          type='button'
+          onClick={() => setShowUrlBuilder((p) => !p)}
+          style={{
+            fontSize: 11,
+            color: showUrlBuilder ? '#6366f1' : '#64748b',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '2px 0',
+            marginBottom: 4,
+            fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: showUrlBuilder ? '#6366f1' : '#334155',
+            }}
+          />
+          {showUrlBuilder
+            ? 'Hide variable builder'
+            : 'Click URL segments to bind variables'}
+        </button>
+
+        {showUrlBuilder && (
+          <div
+            style={{
+              padding: '10px 12px',
+              background: '#0a0c13',
+              borderRadius: 6,
+              border: '1px solid #1a2035',
+              fontSize: 13,
+              lineHeight: 2.2,
+              wordBreak: 'break-all',
+              marginBottom: 6,
+              position: 'relative', // needed for absolute picker
+            }}
+          >
+            {urlSegments.map((seg, i) => {
+              if (seg.kind === 'delimiter') {
+                return (
+                  <span key={i} style={{ color: '#4a5568' }}>
+                    {seg.content}
+                  </span>
+                );
+              }
+
+              const boundVarName: string | undefined = urlSubstitutions[i];
+              const varType: VariableType | null = boundVarName
+                ? getVariableType(boundVarName)
+                : null;
+              const colors: TypeColorConfig | null = varType
+                ? TYPE_COLORS[varType]
+                : null;
+              const boundVar: Variable | undefined = boundVarName
+                ? allAvailableVars.find((v) => v.name === boundVarName)
+                : undefined;
+              const resolvedVal: string = boundVar
+                ? String(boundVar.value ?? boundVar.initialValue ?? '')
+                : '';
+
+              return (
+                <span
+                  key={i}
+                  onClick={(e) => openSegmentPicker(e, i)}
+                  title={
+                    boundVarName
+                      ? `Bound to {{${boundVarName}}}`
+                      : 'Click to bind a variable'
+                  }
+                  style={{
+                    cursor: 'pointer',
+                    borderRadius: 4,
+                    padding: '1px 5px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 3,
+                    border: `1px solid ${colors ? colors.border : 'transparent'}`,
+                    background: colors ? colors.bg : 'transparent',
+                    color: colors ? colors.text : '#94a3b8',
+                    transition: 'background 0.15s',
+                    margin: '0 1px',
+                  }}
+                  onMouseEnter={(e: React.MouseEvent<HTMLSpanElement>) => {
+                    if (!colors) {
+                      e.currentTarget.style.background = 'rgba(99,179,237,0.1)';
+                      e.currentTarget.style.color = '#90cdf4';
+                    }
+                  }}
+                  onMouseLeave={(e: React.MouseEvent<HTMLSpanElement>) => {
+                    if (!colors) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.color = '#94a3b8';
+                    }
+                  }}
+                >
+                  {boundVarName ? (
+                    <>
+                      <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
+                        {'{{'}{' '}
+                      </span>
+                      <span style={{ fontWeight: 500 }}>{boundVarName}</span>
+                      <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
+                        {'}}'}
+                      </span>
+                      {resolvedVal && (
+                        <span
+                          style={{
+                            fontSize: '0.75em',
+                            marginLeft: 3,
+                            color: colors?.preview,
+                            opacity: 0.8,
+                            fontStyle: 'italic',
+                          }}
+                        >
+                          →{' '}
+                          {resolvedVal.length > 15
+                            ? `${resolvedVal.slice(0, 15)}…`
+                            : resolvedVal}
+                        </span>
+                      )}
+                      <span
+                        onClick={(e: React.MouseEvent<HTMLSpanElement>) =>
+                          clearSegmentSubstitution(i, e)
+                        }
+                        title='Remove'
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 13,
+                          height: 13,
+                          borderRadius: '50%',
+                          background: 'rgba(139,92,246,0.4)',
+                          color: '#c4b5fd',
+                          fontSize: 9,
+                          marginLeft: 2,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        ×
+                      </span>
+                    </>
+                  ) : (
+                    seg.content
+                  )}
+                </span>
+              );
+            })}
+
+            {/* Picker popover */}
+            {activeSegment !== null && (
+              <div
+                ref={pickerRef}
+                style={{
+                  position: 'absolute',
+                  top: pickerPos.top,
+                  left: Math.max(0, pickerPos.left),
+                  width: 290,
+                  zIndex: 100,
+                  background: '#0f1117',
+                  border: '1px solid #2d3a52',
+                  borderRadius: 10,
+                  padding: 12,
+                  boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                }}
+              >
+                <div
+                  style={{ fontSize: 11, color: '#475569', marginBottom: 8 }}
+                >
+                  Binding:{' '}
+                  <span style={{ color: '#c4b5fd', fontFamily: 'monospace' }}>
+                    "{urlSegments[activeSegment]?.content}"
+                  </span>
+                </div>
+
+                <input
+                  autoFocus
+                  placeholder='Search variables...'
+                  value={segmentSearch}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setSegmentSearch(e.target.value)
+                  }
+                  style={{
+                    width: '100%',
+                    background: '#0a0c13',
+                    border: '1px solid #1e2433',
+                    borderRadius: 6,
+                    color: '#e2e8f0',
+                    padding: '6px 10px',
+                    fontSize: 12,
+                    outline: 'none',
+                    marginBottom: 8,
+                    boxSizing: 'border-box',
+                  }}
+                />
+
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                  {(['all', 'static', 'dynamic', 'extracted'] as const).map(
+                    (t) => (
+                      <button
+                        key={t}
+                        type='button'
+                        onClick={() => setSegmentTab(t)}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: 20,
+                          fontSize: 10,
+                          cursor: 'pointer',
+                          border: '1px solid',
+                          fontFamily: 'inherit',
+                          background:
+                            segmentTab === t ? '#1e293b' : 'transparent',
+                          borderColor:
+                            segmentTab === t ? '#334155' : 'transparent',
+                          color: segmentTab === t ? '#e2e8f0' : '#64748b',
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ),
+                  )}
+                </div>
+
+                {/* List */}
+                <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                  {filteredVars.length === 0 ? (
+                    <div
+                      style={{
+                        color: '#334155',
+                        fontSize: 12,
+                        padding: '8px 0',
+                        textAlign: 'center',
+                      }}
+                    >
+                      No variables found
+                    </div>
+                  ) : (
+                    filteredVars.map((v) => {
+                      const vType: VariableType = getVariableType(v.name);
+                      const colors: TypeColorConfig = TYPE_COLORS[vType];
+                      const isSelected: boolean =
+                        urlSubstitutions[activeSegment] === v.name;
+
+                      return (
+                        <div
+                          key={v.id}
+                          onClick={() => assignSegmentVariable(v.name)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '8px 10px',
+                            borderRadius: 6,
+                            cursor: 'pointer',
+                            background: isSelected ? colors.bg : 'transparent',
+                            border: `1px solid ${isSelected ? colors.border : 'transparent'}`,
+                            marginBottom: 2,
+                            transition: 'background 0.12s',
+                          }}
+                          onMouseEnter={(
+                            e: React.MouseEvent<HTMLDivElement>,
+                          ) => {
+                            if (!isSelected)
+                              e.currentTarget.style.background = '#1e293b';
+                          }}
+                          onMouseLeave={(
+                            e: React.MouseEvent<HTMLDivElement>,
+                          ) => {
+                            if (!isSelected)
+                              e.currentTarget.style.background = 'transparent';
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: 12,
+                                color: isSelected ? colors.text : '#e2e8f0',
+                                fontFamily: 'monospace',
+                                fontWeight: isSelected ? 500 : 400,
+                              }}
+                            >
+                              {v.name}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: '#475569',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {String(v.value ?? '').slice(0, 30)}
+                              {String(v.value ?? '').length > 30 ? '…' : ''}
+                            </div>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: 9,
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              background: colors.bg,
+                              color: colors.text,
+                              border: `1px solid ${colors.border}`,
+                              textTransform: 'uppercase' as const,
+                              letterSpacing: '0.05em',
+                              fontWeight: 500,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {vType}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {urlSubstitutions[activeSegment] && (
+                  <button
+                    type='button'
+                    onClick={() => {
+                      clearSegmentSubstitution(activeSegment, null);
+                      setActiveSegment(null);
+                    }}
+                    style={{
+                      width: '100%',
+                      marginTop: 8,
+                      padding: '6px',
+                      background: 'transparent',
+                      border: '1px solid #1e2433',
+                      borderRadius: 6,
+                      color: '#64748b',
+                      fontSize: 11,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Clear substitution
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleAddUrlEncodedField = () => {
     const newField: KeyValueField = {
       id: Math.random().toString(),
@@ -1771,6 +2221,60 @@ export function RequestEditor({
   };
 
   const [copied, setCopied] = useState(false);
+
+  const [urlSegments, setUrlSegments] = useState<UrlSegment[]>([]);
+  const [urlSubstitutions, setUrlSubstitutions] = useState<
+    Record<number, string>
+  >({});
+  const [activeSegment, setActiveSegment] = useState<number | null>(null);
+  const [segmentSearch, setSegmentSearch] = useState<string>('');
+  const [segmentTab, setSegmentTab] = useState<'all' | VariableType>('all');
+  const [pickerPos, setPickerPos] = useState<{ top: number; left: number }>({
+    top: 0,
+    left: 0,
+  });
+  const [showUrlBuilder, setShowUrlBuilder] = useState<boolean>(false);
+
+  // Tokenize URL whenever it changes
+  useEffect(() => {
+    const parsed = tokenizeUrl(url);
+    setUrlSegments(parsed);
+
+    setUrlSubstitutions((prev) => {
+      const next: Record<number, string> = {};
+
+      parsed.forEach((seg, i) => {
+        if (seg.kind !== 'value') return;
+
+        // If segment IS a {{varName}} pattern, auto-bind it
+        const varMatch = seg.content.match(/^\{\{(\w+)\}\}$/);
+        if (varMatch) {
+          next[i] = varMatch[1]; // bind to the variable name
+          return;
+        }
+
+        // Otherwise preserve existing manual substitution if segment unchanged
+        if (prev[i] && seg.content === seg.content) {
+          next[i] = prev[i];
+        }
+      });
+
+      return next;
+    });
+  }, [url]);
+  // Close picker on outside click
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setActiveSegment(null);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+  const urlBarRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
+
   const handleCopy = async (value: string) => {
     try {
       const formattedValue = `{{${value}}}`;
@@ -1913,6 +2417,67 @@ export function RequestEditor({
       )}
     </div>
   );
+
+  function openSegmentPicker(
+    e: React.MouseEvent<HTMLSpanElement>,
+    segIndex: number,
+  ): void {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const barRect = urlBarRef.current?.getBoundingClientRect();
+    if (!barRect) return;
+    setPickerPos({
+      top: rect.bottom - barRect.top + 6,
+      left: Math.min(rect.left - barRect.left, barRect.width - 300),
+    });
+    setActiveSegment(segIndex);
+    setSegmentSearch('');
+    setSegmentTab('all');
+  }
+
+  function assignSegmentVariable(variableName: string): void {
+    const updatedSubs = { ...urlSubstitutions, [activeSegment!]: variableName };
+    setUrlSubstitutions(updatedSubs);
+    const newUrl = urlSegments
+      .map((seg, i) => {
+        if (seg.kind === 'delimiter') return seg.content;
+        if (updatedSubs[i]) return `{{${updatedSubs[i]}}}`;
+        return seg.content;
+      })
+      .join('');
+    setUrl(newUrl);
+    setActiveSegment(null);
+  }
+
+  function clearSegmentSubstitution(
+    segIndex: number,
+    e: React.MouseEvent<HTMLSpanElement> | null,
+  ): void {
+    e?.stopPropagation();
+    const updatedSubs = { ...urlSubstitutions };
+    delete updatedSubs[segIndex];
+    setUrlSubstitutions(updatedSubs);
+
+    const newUrl = urlSegments
+      .map((seg, i) => {
+        if (seg.kind === 'delimiter') return seg.content;
+        if (updatedSubs[i]) return `{{${updatedSubs[i]}}}`;
+        return seg.content;
+      })
+      .join('');
+    setUrl(newUrl);
+  }
+
+  function getVariableType(varName: string): VariableType {
+    if (dynamicStructured.some((v) => v.name === varName)) return 'dynamic';
+
+    const allExtracted = Object.values(
+      extractedVariablesByRequest ?? {},
+    ).flatMap((vars) => Object.keys(vars));
+    if (allExtracted.includes(varName)) return 'extracted';
+
+    return 'static';
+  }
 
   const DynamicVariablesPanel = () => {
     if (usedDynamicVariables.length === 0) return null;
@@ -2233,12 +2798,15 @@ export function RequestEditor({
           {isExecuting ? 'Running...' : 'Run'}
         </Button>
       </div>
-      <div className='flex items-start space-x-2 mt-2 text-sm'>
+      {/* <div className='flex items-start space-x-2 mt-2 text-sm'>
         <span className='text-gray-600 dark:text-gray-400 font-medium'>
           Final URL Preview:
         </span>
         <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
-      </div>
+      </div> */}
+
+      <UrlSubstitutionBar />
+
       <DynamicVariablesPanel />
       {Object.keys(parentExtractedVariables).length > 0 && (
         <div className='mt-2 p-2 bg-blue-50 border border-blue-200 rounded'>
@@ -2904,12 +3472,13 @@ export function RequestEditor({
               placeholder='https://api.example.com/endpoint'
             />
           </div>
-          <div className='flex items-start space-x-2 mt-2 text-sm'>
+          {/* <div className='flex items-start space-x-2 mt-2 text-sm'>
             <span className='text-gray-600 dark:text-gray-400 font-medium'>
               Final URL Preview:
             </span>
             <div className='flex-1'>{renderEnhancedPreviewUrl()}</div>
-          </div>
+          </div> */}
+          <UrlSubstitutionBar />
 
           <DynamicVariablesPanel />
 
