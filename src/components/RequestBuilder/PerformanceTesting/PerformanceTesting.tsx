@@ -62,6 +62,7 @@ import RateLimitDashboard, {
   RateLimitSummary,
 } from './RateLimitDashboard';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import { useCollection } from '@/hooks/useCollection';
 
 export interface PerformanceTestProps {
   request: {
@@ -228,6 +229,8 @@ export default function PerformanceTesting({
     'idle' | 'authCheck' | 'authRequired' | 'setupAuth'
   >('idle');
   const { activeEnvironment } = useDataManagement();
+  const { collections, activeCollection, setActiveCollection } =
+    useCollection();
 
   const requestId = request?.id;
   const [editingConfig, setEditingConfig] =
@@ -498,9 +501,30 @@ export default function PerformanceTesting({
       onClose();
     }
   };
+
   const getAuthRequestName = () => {
-    if (!preRequestId) return null;
-    return preRequestId;
+    if (!preRequestId || !activeCollection?.id) return null;
+
+    // Try to find from localStorage stored data
+    const storageKeys = Object.keys(localStorage).filter((key) =>
+      key.startsWith(`extracted_var_${activeCollection.id}_`),
+    );
+
+    for (const key of storageKeys) {
+      try {
+        const data = JSON.parse(localStorage.getItem(key) || '{}');
+        if (data.requestName) return data.requestName;
+      } catch {}
+    }
+
+    const collection = collections.find((c) => c.id === activeCollection?.id);
+    const allRequests = [
+      ...(collection?.requests || []),
+      ...((collection as any)?.folders || []).flatMap(
+        (f: any) => f.requests || [],
+      ),
+    ];
+    return allRequests.find((r) => r.id === preRequestId)?.name || null;
   };
 
   const {
@@ -646,10 +670,13 @@ export default function PerformanceTesting({
                 </div>
                 <div className='flex items-center gap-3'>
                   {preRequestId && (
-                    <div className='flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg whitespace-nowrap'>
+                    <div className='mt-4 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
                       <CheckCircle className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
                       <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
-                        Auto Auth Enabled
+                        Auto Auth Enabled -
+                      </span>
+                      <span className='text-xs text-gray-500 dark:text-gray-400'>
+                        {getAuthRequestName() || preRequestId}
                       </span>
                     </div>
                   )}
