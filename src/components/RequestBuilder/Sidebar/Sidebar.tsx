@@ -1868,7 +1868,7 @@ const Sidebar: React.FC = () => {
                     >
                       <Zap className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Scanning {''}
+                        Performance Analysis {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>
@@ -1883,7 +1883,7 @@ const Sidebar: React.FC = () => {
                     >
                       <Rocket className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Analysis {''}
+                        Rate limit Test {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>

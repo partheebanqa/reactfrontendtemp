@@ -1,56 +1,29 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Loader2,
   X,
-  Download,
-  Share2,
-  Search,
-  Shield,
-  Clock,
   AlertCircle,
   CheckCircle,
-  Play,
-  FileText,
-  ChevronLeft,
   ChevronRight,
   Rocket,
   Plus,
+  Unlock,
+  Lock,
+  Settings,
+  Globe,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
 import { useWorkspace } from '@/hooks/useWorkspace';
-
-import {
-  downloadSecurityScanAsPDF,
-  downloadSecurityScanAsHTML,
-  shareSecurityScan,
-  ScanResult,
-} from '@/utils/securityExportUtils';
-
-import {
-  useLoadHistoricalScan,
-  useScanHistory,
-  useSecurityScanFlow,
-} from '@/store/securityScan';
+import { useScanHistory, useSecurityScanFlow } from '@/store/securityScan';
 import { ConfigFormDialog } from './ConfigFormDialog';
-import { ExecutionHistory } from './ExecutionHistory';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   PerformanceConfig,
-  PerformanceRunApi,
-  PerformanceRunDTO,
   PerformanceRunResultsResponse,
   PerformanceTestConfigApi,
-  PerformanceTestConfigDTO,
   PerformanceTestUpdatePayload,
 } from '@/models/performanceTest.model';
 import {
@@ -84,7 +57,11 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { RunSummaryCard } from './RunSummaryCard';
-import RateLimitDashboard, { RateLimitRequest, RateLimitSummary } from './RateLimitDashboard';
+import RateLimitDashboard, {
+  RateLimitRequest,
+  RateLimitSummary,
+} from './RateLimitDashboard';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 export interface PerformanceTestProps {
   request: {
@@ -100,7 +77,6 @@ export interface PerformanceTestProps {
 }
 type ScanStatus = 'idle' | 'initializing' | 'scanning' | 'completed' | 'error';
 
-
 function computePercentile(values: number[], p: number) {
   if (!values.length) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -115,7 +91,7 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
   const results = runResultsResponse?.results ?? [];
   const s = runResultsResponse?.summary ?? {};
 
-  console.log(results, "results");
+  console.log(results, 'results');
 
   const requests: RateLimitRequest[] = results.map((r: any, idx: number) => {
     const statusCode = Number(r.statusCode ?? r.status ?? 0);
@@ -125,16 +101,19 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 
     return {
       id: String(r.id ?? r.requestId ?? idx),
-      url: String(r.url ?? r.requestUrl ?? ""),
-      method: String(r.method ?? "GET"),
+      url: String(r.url ?? r.requestUrl ?? ''),
+      method: String(r.method ?? 'GET'),
       statusCode,
       responseTime,
       size,
       success: Boolean(r.success ?? (statusCode >= 200 && statusCode < 300)),
       requestHeaders: (r.requestHeaders ?? {}) as any,
       responseHeaders: (r.responseHeaders ?? {}) as any,
-      responseBody: typeof r.responseBody === "string" ? r.responseBody : JSON.stringify(r.responseBody ?? ""),
-      requestCurl: String(r.requestCurl ?? ""),
+      responseBody:
+        typeof r.responseBody === 'string'
+          ? r.responseBody
+          : JSON.stringify(r.responseBody ?? ''),
+      requestCurl: String(r.requestCurl ?? ''),
       dnsTime: Number(r.dnsTime ?? 0),
       tcpTime: Number(r.tcpTime ?? 0),
       tlsTime: Number(r.tlsTime ?? 0),
@@ -143,26 +122,51 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
     };
   });
 
-  const responseTimes = requests.map((x) => x.responseTime).filter((n) => Number.isFinite(n));
-  const ttfbs = requests.map((x) => x.ttfbTime).filter((n) => Number.isFinite(n));
+  const responseTimes = requests
+    .map((x) => x.responseTime)
+    .filter((n) => Number.isFinite(n));
+  const ttfbs = requests
+    .map((x) => x.ttfbTime)
+    .filter((n) => Number.isFinite(n));
 
-  const startTime = String(s.startTime ?? s.startedAt ?? s.start ?? requests[0]?.timestamp ?? new Date().toISOString());
-  const endTime = String(s.endTime ?? s.endedAt ?? s.end ?? requests[requests.length - 1]?.timestamp ?? new Date().toISOString());
+  const startTime = String(
+    s.startTime ??
+      s.startedAt ??
+      s.start ??
+      requests[0]?.timestamp ??
+      new Date().toISOString(),
+  );
+  const endTime = String(
+    s.endTime ??
+      s.endedAt ??
+      s.end ??
+      requests[requests.length - 1]?.timestamp ??
+      new Date().toISOString(),
+  );
 
   const totalRequests = Number(s.totalRequests ?? requests.length);
-  const successfulRequests = Number(s.successfulRequests ?? requests.filter((r) => r.success).length);
-  const failedRequests = Number(s.failedRequests ?? (totalRequests - successfulRequests));
+  const successfulRequests = Number(
+    s.successfulRequests ?? requests.filter((r) => r.success).length,
+  );
+  const failedRequests = Number(
+    s.failedRequests ?? totalRequests - successfulRequests,
+  );
 
   const avgResp =
     Number(s.avgResponseTime) ||
-    (responseTimes.reduce((a, b) => a + b, 0) / (responseTimes.length || 1));
+    responseTimes.reduce((a, b) => a + b, 0) / (responseTimes.length || 1);
 
   const avgTtfb =
-    Number(s.avgTtfb) ||
-    (ttfbs.reduce((a, b) => a + b, 0) / (ttfbs.length || 1));
+    Number(s.avgTtfb) || ttfbs.reduce((a, b) => a + b, 0) / (ttfbs.length || 1);
 
-  const minResp = Number(s.minResponseTime ?? Math.min(...(responseTimes.length ? responseTimes : [0])));
-  const maxResp = Number(s.maxResponseTime ?? Math.max(...(responseTimes.length ? responseTimes : [0])));
+  const minResp = Number(
+    s.minResponseTime ??
+      Math.min(...(responseTimes.length ? responseTimes : [0])),
+  );
+  const maxResp = Number(
+    s.maxResponseTime ??
+      Math.max(...(responseTimes.length ? responseTimes : [0])),
+  );
 
   const p50 = Number(s.p50ResponseTime ?? computePercentile(responseTimes, 50));
   const p90 = Number(s.p90ResponseTime ?? computePercentile(responseTimes, 90));
@@ -171,7 +175,10 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 
   const durationSec =
     Number(s.totalDuration) ||
-    Math.max(0, (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000);
+    Math.max(
+      0,
+      (new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000,
+    );
 
   const totalDataTransferred =
     Number(s.totalDataTransferred) ||
@@ -182,8 +189,8 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
     (durationSec > 0 ? totalRequests / durationSec : 0);
 
   const summary: RateLimitSummary = {
-    id: String(s.id ?? s.executionId ?? "unknown"),
-    status: String(s.status ?? "COMPLETED"),
+    id: String(s.id ?? s.executionId ?? 'unknown'),
+    status: String(s.status ?? 'COMPLETED'),
     startTime,
     endTime,
     totalRequests,
@@ -199,7 +206,9 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
     p95ResponseTime: p95,
     p99ResponseTime: p99,
     avgTtfb,
-    avgDownloadSize: Number(s.avgDownloadSize ?? (totalDataTransferred / totalRequests || 0)),
+    avgDownloadSize: Number(
+      s.avgDownloadSize ?? (totalDataTransferred / totalRequests || 0),
+    ),
     requestsPerSecond: rps,
     throughput: Number(s.throughput ?? rps),
     totalDuration: durationSec,
@@ -215,6 +224,10 @@ export default function PerformanceTesting({
   onClose,
 }: PerformanceTestProps) {
   const { currentWorkspace } = useWorkspace();
+  const [authFlowStatus, setAuthFlowStatus] = useState<
+    'idle' | 'authCheck' | 'authRequired' | 'setupAuth'
+  >('idle');
+  const { activeEnvironment } = useDataManagement();
 
   const requestId = request?.id;
   const [editingConfig, setEditingConfig] =
@@ -337,7 +350,8 @@ export default function PerformanceTesting({
   });
 
   const executeMutation = useMutation({
-    mutationFn: (configId: string) => executePerformanceTest({ configId }),
+    mutationFn: (configId: string) =>
+      executePerformanceTest({ configId, environmentId }),
 
     onMutate: (configId) => {
       setExecutingConfigId(configId);
@@ -377,12 +391,6 @@ export default function PerformanceTesting({
   });
 
   // console.log(editingConfigData, "editingConfigData");
-
-  const handleCreateClick = () => {
-    setFormConfig(null);
-    setEditingConfigId(null);
-    setFormDialogOpen(true);
-  };
 
   const handleEditClick = async (row: PerformanceTestConfigApi) => {
     try {
@@ -451,6 +459,50 @@ export default function PerformanceTesting({
     await executeMutation.mutateAsync(configId);
   };
 
+  const handleCreateClick = () => {
+    setAuthFlowStatus('authCheck');
+  };
+
+  const openConfigForm = () => {
+    setAuthFlowStatus('idle');
+    setFormConfig(null);
+    setEditingConfigId(null);
+    setFormDialogOpen(true);
+  };
+
+  const handleAuthResponse = (requiresAuth: boolean) => {
+    if (requiresAuth) {
+      if (preRequestId) {
+        // Has preRequestId → show authRequired confirmation, then open form
+        setAuthFlowStatus('authRequired');
+        setTimeout(() => {
+          openConfigForm();
+        }, 2500);
+      } else {
+        // No preRequestId → show setupAuth screen
+        setAuthFlowStatus('setupAuth');
+      }
+    } else {
+      // No auth needed → go straight to form
+      openConfigForm();
+    }
+  };
+
+  const handleSetupAuthAction = (action: 'setup' | 'skip') => {
+    if (action === 'skip') {
+      // Skip auth → go straight to form
+      openConfigForm();
+    } else {
+      // Setup auth → close the panel so user can configure
+      setAuthFlowStatus('idle');
+      onClose();
+    }
+  };
+  const getAuthRequestName = () => {
+    if (!preRequestId) return null;
+    return preRequestId;
+  };
+
   const {
     data: runDetails,
     isFetching: isFetchingRunDetails,
@@ -499,7 +551,6 @@ export default function PerformanceTesting({
 
   return (
     <div className='bg-white dark:bg-gray-900 w-full h-full flex flex-col overflow-auto'>
-      {/* Header */}
       <div className='border-b border-gray-200 dark:border-gray-800 pt-4 px-4 flex-shrink-0'>
         <div className='flex items-center justify-between mb-3'>
           <div className='flex-1'>
@@ -510,19 +561,28 @@ export default function PerformanceTesting({
               </h2>
             </div>
             <p className='text-sm text-gray-600 dark:text-gray-400'>
-              {/* <span className='font-medium'>{request.method}</span>{' '}
-              {request.url} */}
-              {/* Configure and execute performance tests with rate limiting */}
               Request : {request.name} ({request?.url})
             </p>
           </div>
 
-          <button
-            onClick={onClose}
-            className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
-          >
-            <X className='w-5 h-5 text-gray-500' />
-          </button>
+          <div className='flex items-center gap-3'>
+            <div className='flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md whitespace-nowrap'>
+              <Globe className='w-4 h-4 text-blue-600 dark:text-blue-400' />
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                Environment:
+              </span>
+              <span className='text-xs font-semibold text-blue-700 dark:text-blue-400'>
+                {activeEnvironment?.name || 'No Environment'}
+              </span>
+            </div>
+
+            <button
+              onClick={onClose}
+              className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
+            >
+              <X className='w-5 h-5 text-gray-500' />
+            </button>
+          </div>
         </div>
       </div>
       <ConfigFormDialog
@@ -574,28 +634,194 @@ export default function PerformanceTesting({
       <div className='flex-1 flex overflow-hidden relative'>
         {/* RIGHT COLUMN - Scan Interface */}
         <div className='flex-1 overflow-auto scrollbar-thin p-3'>
-          <Card className='flex justify-between p-3 mb-2'>
-            <div>
-              <CardTitle>Rate Limit Configurations</CardTitle>
-              <CardDescription>
-                Manage your performance test configurations
-              </CardDescription>
+          {/* IDLE — show config list */}
+          {authFlowStatus === 'idle' && (
+            <>
+              <Card className='flex justify-between p-3 mb-2'>
+                <div>
+                  <CardTitle>Rate Limit Configurations</CardTitle>
+                  <CardDescription>
+                    Manage your performance test configurations
+                  </CardDescription>
+                </div>
+                <div className='flex items-center gap-3'>
+                  {preRequestId && (
+                    <div className='flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg whitespace-nowrap'>
+                      <CheckCircle className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
+                      <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
+                        Auto Auth Enabled
+                      </span>
+                    </div>
+                  )}
+                  <Button onClick={handleCreateClick}>
+                    <Plus className='h-4 w-4 mr-2' />
+                    New Configuration
+                  </Button>
+                </div>
+              </Card>
+              <ConfigList
+                configs={perfConfigs || []}
+                isLoading={isLoading}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteClick}
+                onExecute={handleRunClick}
+                executingConfigId={executingConfigId || ''}
+              />
+            </>
+          )}
+
+          {/* AUTH CHECK — yes/no question */}
+          {authFlowStatus === 'authCheck' && (
+            <div className='flex items-center justify-center h-full px-6'>
+              <div className='text-center max-w-lg'>
+                <div className='w-20 h-20 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-6'>
+                  <Lock className='w-10 h-10 text-blue-600 dark:text-blue-400' />
+                </div>
+                <h3 className='text-2xl font-semibold text-gray-900 dark:text-white mb-3'>
+                  Authentication Check
+                </h3>
+                <p className='text-gray-600 dark:text-gray-400 mb-8'>
+                  Does your API require authentication headers, tokens, or
+                  credentials to access this endpoint?
+                </p>
+                <div className='space-y-3 max-w-md mx-auto'>
+                  <button
+                    onClick={() => handleAuthResponse(true)}
+                    className='w-full p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors flex items-start gap-3 text-left'
+                  >
+                    <div className='w-10 h-10 flex-shrink-0 bg-green-100 dark:bg-green-900/30 rounded-lg flex items-center justify-center'>
+                      <CheckCircle className='w-5 h-5 text-green-600 dark:text-green-400' />
+                    </div>
+                    <div className='flex-1'>
+                      <div className='text-gray-900 dark:text-white font-medium mb-1'>
+                        Yes, Authentication Required
+                      </div>
+                      <div className='text-gray-500 dark:text-gray-400 text-sm'>
+                        API needs auth headers or tokens
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => handleAuthResponse(false)}
+                    className='w-full p-4 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors flex items-start gap-3 text-left'
+                  >
+                    <div className='w-10 h-10 flex-shrink-0 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center'>
+                      <Unlock className='w-5 h-5 text-blue-600 dark:text-blue-400' />
+                    </div>
+                    <div className='flex-1'>
+                      <div className='text-gray-900 dark:text-white font-medium mb-1'>
+                        No Authentication Needed
+                      </div>
+                      <div className='text-gray-500 dark:text-gray-400 text-sm'>
+                        Public API, no auth required
+                      </div>
+                    </div>
+                  </button>
+                </div>
+                <button
+                  onClick={() => setAuthFlowStatus('idle')}
+                  className='mt-6 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm'
+                >
+                  ← Back
+                </button>
+              </div>
             </div>
-            <div>
-              <Button onClick={handleCreateClick}>
-                <Plus className='h-4 w-4 mr-2' />
-                New Configuration
-              </Button>
+          )}
+
+          {/* AUTH REQUIRED — preRequestId exists, show confirmation then open form */}
+          {authFlowStatus === 'authRequired' && (
+            <div className='flex items-center justify-center h-full px-6'>
+              <div className='text-center max-w-lg'>
+                <div className='w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center mx-auto mb-6'>
+                  <CheckCircle className='w-10 h-10 text-emerald-600 dark:text-emerald-400' />
+                </div>
+                <h3 className='text-2xl font-semibold text-gray-900 dark:text-white mb-3'>
+                  Using Configured Authentication
+                </h3>
+                <p className='text-gray-600 dark:text-gray-400 mb-8'>
+                  We'll use your Auto Auth configuration to authenticate
+                  requests during the performance test. This ensures accurate
+                  results for protected endpoints.
+                </p>
+                <div className='p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-3 max-w-md mx-auto'>
+                  <CheckCircle className='w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
+                  <span className='text-gray-800 dark:text-gray-200 font-medium text-sm'>
+                    Auto Auth Enabled — Opening configuration form...
+                  </span>
+                </div>
+              </div>
             </div>
-          </Card>
-          <ConfigList
-            configs={perfConfigs || []}
-            isLoading={isLoading}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteClick}
-            onExecute={handleRunClick}
-            executingConfigId={executingConfigId || ''}
-          />
+          )}
+
+          {/* SETUP AUTH — no preRequestId, offer setup or skip */}
+          {authFlowStatus === 'setupAuth' && (
+            <div className='flex items-center justify-center h-full px-6'>
+              <div className='text-center max-w-2xl'>
+                <div className='w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center mx-auto mb-6'>
+                  <AlertCircle className='w-10 h-10 text-yellow-600 dark:text-yellow-400' />
+                </div>
+                <h3 className='text-2xl font-semibold text-gray-900 dark:text-white mb-3'>
+                  Auto Auth Not Configured
+                </h3>
+                <p className='text-gray-600 dark:text-gray-400 mb-8'>
+                  Your API requires authentication, but Auto Auth isn't set up
+                  yet. Setting it up will ensure more accurate performance test
+                  results for protected endpoints.
+                </p>
+                <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 max-w-xl mx-auto'>
+                  <button
+                    onClick={() => handleSetupAuthAction('setup')}
+                    className='p-5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors text-center'
+                  >
+                    <div className='w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center mx-auto mb-3'>
+                      <Settings className='w-7 h-7 text-blue-600 dark:text-blue-400' />
+                    </div>
+                    <h4 className='text-gray-900 dark:text-white font-medium mb-2'>
+                      Setup Auto Auth
+                    </h4>
+                    <p className='text-gray-500 dark:text-gray-400 text-sm mb-3'>
+                      Configure authentication for accurate test results
+                    </p>
+                    <span className='inline-block px-3 py-1 bg-blue-100 dark:bg-blue-900/30 rounded text-blue-700 dark:text-blue-400 text-xs font-medium'>
+                      Recommended
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => handleSetupAuthAction('skip')}
+                    className='p-5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg transition-colors text-center'
+                  >
+                    <div className='w-14 h-14 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mx-auto mb-3'>
+                      <ChevronRight className='w-7 h-7 text-gray-600 dark:text-gray-400' />
+                    </div>
+                    <h4 className='text-gray-900 dark:text-white font-medium mb-2'>
+                      Continue Without Auth
+                    </h4>
+                    <p className='text-gray-500 dark:text-gray-400 text-sm mb-3'>
+                      Test without authentication, may miss protected routes
+                    </p>
+                    <span className='inline-block px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400 text-xs font-medium'>
+                      Limited Results
+                    </span>
+                  </button>
+                </div>
+                <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start max-w-xl mx-auto mb-6'>
+                  <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
+                  <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
+                    To test protected endpoints accurately, configure Auto Auth
+                    in your collection settings first.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAuthFlowStatus('authCheck')}
+                  className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 text-sm'
+                >
+                  ← Back
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RUN DETAILS PANEL */}
@@ -702,7 +928,8 @@ export default function PerformanceTesting({
               {/* <RunSummaryCard summary={runResultsResponse.summary} />
               <RunResultsTable results={runResultsResponse.results} /> */}
               {(() => {
-                const mapped = mapRunResultsToRateLimitDashboard(runResultsResponse);
+                const mapped =
+                  mapRunResultsToRateLimitDashboard(runResultsResponse);
                 return (
                   <RateLimitDashboard
                     summary={mapped.summary}
@@ -714,7 +941,6 @@ export default function PerformanceTesting({
           )}
         </div>
       )}
-
     </div>
   );
 }
