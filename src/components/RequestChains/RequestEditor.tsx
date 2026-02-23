@@ -1700,26 +1700,17 @@ export function RequestEditor({
             padding: '2px 0',
             marginBottom: 4,
             fontFamily: 'inherit',
-            display: 'flex',
-            alignItems: 'center',
+            display: url.trim() ? 'flex' : 'none',
+
             gap: 4,
           }}
         >
-          <span
-            style={{
-              display: 'inline-block',
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: '#6366f1',
-            }}
-          />
-          Click Value to bind variable
+          Click Value to Bind Variable
         </button>
 
         <div
           style={{
-            padding: '10px 12px',
+            padding: '2px 0px',
             background: '#0a0c13',
             borderRadius: 6,
             border: '1px solid #1a2035',
@@ -1727,7 +1718,8 @@ export function RequestEditor({
             lineHeight: 2.2,
             wordBreak: 'break-all',
             marginBottom: 6,
-            position: 'relative', // needed for absolute picker
+            position: 'relative',
+            display: url.trim() ? 'block' : 'none',
           }}
         >
           {urlSegments.map((seg, i) => {
@@ -1797,22 +1789,7 @@ export function RequestEditor({
                     <span style={{ fontSize: '0.8em', opacity: 0.6 }}>
                       {'}}'}
                     </span>
-                    {resolvedVal && (
-                      <span
-                        style={{
-                          fontSize: '0.75em',
-                          marginLeft: 3,
-                          color: colors?.preview,
-                          opacity: 0.8,
-                          fontStyle: 'italic',
-                        }}
-                      >
-                        →{' '}
-                        {resolvedVal.length > 15
-                          ? `${resolvedVal.slice(0, 15)}…`
-                          : resolvedVal}
-                      </span>
-                    )}
+
                     <span
                       onClick={(e: React.MouseEvent<HTMLSpanElement>) =>
                         clearSegmentSubstitution(i, e)
@@ -2031,6 +2008,49 @@ export function RequestEditor({
             </div>
           )}
         </div>
+        {url.trim() && (
+          <div
+            style={{
+              marginTop: 4,
+              padding: '6px 10px',
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: 6,
+              fontSize: 12,
+              color: '#475569',
+              wordBreak: 'break-all',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 6,
+            }}
+          >
+            <span style={{ color: '#94a3b8', flexShrink: 0, fontWeight: 500 }}>
+              Preview:
+            </span>
+            <span style={{ fontFamily: 'monospace', color: '#0f172a' }}>
+              {(() => {
+                const allVars = getAllAvailableVariables();
+                return urlSegments
+                  .map((seg, i) => {
+                    if (seg.kind === 'delimiter') return seg.content;
+                    const boundVarName = urlSubstitutions[i];
+                    if (boundVarName) {
+                      const boundVar = allVars.find(
+                        (v) => v.name === boundVarName,
+                      );
+                      return String(
+                        boundVar?.value ??
+                          boundVar?.initialValue ??
+                          `{{${boundVarName}}}`,
+                      );
+                    }
+                    return originalSegmentContents.current[i] ?? seg.content;
+                  })
+                  .join('');
+              })()}
+            </span>
+          </div>
+        )}
       </div>
     );
   };
