@@ -18,6 +18,7 @@ import {
   Unlock,
   Lock,
   Settings,
+  Globe,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ import {
 import { useCollection } from '@/hooks/useCollection';
 import { CollectionRequest } from '@/shared/types/collection';
 import { useRequest } from '@/hooks/useRequest';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 export interface SecurityScanViewProps {
   request: {
@@ -87,6 +89,7 @@ export default function SecurityScanView({
   onClose,
 }: SecurityScanViewProps) {
   const { currentWorkspace } = useWorkspace();
+  const { variables, activeEnvironment } = useDataManagement();
 
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -718,7 +721,20 @@ export default function SecurityScanView({
         </button>
 
         {/* RIGHT COLUMN - Scan Interface */}
+
         <div className='flex-1 overflow-auto scrollbar-thin'>
+          <div className='flex justify-end px-6 pt-4'>
+            <div className='flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md whitespace-nowrap'>
+              <Globe className='w-4 h-4 text-blue-600 dark:text-blue-400' />
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                Environment:
+              </span>
+              <span className='text-xs font-semibold text-blue-700 dark:text-blue-400'>
+                {activeEnvironment?.name || 'No Environment'}
+              </span>
+            </div>
+          </div>
+
           {scanStatus === 'idle' && (
             <div className='flex items-center justify-center h-full px-6'>
               <div className='text-center max-w-md'>
@@ -745,11 +761,9 @@ export default function SecurityScanView({
                 {preRequestId && (
                   <div className='mt-4 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
                     <CheckCircle className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
-
                     <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
                       Auto Auth Enabled -
                     </span>
-
                     <span className='text-xs text-gray-500 dark:text-gray-400'>
                       {getAuthRequestName() || preRequestId}
                     </span>

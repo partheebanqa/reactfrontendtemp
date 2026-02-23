@@ -14,16 +14,11 @@ import {
   Settings,
   Unlock,
   Lock,
+  Globe,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { collectionActions } from '@/store/collectionStore';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,8 +29,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useWorkspace } from '@/hooks/useWorkspace';
-
 import {
   useLoadHistoricalPerformanceAnalysis,
   usePerformanceHistory,
@@ -46,6 +39,7 @@ import PerformanceReportView from './PerformanceReportView';
 import { useCollection } from '@/hooks/useCollection';
 import { CollectionRequest } from '@/shared/types/collection';
 import { useRequest } from '@/hooks/useRequest';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 export interface PerformanceScanProps {
   request: {
@@ -135,7 +129,7 @@ export default function PerformanceScanView({
   preRequestId,
   onClose,
 }: PerformanceScanProps) {
-  const { currentWorkspace } = useWorkspace();
+  const { activeEnvironment } = useDataManagement();
 
   const [scanStatus, setScanStatus] = useState<ScanStatus>('idle');
   const [scanResult, setScanResult] =
@@ -147,7 +141,6 @@ export default function PerformanceScanView({
   const [selectedHistoryAnalysis, setSelectedHistoryAnalysis] = useState<
     string | null
   >(null);
-  const [expandedCheck, setExpandedCheck] = useState<string | null>(null);
   const [scanProgress, setScanProgress] = useState('');
   const [remainingTime, setRemainingTime] = useState(60);
 
@@ -712,6 +705,17 @@ export default function PerformanceScanView({
         </button>
 
         <div className='flex-1 overflow-auto scrollbar-thin'>
+          <div className='flex justify-end px-6 pt-4'>
+            <div className='flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md whitespace-nowrap'>
+              <Globe className='w-4 h-4 text-blue-600 dark:text-blue-400' />
+              <span className='text-xs text-gray-500 dark:text-gray-400'>
+                Environment:
+              </span>
+              <span className='text-xs font-semibold text-blue-700 dark:text-blue-400'>
+                {activeEnvironment?.name || 'No Environment'}
+              </span>
+            </div>
+          </div>
           {scanStatus === 'idle' && (
             <div className='flex items-center justify-center h-full px-6'>
               <div className='text-center max-w-2xl w-full'>

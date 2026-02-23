@@ -1868,7 +1868,7 @@ const Sidebar: React.FC = () => {
                     >
                       <Zap className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Scanning {''}
+                        Performance Analysis {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>
@@ -1883,7 +1883,7 @@ const Sidebar: React.FC = () => {
                     >
                       <Rocket className='h-4 w-4 mr-2' />
                       <span>
-                        Performance Analysis {''}
+                        Rate limit Test {''}
                         <span className='text-xs italic text-gray-500'>
                           (Beta)
                         </span>
@@ -2224,7 +2224,7 @@ const Sidebar: React.FC = () => {
           open={showMarkAuthDialog}
           onOpenChange={setShowMarkAuthDialog}
         >
-          <AlertDialogContent className='max-w-3xl bg-[#0d1117] border border-gray-700 text-white'>
+          <AlertDialogContent className='max-w-3xl bg-[#0d1117] border border-gray-700 text-white max-h-[90vh] overflow-y-auto scrollbar-thin'>
             <AlertDialogHeader>
               <AlertDialogTitle className='text-cyan-400 text-xl'>
                 Set "{selectedRequest?.name}" as Auto Auth?
