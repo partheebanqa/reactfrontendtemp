@@ -125,7 +125,7 @@ export function RequestChainsList({
 
   const [environmentFilter, setEnvironmentFilter] = useState<string>('all');
   const { environments, activeEnvironment } = useDataManagement();
-
+  const [tagsFilter, setTagsFilter] = useState<string>('all');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewChain, setPreviewChain] = useState<RequestChain | null>(null);
 
@@ -135,6 +135,16 @@ export function RequestChainsList({
     environments?.forEach((e) => e?.name && set.add(e.name));
     return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
   }, [environments]);
+
+  const tagsOptions = useMemo(() => {
+    const set = new Set<string>();
+    chains.forEach((chain) => {
+      chain.tags?.forEach((tag) => tag && set.add(tag));
+    });
+    return ['all', ...Array.from(set).sort((a, b) => a.localeCompare(b))];
+  }, [chains]);
+
+  // console.log(chains, 'environment options', envOptions, 'tags options', tagsOptions);
 
   const filteredAndSortedChains = useMemo(() => {
     const filtered = chains.filter((chain) => {
@@ -158,7 +168,11 @@ export function RequestChainsList({
         environmentFilter === 'all' ||
         envName === environmentFilter.toLowerCase();
 
-      return matchesSearch && matchesStatus && matchesEnvironment;
+      const matchesTags =
+        tagsFilter === 'all' ||
+        chain.tags?.some((tag) => tag.toLowerCase() === tagsFilter.toLowerCase());
+
+      return matchesSearch && matchesStatus && matchesEnvironment && matchesTags;
     });
 
     filtered.sort((a, b) => {
@@ -189,7 +203,7 @@ export function RequestChainsList({
     });
 
     return filtered;
-  }, [chains, searchTerm, statusFilter, sortBy, sortOrder, environmentFilter]);
+  }, [chains, searchTerm, statusFilter, sortBy, sortOrder, environmentFilter, tagsFilter]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -217,6 +231,22 @@ export function RequestChainsList({
 
   const handleClickReport = (chainId: string) => {
     navigate(`/executions/report?chainId=${chainId}`);
+  };
+
+  const getTagColor = (tag: string) => {
+    const colors: Record<string, string> = {
+      sanity: 'bg-blue-100 text-blue-700 border-blue-200',
+      regression: 'bg-purple-100 text-purple-700 border-purple-200',
+      smoke: 'bg-orange-100 text-orange-700 border-orange-200',
+      uat: 'bg-green-100 text-green-700 border-green-200',
+      integration: 'bg-pink-100 text-pink-700 border-pink-200',
+      e2e: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+    };
+
+    return (
+      colors[tag.toLowerCase()] ||
+      'bg-gray-100 text-gray-700 border-gray-200'
+    );
   };
 
   return (
@@ -437,6 +467,25 @@ export function RequestChainsList({
             </SelectContent>
           </Select>
 
+          <Select value={tagsFilter} onValueChange={setTagsFilter}>
+            <SelectTrigger className='w-48'>
+              <SelectValue placeholder='All tags' />
+            </SelectTrigger>
+            <SelectContent>
+              {tagsOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name === 'all' ? (
+                    'All Tags'
+                  ) : (
+                    <div className='flex items-center gap-2'>
+                      <span>{name}</span>
+                    </div>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select
             value={`${sortBy}-${sortOrder}`}
             onValueChange={(value) => {
@@ -510,63 +559,55 @@ export function RequestChainsList({
                               variant='outline'
                               className={`
                                 flex items-center gap-1 text-xs
-                                ${
-                                  chain.environment?.name
-                                    ?.toLowerCase()
-                                    .includes('prod')
-                                    ? 'bg-green-100 text-green-800 border-green-200'
-                                    : ''
+                                ${chain.environment?.name
+                                  ?.toLowerCase()
+                                  .includes('prod')
+                                  ? 'bg-green-100 text-green-800 border-green-200'
+                                  : ''
                                 }
-                                ${
-                                  chain.environment?.name
-                                    ?.toLowerCase()
-                                    .includes('stage')
-                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                    : ''
+                                ${chain.environment?.name
+                                  ?.toLowerCase()
+                                  .includes('stage')
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                  : ''
                                 }
-                                ${
-                                  chain.environment?.name
-                                    ?.toLowerCase()
-                                    .includes('dev')
-                                    ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                    : ''
+                                ${chain.environment?.name
+                                  ?.toLowerCase()
+                                  .includes('dev')
+                                  ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                  : ''
                                 }
-                                ${
-                                  !chain.environment?.name ||
+                                ${!chain.environment?.name ||
                                   chain.environment?.name === 'No Environment'
-                                    ? 'bg-gray-100 text-gray-700 border-gray-200'
-                                    : ''
+                                  ? 'bg-gray-100 text-gray-700 border-gray-200'
+                                  : ''
                                 }
                               `}
                             >
                               <span
                                 className={`h-2 w-2 rounded-full 
-                                  ${
-                                    chain.environment?.name
-                                      ?.toLowerCase()
-                                      .includes('prod')
-                                      ? 'bg-green-600'
-                                      : ''
+                                  ${chain.environment?.name
+                                    ?.toLowerCase()
+                                    .includes('prod')
+                                    ? 'bg-green-600'
+                                    : ''
                                   }
-                                  ${
-                                    chain.environment?.name
-                                      ?.toLowerCase()
-                                      .includes('stage')
-                                      ? 'bg-yellow-600'
-                                      : ''
+                                  ${chain.environment?.name
+                                    ?.toLowerCase()
+                                    .includes('stage')
+                                    ? 'bg-yellow-600'
+                                    : ''
                                   }
-                                  ${
-                                    chain.environment?.name
-                                      ?.toLowerCase()
-                                      .includes('dev')
-                                      ? 'bg-blue-600'
-                                      : ''
+                                  ${chain.environment?.name
+                                    ?.toLowerCase()
+                                    .includes('dev')
+                                    ? 'bg-blue-600'
+                                    : ''
                                   }
-                                  ${
-                                    !chain.environment?.name ||
+                                  ${!chain.environment?.name ||
                                     chain.environment?.name === 'No Environment'
-                                      ? 'bg-gray-500'
-                                      : ''
+                                    ? 'bg-gray-500'
+                                    : ''
                                   }
                                 `}
                               />
@@ -575,11 +616,10 @@ export function RequestChainsList({
 
                             <Badge
                               variant={chain.enabled ? 'default' : 'secondary'}
-                              className={`text-xs ${
-                                chain.enabled
-                                  ? 'bg-green-100 text-green-800'
-                                  : ''
-                              }`}
+                              className={`text-xs ${chain.enabled
+                                ? 'bg-green-100 text-green-800'
+                                : ''
+                                }`}
                             >
                               {chain.enabled ? 'Enabled' : 'Disabled'}
                             </Badge>
@@ -599,12 +639,12 @@ export function RequestChainsList({
                           <span className='font-[500] text-[#64748b] line-clamp-1'>
                             {chain.chainRequests.length > 3
                               ? chain.chainRequests
-                                  .slice(0, 3)
-                                  .map((r) => r.name)
-                                  .join(' → ') + ' → ...'
+                                .slice(0, 3)
+                                .map((r) => r.name.slice(0, 60))
+                                .join(' → ') + ' → ...'
                               : chain.chainRequests
-                                  .map((r) => r.name)
-                                  .join(' → ')}
+                                .map((r) => r.name)
+                                .join(' → ')}
                           </span>
                         </div>
 
@@ -634,9 +674,27 @@ export function RequestChainsList({
                             <span className='hidden sm:inline'>•</span>
                             <span className='truncate'>ID: {chain.id}</span>
                           </div>
+                          <div className='flex flex-col sm:flex-row sm:items-center gap-1'>
+                            {
+                              (chain?.tags?.length ?? 0) > 0 && (
+                                <div className='flex items-center space-x-2 mt-2'>
+                                  {chain.tags!.map((tag) => (
+                                    <Badge
+                                      key={tag}
+                                      variant='outline'
+                                      className={getTagColor(tag)}
+                                    >
+                                      {tag}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+
 
                     {/* Right section - Action buttons */}
                     <div className='flex items-center justify-end space-x-1 md:space-x-2 flex-shrink-0'>
@@ -648,11 +706,10 @@ export function RequestChainsList({
                               variant='ghost'
                               size='sm'
                               onClick={() => onToggleChain(chain?.id)}
-                              className={`h-8 w-8 p-0 ${
-                                chain.enabled
-                                  ? 'text-green-600 hover:text-green-700'
-                                  : 'text-muted-foreground hover:text-foreground'
-                              }`}
+                              className={`h-8 w-8 p-0 ${chain.enabled
+                                ? 'text-green-600 hover:text-green-700'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
                             >
                               {chain.enabled ? (
                                 <Play className='w-4 h-4' />
