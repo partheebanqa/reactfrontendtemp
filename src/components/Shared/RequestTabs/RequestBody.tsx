@@ -63,8 +63,6 @@ export default function RequestBody({
   onRemoveUrlEncodedField,
   showSubstituteButton,
 }: RequestBodyProps) {
-  console.log('staticVariables888:', staticVariables);
-
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
