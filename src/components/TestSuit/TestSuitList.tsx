@@ -42,9 +42,7 @@ const TestSuites: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
-  const [testSuitListData, setTestSuitListData] = useState<
-    TestSuite[] | undefined
-  >(undefined);
+  const [testSuitListData, setTestSuitListData] = useState<TestSuite[] | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All statuses');
   const [environmentFilter, setEnvironmentFilter] = useState<string>('all');

@@ -1,16 +1,16 @@
-import type { ExtendedRequest } from '@/models/collection.model';
-import { API_REQUEST, API_REQUEST_CHAIN } from '@/config/apiRoutes';
-import { apiRequest } from '@/lib/queryClient';
+import type { ExtendedRequest } from "@/models/collection.model";
+import { API_REQUEST, API_REQUEST_CHAIN } from "@/config/apiRoutes";
+import { apiRequest } from "@/lib/queryClient";
 import type {
   RequestChain,
   RequestDetailResponse,
-} from '@/shared/types/requestChain.model';
+} from "@/shared/types/requestChain.model";
 
 export async function getRequestDetails(
-  requestId: string
+  requestId: string,
 ): Promise<RequestDetailResponse> {
   try {
-    const response = await apiRequest('GET', `${API_REQUEST}/${requestId}`);
+    const response = await apiRequest("GET", `${API_REQUEST}/${requestId}`);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -21,14 +21,14 @@ export async function getRequestDetails(
     console.error(`Failed to fetch request details for ${requestId}:`, error);
     throw new Error(
       `Failed to fetch request details: ${
-        error instanceof Error ? error.message : 'Unknown error'
-      }`
+        error instanceof Error ? error.message : "Unknown error"
+      }`,
     );
   }
 }
 
 export async function getMultipleRequestDetails(
-  requestIds: string[]
+  requestIds: string[],
 ): Promise<RequestDetailResponse[]> {
   try {
     const requests = requestIds.map((id) => getRequestDetails(id));
@@ -37,24 +37,24 @@ export async function getMultipleRequestDetails(
     return results
       .filter(
         (result): result is PromiseFulfilledResult<RequestDetailResponse> =>
-          result.status === 'fulfilled'
+          result.status === "fulfilled",
       )
       .map((result) => result.value);
   } catch (error) {
-    console.error('Failed to fetch multiple request details:', error);
+    console.error("Failed to fetch multiple request details:", error);
     throw error;
   }
 }
 
 export async function getCollectionRequests(
-  collectionId?: string
+  collectionId?: string,
 ): Promise<ExtendedRequest[]> {
   try {
     const url = collectionId
       ? `${API_REQUEST}/collections/${collectionId}/requests`
       : `${API_REQUEST}/requests`;
 
-    const response = await apiRequest('GET', url);
+    const response = await apiRequest("GET", url);
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -62,18 +62,18 @@ export async function getCollectionRequests(
     const data = await response.json();
     return data;
   } catch (error) {
-    console.error('Failed to fetch collection requests:', error);
+    console.error("Failed to fetch collection requests:", error);
     throw error;
   }
 }
 
 export async function saveRequestChain(
-  chain: RequestChain
+  chain: RequestChain,
 ): Promise<RequestChain> {
-  const response = await apiRequest('POST', API_REQUEST_CHAIN, {
+  const response = await apiRequest("POST", API_REQUEST_CHAIN, {
     body: JSON.stringify(chain),
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   });
 
@@ -88,12 +88,12 @@ export async function saveRequestChain(
 
 export async function updateRequestChain(
   chain: RequestChain,
-  id: string
+  id: string,
 ): Promise<RequestChain> {
-  const response = await apiRequest('PUT', `${API_REQUEST_CHAIN}/${id}`, {
+  const response = await apiRequest("PUT", `${API_REQUEST_CHAIN}/${id}`, {
     body: JSON.stringify(chain),
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
   });
 
@@ -107,17 +107,17 @@ export async function updateRequestChain(
 }
 
 export const getRequestChains = async (
-  workspaceId: string
+  workspaceId: string,
 ): Promise<RequestChain[]> => {
   try {
     const response = await apiRequest(
-      'GET',
+      "GET",
       `${API_REQUEST_CHAIN}/with-chainrequests?ws=${workspaceId}`,
       {
         headers: {
-          'X-Workspace-ID': workspaceId,
+          "X-Workspace-ID": workspaceId,
         },
-      }
+      },
     );
 
     const data = await response.json();
@@ -132,21 +132,21 @@ export const getRequestChains = async (
         url: req.chainrequestUrl,
         method: req.chainrequestMethod,
         headers: [],
-        body: '',
+        body: "",
         variables: [],
         tests: [],
         enabled: true,
       })),
-      description: chain.description || '',
+      description: chain.description || "",
       variables: [],
       schedule: {
         enabled: false,
-        type: 'once',
-        startDate: '',
-        timezone: '',
+        type: "once",
+        startDate: "",
+        timezone: "",
       },
       environment: chain.environment,
-      environmentName: chain.environment.name || 'No Environment',
+      environmentName: chain.environment.name || "No Environment",
       enabled: true,
       createdAt: chain.createdAt,
       updatedAt: chain.createdAt, // Using createdAt as updatedAt since it's not in the response
@@ -154,11 +154,12 @@ export const getRequestChains = async (
       executionCount: 0,
       successRate: 0,
       isImportant: chain.isImportant || false,
+      tags: chain.tags || [],
     }));
 
     return mappedChains;
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to fetch request chains');
+    throw new Error(error.message || "Failed to fetch request chains");
   }
 };
 
@@ -198,22 +199,22 @@ export const getRequestChains = async (
 export const getRequestChainData = async (chainId: string) => {
   try {
     const response = await apiRequest(
-      'GET',
-      `${API_REQUEST_CHAIN}/${chainId}/data`
+      "GET",
+      `${API_REQUEST_CHAIN}/${chainId}/data`,
     );
     const data = await response.json();
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to fetch test suite');
+    throw new Error(error.message || "Failed to fetch test suite");
   }
 };
 
 export const getRequestChainById = async (
   chainId: string,
-  workspaceId: string
+  workspaceId: string,
 ): Promise<RequestChain> => {
-  const response = await apiRequest('GET', `${API_REQUEST_CHAIN}/${chainId}`, {
+  const response = await apiRequest("GET", `${API_REQUEST_CHAIN}/${chainId}`, {
     headers: {
-      'X-Workspace-ID': workspaceId,
+      "X-Workspace-ID": workspaceId,
     },
   });
 
@@ -230,57 +231,57 @@ export const getRequestChainById = async (
     requests: data.chainRequests || [], // Map chainRequests to requests for backward compatibility
     chainRequests: data.chainRequests || [], // Keep chainRequests as primary
     variables: data.variables || [],
-    environment: data.environmentId || 'dev',
+    environment: data.environmentId || "dev",
   };
 
   return transformedChain;
 };
 
 export const duplicateRequestChainById = async (
-  chainId: string
+  chainId: string,
 ): Promise<void> => {
   try {
     const response = await apiRequest(
-      'POST',
+      "POST",
       `${API_REQUEST_CHAIN}/${chainId}/duplicate`,
       {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       throw new Error(`Failed to duplicate request chain with ID: ${chainId}`);
     }
   } catch (error: unknown) {
-    console.error('Error duplicating request chain:', error);
+    console.error("Error duplicating request chain:", error);
     if (error instanceof Error) {
-      throw new Error(error.message || 'Failed to duplicate request chain');
+      throw new Error(error.message || "Failed to duplicate request chain");
     }
-    throw new Error('Failed to duplicate request chain');
+    throw new Error("Failed to duplicate request chain");
   }
 };
 
 export const deletRequestChainById = async (chainId: string): Promise<void> => {
   try {
     const response = await apiRequest(
-      'DELETE',
-      `${API_REQUEST_CHAIN}/${chainId}`
+      "DELETE",
+      `${API_REQUEST_CHAIN}/${chainId}`,
     );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch request chain with ID: ${chainId}`);
     }
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to delete test suite');
+    throw new Error(error.message || "Failed to delete test suite");
   }
 };
 
 export const getRequestChainVariables = async (
   requestChainId: string,
   page = 1,
-  pageSize = 10
+  pageSize = 10,
 ): Promise<{
   page: number;
   pageSize: number;
@@ -295,8 +296,8 @@ export const getRequestChainVariables = async (
 }> => {
   try {
     const response = await apiRequest(
-      'GET',
-      `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`
+      "GET",
+      `${API_REQUEST_CHAIN}/${requestChainId}/variables?page=${page}&pageSize=${pageSize}`,
     );
 
     if (!response.ok) {
@@ -306,6 +307,6 @@ export const getRequestChainVariables = async (
     const data = await response.json();
     return data;
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to fetch request chain variables');
+    throw new Error(error.message || "Failed to fetch request chain variables");
   }
 };

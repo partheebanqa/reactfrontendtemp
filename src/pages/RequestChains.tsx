@@ -32,6 +32,8 @@ const RequestChains = () => {
     enabled: !!currentWorkspace?.id,
   });
 
+  // console.log(chains, 'request chains');
+
   const handleCreateChain = () => {
     setLocation('/request-chains/create');
   };

@@ -1142,43 +1142,44 @@ const CreateTestSuit: React.FC = () => {
                     rows={3}
                   />
                 </div>
-                <div>
-                  <TagInput tags={tags} setTags={setTags} />
-                </div>
-
-
-                <div className='space-y-1'>
-                  <label
-                    htmlFor='environment-select'
-                    className='block text-sm font-medium'
-                  >
-                    Environment <span className='text-destructive'>*</span>
-                  </label>
-                  <Select
-                    value={selectedEnvironment}
-                    onValueChange={handleEnvironmentChange}
-                  >
-                    <SelectTrigger id='environment-select'>
-                      <SelectValue placeholder='Select environment' />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {environments.map((env) => (
-                        <SelectItem key={env.id} value={env.id}>
-                          <div className='flex flex-col text-left'>
-                            <span className='font-medium text-sm'>
-                              {env.name}{' '}
-                              <span className='text-xs text-muted-foreground break-all'>
-                                - {env.baseUrl}
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div className='space-y-2'>
+                    <label
+                      htmlFor='environment-select'
+                      className='block text-sm font-medium'
+                    >
+                      Environment <span className='text-destructive'>*</span>
+                    </label>
+                    <Select
+                      value={selectedEnvironment}
+                      onValueChange={handleEnvironmentChange}
+                    >
+                      <SelectTrigger id='environment-select'>
+                        <SelectValue placeholder='Select environment' />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {environments.map((env) => (
+                          <SelectItem key={env.id} value={env.id}>
+                            <div className='flex flex-col text-left'>
+                              <span className='font-medium text-sm'>
+                                {env.name}{' '}
+                                <span className='text-xs text-muted-foreground break-all'>
+                                  - {env.baseUrl}
+                                </span>
                               </span>
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className='text-xs'>
-                    Select the target environment for these tests
-                  </p>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className='text-xs'>
+                      Select the target environment for these tests
+                    </p>
+                  </div>
+                  <div className='space-y-2'>
+                    <TagInput tags={tags} setTags={setTags} />
+                  </div>
+
                 </div>
 
                 {testSuite?.name && testSuite?.environment && (

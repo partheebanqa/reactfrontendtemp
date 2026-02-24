@@ -17,6 +17,7 @@ export interface RequestChain {
     id: string;
     name: string;
   };
+  tags?: string[];
 }
 
 export interface APIRequest {

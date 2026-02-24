@@ -75,7 +75,7 @@ const TagInput: React.FC<TagInputProps> = ({
         <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700">{label}</label>
 
-            <div className="min-h-[42px] w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+            <div className="w-full px-3 py-1.5 border border-gray-300 rounded-md bg-white focus-within:ring-0 focus-within:ring-blue-500 focus-within:border-[#136fb0]">
                 <div className="flex flex-wrap gap-2 items-center">
                     {tags.length === 0 && inputValue === '' && (
                         <span className="text-gray-400 text-sm">{placeholder}</span>
