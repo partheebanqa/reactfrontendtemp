@@ -80,6 +80,7 @@ import {
   SelectedVariable,
   Variable,
 } from '@/shared/types/request';
+import VariablePicker from '../Shared/VariablePicker';
 
 type FormField = {
   id: string;
@@ -292,8 +293,15 @@ export function RequestEditor({
   const [body, setBody] = useState(initialRequest.body || '');
 
   const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
-    [],
+    () => {
+      if (!initialRequest.variables) return [];
+      return initialRequest.variables
+        .filter((v: any) => v.field === 'body' && v.key && v.variable)
+        .map((v: any) => ({ path: v.key, name: v.variable }));
+    },
   );
+
+  console.log('selectedVariable:', selectedVariable);
 
   const [headers, setHeaders] = useState<KeyValuePair[]>(
     initialRequest.headers || [],
@@ -453,6 +461,17 @@ export function RequestEditor({
     } else {
       setBody('');
     }
+    // Restore body variable substitutions from saved variables field
+    if (initialRequest.variables && Array.isArray(initialRequest.variables)) {
+      const bodyVars = initialRequest.variables
+        .filter((v: any) => v.field === 'body' && v.key && v.variable)
+        .map((v: any) => ({ path: v.key, name: v.variable }));
+      setSelectedVariable(bodyVars);
+      const variablesPayload = buildVariablesPayload(bodyVars);
+      onUpdate({ variables: variablesPayload });
+    } else {
+      setSelectedVariable([]);
+    }
   }, [initialRequest.id]);
 
   useEffect(() => {
@@ -502,6 +521,12 @@ export function RequestEditor({
       isSyncingRef.current = false;
     }, 100);
   }, [params]);
+
+  useEffect(() => {
+    if (isSyncingRef.current) return;
+    const variablesPayload = buildVariablesPayload(selectedVariable);
+    onUpdate({ variables: variablesPayload });
+  }, [headers, params, auth.token, selectedVariable]);
 
   const handleAssertionsUpdate = (newAssertions: any[]) => {
     setAssertions(newAssertions);
@@ -913,11 +938,9 @@ export function RequestEditor({
 
   const handleJsonVariableSelect = (variables: SelectedVariable[]) => {
     setSelectedVariable(variables);
-    if (initialRequest.id) {
-      onUpdate({ variable: variables });
-    }
+    const variablesPayload = buildVariablesPayload(variables);
+    onUpdate({ variable: variables, variables: variablesPayload });
   };
-
   const handleAutocomplete = (
     e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
@@ -948,6 +971,9 @@ export function RequestEditor({
       setAutocompleteState((prev) => ({ ...prev, show: false }));
     }
   };
+
+  console.log('storeVariables:', storeVariables);
+  console.log('dynamicVariables:', dynamicVariables);
 
   React.useEffect(() => {
     const allVariables = getAllAvailableVariables();
@@ -1827,162 +1853,34 @@ export function RequestEditor({
                 position: 'absolute',
                 top: pickerPos.top,
                 left: Math.max(0, pickerPos.left),
-                width: 290,
                 zIndex: 100,
-                background: '#0f1117',
-                border: '1px solid #2d3a52',
-                borderRadius: 10,
-                padding: 12,
-                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
               }}
             >
-              <div style={{ fontSize: 11, color: '#475569', marginBottom: 8 }}>
-                Binding:{' '}
-                <span style={{ color: '#c4b5fd', fontFamily: 'monospace' }}>
-                  "{urlSegments[activeSegment]?.content}"
-                </span>
-              </div>
-
-              <input
-                autoFocus
-                placeholder='Search variables...'
-                value={segmentSearch}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                  setSegmentSearch(e.target.value)
-                }
-                style={{
-                  width: '100%',
-                  background: '#0a0c13',
-                  border: '1px solid #1e2433',
-                  borderRadius: 6,
-                  color: '#e2e8f0',
-                  padding: '6px 10px',
-                  fontSize: 12,
-                  outline: 'none',
-                  marginBottom: 8,
-                  boxSizing: 'border-box',
-                }}
+              <VariablePicker
+                staticVariables={filteredVars
+                  .filter(
+                    (v) =>
+                      getVariableType(v.name) === 'static' &&
+                      v.name.startsWith('S_'),
+                  )
+                  .map((v) => ({ name: v.name, value: String(v.value ?? '') }))}
+                dynamicVariables={filteredVars
+                  .filter(
+                    (v) =>
+                      getVariableType(v.name) === 'dynamic' &&
+                      v.name.startsWith('D_'),
+                  )
+                  .map((v) => ({ name: v.name, value: String(v.value ?? '') }))}
+                extractedVariables={filteredVars
+                  .filter(
+                    (v) =>
+                      getVariableType(v.name) === 'extracted' &&
+                      v.name.startsWith('E_'),
+                  )
+                  .map((v) => ({ name: v.name, value: String(v.value ?? '') }))}
+                bindingLabel={urlSegments[activeSegment]?.content}
+                onSelect={(variableName) => assignSegmentVariable(variableName)}
               />
-
-              {/* Tabs */}
-              <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
-                {(['all', 'static', 'dynamic', 'extracted'] as const).map(
-                  (t) => (
-                    <button
-                      key={t}
-                      type='button'
-                      onClick={() => setSegmentTab(t)}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 20,
-                        fontSize: 10,
-                        cursor: 'pointer',
-                        border: '1px solid',
-                        fontFamily: 'inherit',
-                        background:
-                          segmentTab === t ? '#1e293b' : 'transparent',
-                        borderColor:
-                          segmentTab === t ? '#334155' : 'transparent',
-                        color: segmentTab === t ? '#e2e8f0' : '#64748b',
-                      }}
-                    >
-                      {t}
-                    </button>
-                  ),
-                )}
-              </div>
-
-              {/* List */}
-              <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                {filteredVars.length === 0 ? (
-                  <div
-                    style={{
-                      color: '#334155',
-                      fontSize: 12,
-                      padding: '8px 0',
-                      textAlign: 'center',
-                    }}
-                  >
-                    No variables found
-                  </div>
-                ) : (
-                  filteredVars.map((v) => {
-                    const vType: VariableType = getVariableType(v.name);
-                    const colors: TypeColorConfig = TYPE_COLORS[vType];
-                    const isSelected: boolean =
-                      urlSubstitutions[activeSegment] === v.name;
-
-                    return (
-                      <div
-                        key={v.id}
-                        onClick={() => assignSegmentVariable(v.name)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          padding: '8px 10px',
-                          borderRadius: 6,
-                          cursor: 'pointer',
-                          background: isSelected ? colors.bg : 'transparent',
-                          border: `1px solid ${isSelected ? colors.border : 'transparent'}`,
-                          marginBottom: 2,
-                          transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => {
-                          if (!isSelected)
-                            e.currentTarget.style.background = '#1e293b';
-                        }}
-                        onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => {
-                          if (!isSelected)
-                            e.currentTarget.style.background = 'transparent';
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div
-                            style={{
-                              fontSize: 12,
-                              color: isSelected ? colors.text : '#e2e8f0',
-                              fontFamily: 'monospace',
-                              fontWeight: isSelected ? 500 : 400,
-                            }}
-                          >
-                            {v.name}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: '#475569',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                            }}
-                          >
-                            {String(v.value ?? '').slice(0, 30)}
-                            {String(v.value ?? '').length > 30 ? '…' : ''}
-                          </div>
-                        </div>
-                        <span
-                          style={{
-                            fontSize: 9,
-                            padding: '2px 6px',
-                            borderRadius: 4,
-                            background: colors.bg,
-                            color: colors.text,
-                            border: `1px solid ${colors.border}`,
-                            textTransform: 'uppercase' as const,
-                            letterSpacing: '0.05em',
-                            fontWeight: 500,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {vType}
-                        </span>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-
               {urlSubstitutions[activeSegment] && (
                 <button
                   type='button'
@@ -2230,6 +2128,45 @@ export function RequestEditor({
     setExtractedVariables(newExtracted);
   };
 
+  const buildVariablesPayload = (bodyVars: SelectedVariable[]) => {
+    const variables: { field: string; key: string; variable: string }[] = [];
+
+    // Body variables (from JsonVariableSubstitution)
+    bodyVars.forEach((v) => {
+      if (v.path && v.name) {
+        variables.push({ field: 'body', key: v.path, variable: v.name });
+      }
+    });
+
+    // Auth token variable (if it's a {{variable}} reference)
+    const authTokenMatch = auth.token.match(/^\{\{(\w+)\}\}$/);
+    if (authTokenMatch) {
+      variables.push({
+        field: 'authorization',
+        key: 'token',
+        variable: authTokenMatch[1],
+      });
+    }
+
+    // Header variables
+    headers.forEach((h) => {
+      const match = h.value?.match(/^\{\{(\w+)\}\}$/);
+      if (match && h.key) {
+        variables.push({ field: 'header', key: h.key, variable: match[1] });
+      }
+    });
+
+    // Param variables
+    params.forEach((p) => {
+      const match = p.value?.match(/^\{\{(\w+)\}\}$/);
+      if (match && p.key) {
+        variables.push({ field: 'param', key: p.key, variable: match[1] });
+      }
+    });
+
+    return variables;
+  };
+
   const [copied, setCopied] = useState(false);
 
   const [urlSegments, setUrlSegments] = useState<UrlSegment[]>([]);
@@ -2449,7 +2386,7 @@ export function RequestEditor({
       .map((seg, i) => {
         if (seg.kind === 'delimiter') return seg.content;
         if (updatedSubs[i]) return `{{${updatedSubs[i]}}}`;
-        return originalSegmentContents.current[i] ?? seg.content; // ← updated
+        return originalSegmentContents.current[i] ?? seg.content;
       })
       .join('');
     setUrl(newUrl);
@@ -2469,7 +2406,6 @@ export function RequestEditor({
       .map((seg, i) => {
         if (seg.kind === 'delimiter') return seg.content;
         if (updatedSubs[i]) return `{{${updatedSubs[i]}}}`;
-        // Use stored original content instead of current segment content
         return originalSegmentContents.current[i] ?? seg.content;
       })
       .join('');
@@ -2926,63 +2862,37 @@ export function RequestEditor({
             {showVariablesPopup && (
               <div
                 ref={variablesPopupRef}
-                className='absolute right-0 top-10 bg-white shadow-lg rounded-lg z-50 w-80 border border-gray-200'
+                className='absolute right-0 top-10 z-50'
               >
-                <div className='p-2 border-b'>
-                  <input
-                    type='text'
-                    className='w-full px-3 py-1.5 rounded-md border border-gray-300
-                          focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                    placeholder='Search variables...'
-                    autoComplete='off'
-                    autoCorrect='off'
-                    spellCheck={false}
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                  />
-                </div>
-
-                <div className='max-h-60 overflow-y-auto scrollbar-thin'>
-                  {getAllAvailableVariables()
-                    .filter(
-                      (item) =>
-                        (item.name.startsWith('D_') ||
-                          item.name.startsWith('S_')) &&
-                        item.name
-                          .toLowerCase()
-                          .includes(searchText.toLowerCase()),
-                    )
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className='w-full flex justify-between items-center px-3 py-2
-                              text-sm border-b border-gray-100 hover:bg-blue-50 transition-colors'
-                        onClick={() => setShowVariablesPopup(false)}
-                      >
-                        <span className='text-gray-800 font-mono'>
-                          {item.name}
-                        </span>
-
-                        <div className='flex items-center space-x-2'>
-                          <span className='text-gray-500 truncate max-w-[120px]'>
-                            {item?.currentValue}
-                          </span>
-
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigator.clipboard.writeText(`{{${item.name}}}`);
-                              setShowVariablesPopup(false);
-                            }}
-                            className='p-1 hover:text-blue-600 transition-colors'
-                            title='Copy variable'
-                          >
-                            <Copy className='w-4 h-4' />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
+                <VariablePicker
+                  staticVariables={storeVariables
+                    .filter((v) => v.name.startsWith('S_'))
+                    .map((v) => ({
+                      name: v.name,
+                      value: String(v.value ?? v.initialValue ?? ''),
+                    }))}
+                  dynamicVariables={dynamicStructured
+                    .filter((v) => v.name.startsWith('D_'))
+                    .map((v) => ({
+                      name: v.name,
+                      value: String(v.value ?? v.initialValue ?? ''),
+                    }))}
+                  extractedVariables={Object.entries(parentExtractedVariables)
+                    .filter(([name]) => name.startsWith('E_'))
+                    .map(([name, value]) => ({
+                      name,
+                      value: String(value),
+                    }))}
+                  bindingLabel='Chain'
+                  onSelect={(variableName) => {
+                    navigator.clipboard.writeText(`{{${variableName}}}`);
+                    toast({
+                      title: 'Copied to Clipboard',
+                      description: `Copied: {{${variableName}}}`,
+                    });
+                    setShowVariablesPopup(false);
+                  }}
+                />
               </div>
             )}
             <div className='flex items-center gap-2'>
@@ -3172,9 +3082,10 @@ export function RequestEditor({
             bodyContent={body}
             formFields={formFields}
             urlEncodedFields={urlEncodedFields}
-            variables={storeVariables || []}
+            staticVariables={storeVariables}
+            dynamicVariables={dynamicStructured}
             initialVariable={selectedVariable}
-            showSubstituteButton={false}
+            showSubstituteButton={true}
             onBodyTypeChange={handleBodyTypeChange}
             onBodyContentChange={handleBodyContentChange}
             onBeautify={handleBeautify}

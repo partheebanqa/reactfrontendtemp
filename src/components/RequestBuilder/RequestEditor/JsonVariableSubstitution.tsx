@@ -15,6 +15,7 @@ import {
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
 import { SelectedVariable, Variable } from '@/shared/types/request';
+import VariablePicker from '@/components/Shared/VariablePicker';
 
 interface PendingSubstitution {
   lineIndex: number;
@@ -97,7 +98,7 @@ export const JsonVariableSubstitution: React.FC<
     return allVariables.filter(
       (v) =>
         v.name.toLowerCase().includes(lower) ||
-        v.value.toLowerCase().includes(lower)
+        v.value.toLowerCase().includes(lower),
     );
   }, [searchTerm, allVariables]);
 
@@ -115,7 +116,7 @@ export const JsonVariableSubstitution: React.FC<
   const getAlreadySubstitutedVariable = (lineIndex: number): string | null => {
     const line = lines[lineIndex];
     const substitutionMatch = line.match(
-      /\/\/\s*substituted with\s*{{\s*(\w+)\s*}}/
+      /\/\/\s*substituted with\s*{{\s*(\w+)\s*}}/,
     );
     return substitutionMatch ? substitutionMatch[1] : null;
   };
@@ -178,7 +179,7 @@ export const JsonVariableSubstitution: React.FC<
 
   const handleClearPendingSubstitution = (lineIndex: number) => {
     setPendingSubstitutions((prev) =>
-      prev.filter((p) => p.lineIndex !== lineIndex)
+      prev.filter((p) => p.lineIndex !== lineIndex),
     );
   };
 
@@ -218,7 +219,7 @@ export const JsonVariableSubstitution: React.FC<
     const line = lines[lineIndex];
     const updatedLine = line.replace(
       /\s*\/\/\s*substituted with\s*{{\s*\w+\s*}}/,
-      ''
+      '',
     );
     const updatedLines = [...lines];
     updatedLines[lineIndex] = updatedLine;
@@ -406,50 +407,31 @@ export const JsonVariableSubstitution: React.FC<
                     dropdownLine === index &&
                     dropdownPosition && (
                       <div
-                        className='fixed w-72 bg-popover border border-border rounded-md shadow-lg text-sm pointer-events-auto'
+                        className='fixed pointer-events-auto'
                         style={{
                           top: `${dropdownPosition.top}px`,
                           left: `${dropdownPosition.left}px`,
                           zIndex: 9999,
                         }}
                       >
-                        {/* Search bar */}
-                        <div className='p-2 border-b border-border'>
-                          <input
-                            type='text'
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder='Search variables...'
-                            className='w-full bg-background border border-input rounded px-2 py-1 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring'
-                            autoFocus
-                          />
-                        </div>
-
-                        {/* List of variables */}
-                        <div className='max-h-48 overflow-y-auto scrollbar-thin'>
-                          {filteredVariables.length > 0 ? (
-                            filteredVariables.map((v) => (
-                              <div
-                                key={v.name}
-                                className='flex justify-between items-center px-3 py-2 hover:bg-accent cursor-pointer border-b border-border last:border-b-0'
-                                onClick={() =>
-                                  handleVariableSelect(v.name, index)
-                                }
-                              >
-                                <span className='font-mono text-foreground text-xs font-medium'>
-                                  {v.name}
-                                </span>
-                                <span className='text-muted-foreground text-xs truncate ml-2 max-w-[140px]'>
-                                  {v.value}
-                                </span>
-                              </div>
-                            ))
-                          ) : (
-                            <div className='px-3 py-2 text-muted-foreground text-xs text-center'>
-                              No results found
-                            </div>
-                          )}
-                        </div>
+                        <VariablePicker
+                          staticVariables={staticVariables
+                            .filter((v) => v.name.startsWith('S_'))
+                            .map((v) => ({
+                              name: v.name,
+                              value: String(v.value ?? v.initialValue ?? ''),
+                            }))}
+                          dynamicVariables={dynamicVariables
+                            .filter((v) => v.name.startsWith('D_'))
+                            .map((v) => ({
+                              name: v.name,
+                              value: String(v.value ?? v.initialValue ?? ''),
+                            }))}
+                          bindingLabel={extractPathFromLine(index)}
+                          onSelect={(variableName) =>
+                            handleVariableSelect(variableName, index)
+                          }
+                        />
                       </div>
                     )}
                 </div>
