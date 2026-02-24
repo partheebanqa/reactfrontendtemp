@@ -9,7 +9,6 @@ import {
 } from '@/services/requestChain.service';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { useLocation, useParams } from 'wouter';
-import { Loader2 } from 'lucide-react';
 import { Loader } from '@/components/Loader';
 
 const RequestChainEdit = () => {
@@ -51,6 +50,8 @@ const RequestChainEdit = () => {
       console.error('Failed to save chain:', error);
     },
   });
+
+  console.log('editingChain:', editingChain);
 
   const handleSaveChain = async (
     chain: RequestChain,

@@ -5,7 +5,6 @@ import {
   analyzeRequestChain,
   type AnalyzedRequest,
 } from '@/lib/postman-analysis';
-
 import type React from 'react';
 import {
   DndContext,
@@ -126,6 +125,8 @@ export function RequestChainEditor({
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
 
+  console.log('datachain:', chain);
+
   const [tags, setTags] = useState<string[]>([]);
 
   const { variables: storeVariables, dynamicVariables } =
@@ -151,8 +152,6 @@ export function RequestChainEditor({
 
     return initial;
   });
-
-
 
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
     chain?.environmentId || activeEnvironment?.id || '',
@@ -236,25 +235,66 @@ export function RequestChainEditor({
     { id: '3', name: 'timeout', value: '5000', type: 'number' },
   ]);
 
-  const [formData, setFormData] = useState<Partial<RequestChain>>({
-    name: chain?.name || '',
-    description: chain?.description || '',
-    workspaceId: currentWorkspace?.id || '',
-    enabled: chain?.enabled ?? true,
-    chainRequests: (chain?.chainRequests || (chain as any)?.requests || []).map(
-      (req: any) => ({
+  const initializedRef = useRef(false);
+
+  const [formData, setFormData] = useState<Partial<RequestChain>>(() => {
+    initializedRef.current = true;
+    return {
+      name: chain?.name || '',
+      description: chain?.description || '',
+      workspaceId: currentWorkspace?.id || '',
+      enabled: chain?.enabled ?? true,
+      chainRequests: (
+        chain?.chainRequests ||
+        (chain as any)?.requests ||
+        []
+      ).map((req: any) => ({
         ...req,
         body: req.body || req.bodyRawContent || '',
         bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
         assertions: req.assertions || [],
+        variables: req.variables || [],
         isSelected: true,
-      }),
-    ),
-    variables: chain?.variables || [],
-    environment: chain?.environment || 'dev',
-    // environmentId: chain?.environmentId || 'dev',
-    tags: chain?.tags || [],
+      })),
+      variables: chain?.variables || [],
+      environment: chain?.environment || 'dev',
+      tags: chain?.tags || [],
+    };
   });
+
+  const lastSyncedChainUpdatedAt = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (!chain) return;
+
+    if (lastSyncedChainUpdatedAt.current === chain.updatedAt) return;
+
+    lastSyncedChainUpdatedAt.current = chain.updatedAt;
+
+    setFormData({
+      name: chain.name || '',
+      description: chain.description || '',
+      workspaceId: chain.workspaceId || currentWorkspace?.id || '',
+      enabled: chain.enabled ?? true,
+      chainRequests: (
+        chain.chainRequests ||
+        (chain as any)?.requests ||
+        []
+      ).map((req: any) => ({
+        ...req,
+        body: req.body || req.bodyRawContent || '',
+        bodyType: req.bodyType || (req.bodyRawContent ? 'raw' : 'none'),
+        assertions: req.assertions || [],
+        variables: req.variables || [],
+        isSelected: req.isSelected !== false,
+      })),
+      variables: chain.variables || [],
+      environment: chain.environment || 'dev',
+      tags: chain.tags || [],
+    });
+
+    setTags(chain.tags || []);
+  }, [chain?.updatedAt]);
 
   useEffect(() => {
     try {
@@ -277,7 +317,6 @@ export function RequestChainEditor({
           formData.chainRequests?.map((r) => r.id) || [],
         );
 
-
         Object.entries(map).forEach(([requestId, log]: [string, any]) => {
           if (
             currentRequestIds.has(requestId) &&
@@ -294,7 +333,6 @@ export function RequestChainEditor({
       if (Object.keys(loadedAssertions).length > 0) {
         setAssertionsByRequest(loadedAssertions);
       }
-
     } catch (e) {
       console.error('Failed to load persisted assertions:', e);
     }
@@ -312,7 +350,6 @@ export function RequestChainEditor({
         ),
       );
 
-
       return filtered;
     });
   }, [formData.chainRequests]);
@@ -328,7 +365,6 @@ export function RequestChainEditor({
           currentRequestIds.has(requestId),
         ),
       );
-
 
       return filtered;
     });
@@ -786,8 +822,9 @@ export function RequestChainEditor({
 
     toast({
       title: 'Variable Applied',
-      description: `{{${variableName}}} applied to ${applicationsCount} location(s) in request #${targetRequestIndex + 1
-        }: ${applications.join(', ')}`,
+      description: `{{${variableName}}} applied to ${applicationsCount} location(s) in request #${
+        targetRequestIndex + 1
+      }: ${applications.join(', ')}`,
     });
   };
 
@@ -862,12 +899,12 @@ export function RequestChainEditor({
       authApiValue: replaceVariables(request.authApiValue || '', variables),
       authorization: request.authorization
         ? {
-          ...request.authorization,
-          token: replaceVariables(
-            request.authorization.token || '',
-            variables,
-          ),
-        }
+            ...request.authorization,
+            token: replaceVariables(
+              request.authorization.token || '',
+              variables,
+            ),
+          }
         : request.authorization,
     };
   };
@@ -1485,8 +1522,9 @@ export function RequestChainEditor({
           if (request.errorHandling === 'stop') {
             toast({
               title: 'Execution Stopped',
-              description: `Chain execution stopped due to error in request ${originalIndex + 1
-                }`,
+              description: `Chain execution stopped due to error in request ${
+                originalIndex + 1
+              }`,
               variant: 'destructive',
             });
             break;
@@ -1740,7 +1778,6 @@ export function RequestChainEditor({
         ) || [],
     });
   };
-  // console.log("SENDING TAGS:", tags);
 
   const duplicateRequest = (requestId: string) => {
     const request = formData.chainRequests?.find((r) => r.id === requestId);
@@ -1886,6 +1923,7 @@ export function RequestChainEditor({
               authorizationType,
               authorization,
               assertions: allAssertions,
+              variables: request.variables || [],
               tags: tags ?? [],
               headers:
                 request.headers?.map((h) =>
@@ -1908,6 +1946,7 @@ export function RequestChainEditor({
               authorizationType,
               authorization,
               assertions: allAssertions,
+              variables: request.variables || [],
               headers:
                 request.headers?.map((h) => ({ ...h, id: undefined })) || [],
               params:
@@ -1935,7 +1974,7 @@ export function RequestChainEditor({
         lastExecuted: chain?.lastExecuted,
         executionCount: chain?.executionCount || 0,
         successRate: chain?.successRate || 0,
-        tags: tags ?? ["untagged", "new"],
+        tags: tags ?? ['untagged', 'new'],
       };
 
       const savedChain =
@@ -2015,11 +2054,11 @@ export function RequestChainEditor({
 
         const headers = Array.isArray(req.headers)
           ? req.headers.map((header: any) => ({
-            id: header.id || `temp_${Date.now()}_${Math.random()}`,
-            key: header.key || '',
-            value: header.value || '',
-            enabled: header.enabled !== false,
-          }))
+              id: header.id || `temp_${Date.now()}_${Math.random()}`,
+              key: header.key || '',
+              value: header.value || '',
+              enabled: header.enabled !== false,
+            }))
           : [];
 
         let authorizationType: APIRequest['authorizationType'] = 'none';
@@ -2050,11 +2089,11 @@ export function RequestChainEditor({
 
         const params = Array.isArray(req.params)
           ? req.params.map((param: any) => ({
-            id: param.id || `temp_${Date.now()}_${Math.random()}`,
-            key: param.key || '',
-            value: param.value || '',
-            enabled: param.enabled !== false,
-          }))
+              id: param.id || `temp_${Date.now()}_${Math.random()}`,
+              key: param.key || '',
+              value: param.value || '',
+              enabled: param.enabled !== false,
+            }))
           : [];
 
         return {
@@ -2565,7 +2604,6 @@ export function RequestChainEditor({
                 </div>
               </div>
 
-
               {/* <DynamicVariablesPanel /> */}
             </CardContent>
           </Card>
@@ -2612,7 +2650,7 @@ export function RequestChainEditor({
                       className='p-4 sm:p-6 border-b border-border'
                     >
                       {formData.chainRequests &&
-                        formData.chainRequests.length > 0 ? (
+                      formData.chainRequests.length > 0 ? (
                         <>
                           <DndContext
                             sensors={sensors}
@@ -2657,10 +2695,10 @@ export function RequestChainEditor({
                                                 (r) =>
                                                   r.id === request.id
                                                     ? {
-                                                      ...r,
-                                                      isSelected:
-                                                        !r.isSelected,
-                                                    }
+                                                        ...r,
+                                                        isSelected:
+                                                          !r.isSelected,
+                                                      }
                                                     : r,
                                               ) || [],
                                           });
@@ -2724,13 +2762,13 @@ export function RequestChainEditor({
                                                   if (
                                                     prevReqId &&
                                                     extractedVariablesByRequest[
-                                                    prevReqId
+                                                      prevReqId
                                                     ]
                                                   ) {
                                                     Object.assign(
                                                       varsUpToThisPoint,
                                                       extractedVariablesByRequest[
-                                                      prevReqId
+                                                        prevReqId
                                                       ],
                                                     );
                                                   }
@@ -2749,7 +2787,7 @@ export function RequestChainEditor({
                                               requestAssertions={(() => {
                                                 const assertions =
                                                   assertionsByRequest[
-                                                  request.id
+                                                    request.id
                                                   ] || [];
                                                 return assertions;
                                               })()}
@@ -2779,160 +2817,160 @@ export function RequestChainEditor({
                                                 {(executionLog.response !=
                                                   null ||
                                                   executionLog.error) && (
-                                                    <div className='border-t border-gray-200 p-2'>
-                                                      <ResponseExplorer
-                                                        response={{
-                                                          ...executionLog.response,
-                                                          requestId:
-                                                            executionLog.requestId,
-                                                        }}
-                                                        onExtractVariable={(
+                                                  <div className='border-t border-gray-200 p-2'>
+                                                    <ResponseExplorer
+                                                      response={{
+                                                        ...executionLog.response,
+                                                        requestId:
+                                                          executionLog.requestId,
+                                                      }}
+                                                      onExtractVariable={(
+                                                        extraction,
+                                                      ) =>
+                                                        handleExtractVariableForRequest(
+                                                          executionLog.requestId,
                                                           extraction,
-                                                        ) =>
-                                                          handleExtractVariableForRequest(
-                                                            executionLog.requestId,
-                                                            extraction,
-                                                          )
-                                                        }
-                                                        extractedVariables={
-                                                          extractedVariablesByRequest[
+                                                        )
+                                                      }
+                                                      extractedVariables={
+                                                        extractedVariablesByRequest[
                                                           executionLog.requestId
-                                                          ] || {}
-                                                        }
-                                                        existingExtractions={
-                                                          formData.chainRequests.find(
-                                                            (r) =>
-                                                              r.id ===
-                                                              executionLog.requestId,
-                                                          )?.extractVariables ||
-                                                          []
-                                                        }
-                                                        onRemoveExtraction={(
+                                                        ] || {}
+                                                      }
+                                                      existingExtractions={
+                                                        formData.chainRequests.find(
+                                                          (r) =>
+                                                            r.id ===
+                                                            executionLog.requestId,
+                                                        )?.extractVariables ||
+                                                        []
+                                                      }
+                                                      onRemoveExtraction={(
+                                                        variableName,
+                                                      ) =>
+                                                        handleRemoveExtractionForRequest(
+                                                          executionLog.requestId,
                                                           variableName,
-                                                        ) =>
-                                                          handleRemoveExtractionForRequest(
-                                                            executionLog.requestId,
-                                                            variableName,
-                                                          )
-                                                        }
-                                                        handleCopy={(value) =>
-                                                          handleCopyForRequest(
-                                                            executionLog.requestId,
-                                                            value,
-                                                          )
-                                                        }
-                                                        chainId={chain?.id ?? ''}
-                                                        copied={
-                                                          copiedStates[
+                                                        )
+                                                      }
+                                                      handleCopy={(value) =>
+                                                        handleCopyForRequest(
+                                                          executionLog.requestId,
+                                                          value,
+                                                        )
+                                                      }
+                                                      chainId={chain?.id ?? ''}
+                                                      copied={
+                                                        copiedStates[
                                                           executionLog.requestId
-                                                          ] || false
-                                                        }
-                                                        actualRequestUrl={
-                                                          executionLog.request.url
-                                                        }
-                                                        actualRequestHeaders={
-                                                          executionLog.request
-                                                            .headers
-                                                        }
-                                                        actualRequestBody={
-                                                          executionLog.request
-                                                            .body
-                                                        }
-                                                        actualRequestMethod={
-                                                          executionLog.request
-                                                            .method
-                                                        }
-                                                        executionStatus={
-                                                          executionLog.status
-                                                        }
-                                                        errorMessage={
-                                                          executionLog.error
-                                                        }
-                                                        executionLog={
-                                                          executionLog
-                                                        }
-                                                        onApplyToAllRequests={
-                                                          handleApplyToAllRequests
-                                                        }
-                                                        allAssertions={
-                                                          assertionsByRequest[
+                                                        ] || false
+                                                      }
+                                                      actualRequestUrl={
+                                                        executionLog.request.url
+                                                      }
+                                                      actualRequestHeaders={
+                                                        executionLog.request
+                                                          .headers
+                                                      }
+                                                      actualRequestBody={
+                                                        executionLog.request
+                                                          .body
+                                                      }
+                                                      actualRequestMethod={
+                                                        executionLog.request
+                                                          .method
+                                                      }
+                                                      executionStatus={
+                                                        executionLog.status
+                                                      }
+                                                      errorMessage={
+                                                        executionLog.error
+                                                      }
+                                                      executionLog={
+                                                        executionLog
+                                                      }
+                                                      onApplyToAllRequests={
+                                                        handleApplyToAllRequests
+                                                      }
+                                                      allAssertions={
+                                                        assertionsByRequest[
                                                           executionLog.requestId
-                                                          ] || []
-                                                        }
-                                                        onAssertionsUpdate={(
+                                                        ] || []
+                                                      }
+                                                      onAssertionsUpdate={(
+                                                        assertions,
+                                                      ) => {
+                                                        setAssertionsByRequest(
+                                                          (prev) => ({
+                                                            ...prev,
+                                                            [executionLog.requestId]:
+                                                              assertions,
+                                                          }),
+                                                        );
+                                                        persistAssertionsToStorage(
+                                                          executionLog.requestId,
                                                           assertions,
-                                                        ) => {
-                                                          setAssertionsByRequest(
-                                                            (prev) => ({
-                                                              ...prev,
-                                                              [executionLog.requestId]:
-                                                                assertions,
-                                                            }),
-                                                          );
-                                                          persistAssertionsToStorage(
-                                                            executionLog.requestId,
-                                                            assertions,
-                                                          );
-                                                        }}
-                                                        variables={
-                                                          usedChainVariables.staticVars
-                                                        }
-                                                        dynamicVariables={
-                                                          usedChainVariables.dynamicVars
-                                                        }
-                                                        requestIndex={
-                                                          requestIndex
-                                                        }
-                                                        extractedVariablesByRequest={
-                                                          extractedVariablesByRequest
-                                                        }
-                                                        chainRequests={
-                                                          formData.chainRequests ||
-                                                          []
-                                                        }
-                                                        requestExtractedVariables={(() => {
-                                                          const varsUpToThisPoint: Record<
-                                                            string,
-                                                            any
-                                                          > = {};
-                                                          for (
-                                                            let i = 0;
-                                                            i <= requestIndex;
-                                                            i++
-                                                          ) {
-                                                            const reqId =
-                                                              formData
-                                                                .chainRequests?.[
-                                                                i
-                                                              ]?.id;
-                                                            if (
-                                                              reqId &&
-                                                              extractedVariablesByRequest[
+                                                        );
+                                                      }}
+                                                      variables={
+                                                        usedChainVariables.staticVars
+                                                      }
+                                                      dynamicVariables={
+                                                        usedChainVariables.dynamicVars
+                                                      }
+                                                      requestIndex={
+                                                        requestIndex
+                                                      }
+                                                      extractedVariablesByRequest={
+                                                        extractedVariablesByRequest
+                                                      }
+                                                      chainRequests={
+                                                        formData.chainRequests ||
+                                                        []
+                                                      }
+                                                      requestExtractedVariables={(() => {
+                                                        const varsUpToThisPoint: Record<
+                                                          string,
+                                                          any
+                                                        > = {};
+                                                        for (
+                                                          let i = 0;
+                                                          i <= requestIndex;
+                                                          i++
+                                                        ) {
+                                                          const reqId =
+                                                            formData
+                                                              .chainRequests?.[
+                                                              i
+                                                            ]?.id;
+                                                          if (
+                                                            reqId &&
+                                                            extractedVariablesByRequest[
                                                               reqId
-                                                              ]
-                                                            ) {
-                                                              Object.assign(
-                                                                varsUpToThisPoint,
-                                                                extractedVariablesByRequest[
+                                                            ]
+                                                          ) {
+                                                            Object.assign(
+                                                              varsUpToThisPoint,
+                                                              extractedVariablesByRequest[
                                                                 reqId
-                                                                ],
-                                                              );
-                                                            }
+                                                              ],
+                                                            );
                                                           }
-                                                          return varsUpToThisPoint;
-                                                        })()}
-                                                        allDynamicVariables={
-                                                          dynamicOverrides
                                                         }
-                                                        allStaticVariables={
-                                                          storeVariables
-                                                        }
-                                                        allExtractedVariables={
-                                                          extractedVariablesArray
-                                                        }
-                                                      />
-                                                    </div>
-                                                  )}
+                                                        return varsUpToThisPoint;
+                                                      })()}
+                                                      allDynamicVariables={
+                                                        dynamicOverrides
+                                                      }
+                                                      allStaticVariables={
+                                                        storeVariables
+                                                      }
+                                                      allExtractedVariables={
+                                                        extractedVariablesArray
+                                                      }
+                                                    />
+                                                  </div>
+                                                )}
                                               </div>
                                             )}
                                           </div>
@@ -3011,17 +3049,18 @@ export function RequestChainEditor({
                                 )}
                                 {isExecuting
                                   ? 'Running...'
-                                  : `Run Selected (${formData.chainRequests?.filter(
-                                    (r) => r.isSelected !== false,
-                                  ).length || 0
-                                  })`}
+                                  : `Run Selected (${
+                                      formData.chainRequests?.filter(
+                                        (r) => r.isSelected !== false,
+                                      ).length || 0
+                                    })`}
                               </Button>
 
                               {executionLogs.length > 0 &&
                                 executionLogs.length ===
-                                formData.chainRequests?.filter(
-                                  (r) => r.isSelected !== false,
-                                ).length &&
+                                  formData.chainRequests?.filter(
+                                    (r) => r.isSelected !== false,
+                                  ).length &&
                                 !isExecuting && (
                                   <Button
                                     variant='outline'

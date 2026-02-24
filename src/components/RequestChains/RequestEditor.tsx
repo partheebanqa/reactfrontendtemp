@@ -301,6 +301,8 @@ export function RequestEditor({
     },
   );
 
+  console.log('selectedVariable:', selectedVariable);
+
   const [headers, setHeaders] = useState<KeyValuePair[]>(
     initialRequest.headers || [],
   );
@@ -465,6 +467,8 @@ export function RequestEditor({
         .filter((v: any) => v.field === 'body' && v.key && v.variable)
         .map((v: any) => ({ path: v.key, name: v.variable }));
       setSelectedVariable(bodyVars);
+      const variablesPayload = buildVariablesPayload(bodyVars);
+      onUpdate({ variables: variablesPayload });
     } else {
       setSelectedVariable([]);
     }
@@ -2382,7 +2386,7 @@ export function RequestEditor({
       .map((seg, i) => {
         if (seg.kind === 'delimiter') return seg.content;
         if (updatedSubs[i]) return `{{${updatedSubs[i]}}}`;
-        return originalSegmentContents.current[i] ?? seg.content; // ← updated
+        return originalSegmentContents.current[i] ?? seg.content;
       })
       .join('');
     setUrl(newUrl);
@@ -2402,7 +2406,6 @@ export function RequestEditor({
       .map((seg, i) => {
         if (seg.kind === 'delimiter') return seg.content;
         if (updatedSubs[i]) return `{{${updatedSubs[i]}}}`;
-        // Use stored original content instead of current segment content
         return originalSegmentContents.current[i] ?? seg.content;
       })
       .join('');
