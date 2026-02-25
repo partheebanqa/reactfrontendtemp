@@ -58,8 +58,6 @@ export const JsonVariableSubstitution: React.FC<
     PendingSubstitution[]
   >([]);
 
-  console.log('staticVariables999:', staticVariables);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [dropdownAbove, setDropdownAbove] = useState<boolean>(false);
@@ -76,15 +74,12 @@ export const JsonVariableSubstitution: React.FC<
     ];
   }, [staticVariables, dynamicVariables]);
 
-  console.log('allVariables:', allVariables);
-
   const [confirmState, setConfirmState] = useState<
     | { open: true; kind: 'saved' | 'line'; path?: string; lineIndex?: number }
     | { open: false }
   >({ open: false });
 
   useEffect(() => {
-    // Always sync with initialVariable, even if it's empty
     setSelectedVariables(initialVariable || []);
   }, [initialVariable]);
 
@@ -101,8 +96,6 @@ export const JsonVariableSubstitution: React.FC<
         v.value.toLowerCase().includes(lower),
     );
   }, [searchTerm, allVariables]);
-
-  console.log('filteredVariables:', filteredVariables);
 
   const extractPathFromLine = (lineIndex: number): string => {
     const line = lines[lineIndex];
@@ -269,7 +262,6 @@ export const JsonVariableSubstitution: React.FC<
   return (
     <div ref={containerRef} className='relative w-full space-y-3'>
       <div className='relative flex border border-border rounded-md overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring'>
-        {/* Line numbers column */}
         <div
           className='flex flex-col bg-muted border-r border-border py-2 px-2 text-right select-none'
           style={{ minWidth: '2.5rem' }}
@@ -288,7 +280,6 @@ export const JsonVariableSubstitution: React.FC<
           ))}
         </div>
 
-        {/* Textarea with auto-sizing */}
         <div className='relative flex-1'>
           <textarea
             ref={textareaRef}
@@ -304,7 +295,6 @@ export const JsonVariableSubstitution: React.FC<
             }}
           />
 
-          {/* Hover underline overlay */}
           <div className='absolute top-0 left-0 right-0 bottom-0 pointer-events-none pt-2'>
             {lines.map((line, index) => {
               const hasKey = /"[^"]+"\s*:/.test(line);
@@ -330,7 +320,6 @@ export const JsonVariableSubstitution: React.FC<
             })}
           </div>
 
-          {/* Variable substitution overlay on the right */}
           <div className='absolute top-0 right-0 bottom-0 w-44 pointer-events-none pt-2'>
             {lines.map((line, index) => {
               const hasKey = /"[^"]+"\s*:/.test(line);
