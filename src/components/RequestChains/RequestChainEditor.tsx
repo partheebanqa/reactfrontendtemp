@@ -125,8 +125,6 @@ export function RequestChainEditor({
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
 
-  console.log('datachain:', chain);
-
   const [tags, setTags] = useState<string[]>([]);
 
   const { variables: storeVariables, dynamicVariables } =
@@ -847,26 +845,36 @@ export function RequestChainEditor({
   ): APIRequest => {
     let processedBody = request.body || '';
 
-    if (
-      request.variable &&
-      Array.isArray(request.variable) &&
-      request.variable.length > 0
-    ) {
+    const bodyVarsMapped = (() => {
+      if (
+        request.variable &&
+        Array.isArray(request.variable) &&
+        request.variable.length > 0
+      ) {
+        return request.variable;
+      }
+      if (request.variables && Array.isArray(request.variables)) {
+        return request.variables
+          .filter((v: any) => v.field === 'body' && v.key && v.variable)
+          .map((v: any) => ({ name: v.variable, path: v.key }));
+      }
+      return [];
+    })();
+
+    if (bodyVarsMapped.length > 0) {
       try {
         const parsedBody = JSON.parse(processedBody);
-
-        request.variable.forEach((varItem: any) => {
+        bodyVarsMapped.forEach((varItem: any) => {
           const variable = variables.find((v) => v.name === varItem.name);
           if (variable && varItem.path) {
             parsedBody[varItem.path] =
               variable.value || variable.initialValue || '';
           }
         });
-
         processedBody = JSON.stringify(parsedBody);
       } catch (e) {
         console.warn(
-          '[v0] Failed to parse body for selectedVariable substitution, using string replacement:',
+          '[v0] Failed to parse body for variable substitution, using string replacement:',
           e,
         );
         processedBody = replaceVariables(processedBody, variables);
@@ -892,6 +900,7 @@ export function RequestChainEditor({
           key: replaceVariables(param.key, variables),
           value: replaceVariables(param.value, variables),
         })) || [],
+
       authToken: replaceVariables(request.authToken || '', variables),
       authUsername: replaceVariables(request.authUsername || '', variables),
       authPassword: replaceVariables(request.authPassword || '', variables),

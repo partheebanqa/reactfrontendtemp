@@ -522,12 +522,6 @@ export function RequestEditor({
     }, 100);
   }, [params]);
 
-  useEffect(() => {
-    if (isSyncingRef.current) return;
-    const variablesPayload = buildVariablesPayload(selectedVariable);
-    onUpdate({ variables: variablesPayload });
-  }, [headers, params, auth.token, selectedVariable]);
-
   const handleAssertionsUpdate = (newAssertions: any[]) => {
     setAssertions(newAssertions);
 
@@ -757,15 +751,22 @@ export function RequestEditor({
     let processedBody = request.body || '';
     let processedBodyRawContent = request.bodyRawContent || '';
 
+    const effectiveSelectedVars =
+      selectedVariable.length > 0
+        ? selectedVariable
+        : (initialRequest.variables || [])
+            .filter((v: any) => v.field === 'body' && v.key && v.variable)
+            .map((v: any) => ({ path: v.key, name: v.variable }));
+
     if (
-      selectedVariable &&
-      selectedVariable.length > 0 &&
+      effectiveSelectedVars &&
+      effectiveSelectedVars.length > 0 &&
       (processedBody || processedBodyRawContent)
     ) {
       const bodyContent = processedBodyRawContent || processedBody;
       try {
         const parsedBody = JSON.parse(bodyContent);
-        selectedVariable.forEach((varItem) => {
+        effectiveSelectedVars.forEach((varItem) => {
           const variable = variables.find((v) => v.name === varItem.name);
           if (variable && varItem.path) {
             parsedBody[varItem.path] = variable.value || variable.initialValue;
@@ -774,7 +775,7 @@ export function RequestEditor({
         processedBody = JSON.stringify(parsedBody, null, 2);
         processedBodyRawContent = JSON.stringify(parsedBody, null, 2);
       } catch {
-        selectedVariable.forEach((varItem) => {
+        effectiveSelectedVars.forEach((varItem) => {
           const variable = variables.find((v) => v.name === varItem.name);
           if (variable) {
             const regex = new RegExp(`{{${variable.name}}}`, 'g');
@@ -971,9 +972,6 @@ export function RequestEditor({
       setAutocompleteState((prev) => ({ ...prev, show: false }));
     }
   };
-
-  console.log('storeVariables:', storeVariables);
-  console.log('dynamicVariables:', dynamicVariables);
 
   React.useEffect(() => {
     const allVariables = getAllAvailableVariables();
