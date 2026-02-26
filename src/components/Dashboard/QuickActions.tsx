@@ -17,28 +17,28 @@ export default function QuickActions() {
   const [, setLocation] = useLocation();
 
   return (
-    <Card>
-      <CardHeader>
+    <Card >
+      <CardHeader className='p-3 md:p-6'>
         <CardTitle className='text-lg font-semibold text-slate-900'>
           Quick Links
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className='p-3 md:p-6'>
         <div className='space-y-3'>
           <Button
             onClick={() => setLocation('/request-builder')}
             variant='ghost'
-            className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
+            className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors '
           >
             <div className='flex items-center space-x-3'>
               <div className='w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center'>
                 <Settings className='text-blue-600' size={14} />
               </div>
               <div className='text-left'>
-                <p className='text-sm font-medium text-slate-900'>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>
                   Request Builder
                 </p>
-                <p className='text-xs text-slate-500'>
+                <p className='text-[10px] md:text-xs text-slate-500'>
                   Start building your first API request with variables and
                   assertions.
                 </p>
@@ -51,15 +51,18 @@ export default function QuickActions() {
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
-            <div className='flex items-center space-x-3'>
-              <div className='w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center'>
+            <div className='flex items-start gap-3 w-full'>
+              {/* ICON */}
+              <div className='w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0'>
                 <Layers className='text-blue-600' size={14} />
               </div>
-              <div className='text-left'>
-                <p className='text-sm font-medium text-slate-900'>
+
+              {/* TEXT */}
+              <div className='text-left min-w-0 flex-1'>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>
                   Create Test Suite
                 </p>
-                <p className='text-xs text-slate-500'>
+                <p className='text-[10px] md:text-xs text-slate-500 break-words'>
                   Group your tests together for better organization and reuse.
                 </p>
               </div>
@@ -76,10 +79,10 @@ export default function QuickActions() {
                 <Link2 className='text-purple-600' size={14} />
               </div>
               <div className='text-left'>
-                <p className='text-sm font-medium text-slate-900'>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>
                   Create Request Chain
                 </p>
-                <p className='text-xs text-slate-500'>
+                <p className='text-[10px] md:text-xs text-slate-500'>
                   Connect multiple API calls to simulate end‑to‑end workflows.
                 </p>
               </div>
@@ -96,8 +99,8 @@ export default function QuickActions() {
                 <CalendarClock className='text-green-600' size={14} />
               </div>
               <div className='text-left'>
-                <p className='text-sm font-medium text-slate-900'>Schedule</p>
-                <p className='text-xs text-slate-500'>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>Schedule</p>
+                <p className='text-[10px] md:text-xs text-slate-500'>
                   {' '}
                   Automate test runs by setting up recurring execution jobs.
                 </p>
@@ -114,8 +117,8 @@ export default function QuickActions() {
                 <ChartColumn className='text-green-600' size={14} />
               </div>
               <div className='text-left'>
-                <p className='text-sm font-medium text-slate-900'>Executions</p>
-                <p className='text-xs text-slate-500'>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>Executions</p>
+                <p className='text-[10px] md:text-xs text-slate-500'>
                   Check how your tests performed and see what's next.
                 </p>
               </div>

@@ -87,7 +87,7 @@ export default function Dashboard() {
       {/* Dashboard Content */}
       <div className='flex-1 overflow-auto mt-3 scrollbar-thin'>
         {/* Stats Overview */}
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-3'>
+        <div className='grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-1 md:gap-6 mb-3'>
           <StatsCard
             title='Total Import Collections'
             value={data?.totalCollections || 0}
@@ -127,7 +127,7 @@ export default function Dashboard() {
         </div>
 
         {/* Charts and Recent Activity */}
-        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-6 mb-8'>
           {/* <ExecutionChart /> */}
           <RecentExecutions data={data?.lastExecutions || []} />
           <QuickActions />
