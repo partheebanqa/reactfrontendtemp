@@ -97,7 +97,7 @@ export function HeroSection() {
             </button>
 
             <button
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/signin')}
               className='group relative px-8 py-4 bg-white text-black font-semibold rounded-lg hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300 flex items-center gap-2'
               aria-label='Start Free Trial'
             >
