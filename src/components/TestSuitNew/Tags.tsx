@@ -18,20 +18,59 @@ const TagInput: React.FC<TagInputProps> = ({
     const [error, setError] = useState('');
     const [showQuickAdd, setShowQuickAdd] = useState(false);
 
-    const predefinedTags = [
-        'Sanity',
-        'Regression',
-        'Smoke',
-        'UAT',
-        'Integration',
-        'E2E',
-    ];
 
-    const availableTags = predefinedTags.filter(
-        (t) => !tags.some((x) => x.toLowerCase() === t.toLowerCase())
+    // 1) Canonical registry: key = normalized id, value = display label
+    const TAG_REGISTRY: Record<string, string> = {
+        sanity: 'Sanity',
+        regression: 'Regression',
+        smoke: 'Smoke',
+        uat: 'UAT',
+        integration: 'Integration',
+        e2e: 'E2E',
+        functional: 'Functional',
+        performance: 'Performance',
+        security: 'Security',
+        api: 'API',
+        ui: 'UI',
+        unit: 'Unit',
+    };
+
+    // 2) Normalize input -> display label (canonical if known, else Title Case)
+    const normalizeTag = (raw: string) => {
+        const lower = raw.toLowerCase().trim();
+
+        // exact registry match
+        if (TAG_REGISTRY[lower]) return TAG_REGISTRY[lower];
+
+        // otherwise title-case words
+        return raw
+            .trim()
+            .split(/\s+/)
+            .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+            .join(' ');
+    };
+
+    // 3) Duplicate prevention (case-insensitive + normalization-safe)
+    const tagExists = (existing: string[], newRaw: string) => {
+        const normalizedNew = normalizeTag(newRaw).toLowerCase();
+        return existing.some((t) => t.toLowerCase() === normalizedNew);
+    };
+
+    // 4) Available tags list (from registry values)
+    const availableTags = Object.values(TAG_REGISTRY).filter(
+        (label) => !tags.some((t) => t.toLowerCase() === label.toLowerCase())
     );
 
+    // 5) Color helper (use normalized key if possible)
     const getTagColor = (tag: string) => {
+        // Convert display label back to key when possible
+        const lower = tag.toLowerCase().trim();
+
+        // reverse lookup: "Sanity" -> "sanity"
+        const key =
+            Object.keys(TAG_REGISTRY).find((k) => TAG_REGISTRY[k].toLowerCase() === lower) ||
+            lower; // fallback
+
         const colors: Record<string, string> = {
             sanity: 'bg-blue-100 text-blue-700 border-blue-200',
             regression: 'bg-purple-100 text-purple-700 border-purple-200',
@@ -39,10 +78,19 @@ const TagInput: React.FC<TagInputProps> = ({
             uat: 'bg-green-100 text-green-700 border-green-200',
             integration: 'bg-pink-100 text-pink-700 border-pink-200',
             e2e: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+
+            functional: 'bg-blue-100 text-blue-700 border-blue-200',
+            performance: 'bg-purple-100 text-purple-700 border-purple-200',
+            security: 'bg-orange-100 text-orange-700 border-orange-200',
+            api: 'bg-gray-100 text-gray-700 border-gray-200',
+            ui: 'bg-gray-100 text-gray-700 border-gray-200',
+            unit: 'bg-gray-100 text-gray-700 border-gray-200',
         };
-        return colors[tag.toLowerCase()] || 'bg-gray-100 text-gray-700 border-gray-200';
+
+        return colors[key] || 'bg-gray-100 text-gray-700 border-gray-200';
     };
 
+    // 6) Add tag (normalize + prevent duplicates + store canonical display)
     const handleAddTag = (tagName: string) => {
         const trimmed = tagName.trim();
         if (!trimmed) {
@@ -50,12 +98,14 @@ const TagInput: React.FC<TagInputProps> = ({
             return;
         }
 
-        if (tags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+        const normalized = normalizeTag(trimmed);
+
+        if (tagExists(tags, normalized)) {
             setError('Tag already exists');
             return;
         }
 
-        setTags((prev) => [...prev, trimmed]);
+        setTags((prev) => [...prev, normalized]); // ✅ store canonical label
         setInputValue('');
         setError('');
     };
@@ -117,7 +167,7 @@ const TagInput: React.FC<TagInputProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => setShowQuickAdd((v) => !v)}
-                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                    className="hover:bg-gray-100 rounded transition-colors"
                                     aria-label="Quick add tags"
                                 >
                                     <Plus className="w-4 h-4 text-gray-500" />
