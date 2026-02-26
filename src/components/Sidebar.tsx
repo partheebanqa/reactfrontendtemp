@@ -142,8 +142,10 @@ const utilsItems: MenuItem[] = [
 ];
 
 const PRO_FEATURES = new Set<FeatureKey>(['executions']);
-
-const Sidebar: React.FC = () => {
+type SidebarProps = {
+  onNavigate?: () => void;
+};
+const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   const [location] = useLocation();
   const { user } = useAuth();
   const { currentWorkspace } = useWorkspace();
@@ -189,13 +191,17 @@ const Sidebar: React.FC = () => {
     const Content = (
       <Button
         variant={isActive ? 'active' : 'ghost'}
-        className={`w-full ${collapsed ? 'p-4 justify-center' : 'justify-start'
+        className={`w-full ${collapsed ? 'p-4 justify-start' : 'justify-start'
           } relative 
           ${lockedByFeatureGate || item.upcoming || isDisabled
             ? 'opacity-50 cursor-not-allowed'
             : ''
           } text-[13px]`}
         disabled={lockedByFeatureGate || item.upcoming || isDisabled}
+        onClick={() => {
+          setCollapsed(false);
+          if (onNavigate) onNavigate();
+        }}
       >
         <Icon className='w-10 h-10' />
         {!collapsed && (
@@ -204,11 +210,25 @@ const Sidebar: React.FC = () => {
             <span className='text-[#ff0000] text-[11px]'>
               {showEnterpriseBadge && '(Enterprise)'}{' '}
             </span>
-            {/* {showEnterpriseBadge && (
-                <Badge variant="secondary" className="ml-2">
-                  Enterprise
-                </Badge>
-              )} */}
+            {showEnterpriseBadge && (
+              <Badge variant="secondary" className="ml-2">
+                Enterprise
+              </Badge>
+            )}
+          </span>
+        )}
+
+        {collapsed && (
+          <span className='flex-1 text-left block md:hidden'>
+            {item.label}{' '}
+            <span className='text-[#ff0000] text-[11px]'>
+              {showEnterpriseBadge && '(Enterprise)'}{' '}
+            </span>
+            {showEnterpriseBadge && (
+              <Badge variant="secondary" className="ml-2">
+                Enterprise
+              </Badge>
+            )}
           </span>
         )}
         {!collapsed && lockedByFeatureGate && isPro && (
@@ -272,7 +292,7 @@ const Sidebar: React.FC = () => {
           } bg-white flex-col border-r transition-all duration-300 h-full`}
       >
         <div
-          className={`${collapsed ? 'p-3' : 'p-2'
+          className={`${collapsed ? 'p-4' : 'p-1.5'
             } border-b flex justify-around items-center relative`}
         >
           {collapsed ? (
@@ -405,7 +425,7 @@ const Sidebar: React.FC = () => {
       </aside>
 
       <div className='block md:hidden'>
-        <div className='flex items-center justify-between h-16 px-4 border-b border-primary-600'>
+        {/* <div className='flex items-center justify-between h-16 px-4 border-b border-primary-600'>
           <div className='flex items-center space-x-2'>
             <span className='text-lg font-semibold'>Optraflow</span>
           </div>
@@ -415,11 +435,11 @@ const Sidebar: React.FC = () => {
           >
             <X className='h-6 w-6' />
           </button>
-        </div>
+        </div> */}
 
         <nav
           className={`flex-1 ${collapsed ? 'px-2' : 'px-4'
-            } py-6 space-y-2 overflow-y-auto scrollbar-thin`}
+            } py-3 space-y-2 overflow-y-auto scrollbar-thin`}
         >
           <div className='space-y-1'>
             {menuItems.map((item) => (

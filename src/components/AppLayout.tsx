@@ -3,9 +3,10 @@ import Sidebar from './Sidebar';
 import TrialBanner from './TrialBanner';
 import Header from './Header/index';
 import { useAuth } from '@/hooks/useAuth';
-import { useLocation } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { ChevronsRight } from 'lucide-react';
+import LogoFull from '../assests/images/OptraLogo.png';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -15,6 +16,24 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const { token } = useAuth();
   const [_, setLocation] = useLocation();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [isDrawerOpen]);
+
+  // ✅ ESC to close
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsDrawerOpen(false);
+    };
+    if (isDrawerOpen) window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isDrawerOpen]);
 
   useEffect(() => {
     if (!token) {
@@ -30,31 +49,52 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <Sidebar />
         </div>
 
-        {/* Mobile Drawer Sidebar */}
-        {isDrawerOpen && (
-          <>
-            {/* Backdrop */}
-            <div
-              className='fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden'
-              onClick={() => setIsDrawerOpen(false)}
-            />
-            {/* Drawer */}
-            <div className='fixed top-0 left-0 z-50 w-64 h-full bg-white border-r shadow-lg transition-transform duration-300 md:hidden'>
-              <Sidebar />
-            </div>
-          </>
-        )}
+        <div className="md:hidden">
 
-        {/* Drawer Toggle Button (Mobile only) */}
-        {/* {!isDrawerOpen && (
-          <Button
-            size="icon"
-            className="fixed top-4 left-4 z-50 bg-primary text-white shadow-md md:hidden"
-            onClick={() => setIsDrawerOpen(true)}
+          <div
+            className={[
+              "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300",
+              isDrawerOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none",
+            ].join(" ")}
+            onClick={() => setIsDrawerOpen(false)}
+          />
+
+
+          <div
+            className={[
+              "fixed top-0 left-0 z-50 h-full w-[280px] max-w-[85vw] bg-white border-r shadow-xl",
+              "transform transition-transform duration-300 ease-out will-change-transform",
+              isDrawerOpen ? "translate-x-0" : "-translate-x-full",
+            ].join(" ")}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Sidebar"
           >
-            <ChevronsRight size={20} />
-          </Button>
-        )} */}
+
+            <div className="h-14 flex items-center justify-between px-3 border-b">
+              <Link to='/' className='flex items-center space-x-2'>
+                <img
+                  src={LogoFull}
+                  alt='Optraflow'
+                  style={{ width: '100%', height: '50px' }}
+                />
+              </Link>
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="p-2 rounded hover:bg-gray-100"
+                aria-label="Close sidebar"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Sidebar content */}
+            <div className="h-[calc(100%-56px)] overflow-y-auto">
+              <Sidebar onNavigate={() => setIsDrawerOpen(false)} />
+            </div>
+          </div>
+        </div>
+
 
         {/* Main Content */}
         <div className='flex-1 flex flex-col overflow-hidden'>
