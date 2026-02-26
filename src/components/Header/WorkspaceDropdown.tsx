@@ -65,7 +65,7 @@ export default function WorkspaceDropdown({
             <DropdownMenuTrigger asChild>
               <Button
                 variant='outline'
-                className='flex items-center space-x-1 sm:space-x-2 max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] h-9 px-2 py-1 border-blue-100 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 bg-transparent'
+                className='flex items-center space-x-1 sm:space-x-2 max-w-[200px] xs:max-w-[150px] sm:max-w-[200px] md:max-w-[250px] lg:max-w-[300px] h-9 px-2 py-1 border-blue-100 hover:bg-blue-50 hover:border-blue-200 transition-all duration-200 bg-transparent'
                 size='sm'
                 aria-label='Select workspace'
                 disabled={isLoading}
@@ -113,11 +113,10 @@ export default function WorkspaceDropdown({
                     <DropdownMenuItem
                       key={workspace.id}
                       onClick={() => handleWorkspaceSelect(workspace)}
-                      className={`group justify-between text-xs sm:text-sm py-2 rounded-md ${
-                        isSelected
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
-                          : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
-                      }`}
+                      className={`group justify-between text-xs sm:text-sm py-2 rounded-md ${isSelected
+                        ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                        : 'hover:bg-gray-50 border border-transparent hover:border-gray-100'
+                        }`}
                     >
                       <div className='flex items-center gap-2'>
                         <span className='font-medium truncate text-gray-500 group-hover:text-gray-700'>

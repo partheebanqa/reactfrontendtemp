@@ -83,6 +83,15 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     '/request-chains/create',
     '/test-suites/create',
     '/executions',
+    '/dashboard',
+    '/test-suites',
+    '/request-chains',
+    '/data-management',
+    '/scheduler',
+    '/cicd-configuration',
+    '/settings/account',
+
+
   ];
 
   const shouldHideEnvironment =
@@ -125,8 +134,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
       return true;
     } catch (error) {
       console.error(
-        `Error ${
-          workspaceModalState.mode === 'add' ? 'creating' : 'updating'
+        `Error ${workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
         error,
       );
@@ -170,15 +178,49 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     }
   };
 
+
+  const avatarColors = [
+    "bg-red-500",
+    "bg-orange-500",
+    "bg-amber-500",
+    "bg-yellow-500",
+    "bg-lime-500",
+    "bg-green-500",
+    "bg-emerald-500",
+    "bg-teal-500",
+    "bg-cyan-500",
+    "bg-sky-500",
+    "bg-blue-500",
+    "bg-indigo-500",
+    "bg-violet-500",
+    "bg-purple-500",
+    "bg-fuchsia-500",
+    "bg-pink-500",
+  ];
+
+  const getAvatarColor = (name?: string) => {
+    if (!name) return "bg-gray-500";
+
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    return avatarColors[Math.abs(hash) % avatarColors.length];
+  };
+
+  const fullName = `${user?.firstName ?? ""}${user?.lastName ?? ""}`;
+  const color = getAvatarColor(fullName);
+
   return (
-    <header className='border-b bg-white dark:bg-gray-900 px-2 sm:px-6 pt-2 sm:pt-4 pb-[0.875rem] sm:pb-[0.875rem]'>
+    <header className='border-b bg-white dark:bg-gray-900 px-2 sm:px-3 pt-2 sm:pt-3 pb-3 sm:pb-3'>
       <div className='flex items-center justify-between gap-4 sm:gap-6  mx-auto'>
         <div className='md:hidden flex items-center'>
           <Button
             size='icon'
             variant='ghost'
             onClick={toggleDrawer}
-            className='mr-2 bg-primary text-white'
+            className='mr-2 bg-[#136fb0] text-white'
           >
             {isDrawerOpen ? (
               <ChevronsLeft size={20} />
@@ -217,13 +259,12 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className='flex items-center cursor-pointer'>
-                <Avatar className='h-7 w-7 sm:h-8 sm:w-9 cursor-pointer'>
+                <Avatar className="h-10 w-10 cursor-pointer">
                   <AvatarImage src={(user as any)?.profileImageUrl} />
-                  <AvatarFallback>
+                  <AvatarFallback className={`${color} text-white font-semibold`}>
                     {getInitials(user?.firstName)}
                   </AvatarFallback>
                 </Avatar>
-                <ChevronDown className='h-4 w-4 ml-1 text-gray-500' />
               </div>
             </DropdownMenuTrigger>
             <DropdownMenuContent align='end' className='w-auto'>
