@@ -108,7 +108,6 @@ const menuItems: MenuItem[] = [
     icon: Workflow,
     feature: 'cicd_integrations',
   },
-  // { label: 'Reports', icon: FileText, feature: 'reports' },
   {
     label: 'Executions',
     path: '/executions',
