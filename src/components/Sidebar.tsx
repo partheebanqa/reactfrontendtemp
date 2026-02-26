@@ -192,13 +192,11 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
     const Content = (
       <Button
         variant={isActive ? 'active' : 'ghost'}
-        className={`w-full ${
-          collapsed ? 'p-4 justify-start' : 'justify-start'
-        } relative 
-          ${
-            lockedByFeatureGate || item.upcoming || isDisabled
-              ? 'opacity-50 cursor-not-allowed'
-              : ''
+        className={`w-full ${collapsed ? 'p-4 justify-start' : 'justify-start'
+          } relative 
+          ${lockedByFeatureGate || item.upcoming || isDisabled
+            ? 'opacity-50 cursor-not-allowed'
+            : ''
           } text-[13px]`}
         disabled={lockedByFeatureGate || item.upcoming || isDisabled}
         onClick={() => {
@@ -287,14 +285,12 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
   return (
     <>
       <aside
-        className={`hidden md:flex ${
-          collapsed ? 'w-16' : 'w-48'
-        } bg-white flex-col border-r transition-all duration-300 h-full`}
+        className={`hidden md:flex ${collapsed ? 'w-16' : 'w-48'
+          } bg-white flex-col border-r transition-all duration-300 h-full`}
       >
         <div
-          className={`${
-            collapsed ? 'p-4' : 'p-1.5'
-          } border-b flex justify-around items-center relative`}
+          className={`${collapsed ? 'p-4' : 'p-1.5'
+            } border-b flex justify-around items-center relative`}
         >
           {collapsed ? (
             <div className='w-8 h-8 flex items-center justify-center mx-auto'>
@@ -322,11 +318,10 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
             variant='ghost'
             size='sm'
             onClick={() => setCollapsed(!collapsed)}
-            className={`p-1 ${
-              collapsed
-                ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#136fb0] rounded-full h-auto hover:bg-[#1e7bbf]'
-                : ''
-            }`}
+            className={`p-1 ${collapsed
+              ? 'absolute left-[50px] top-1/2 transform -translate-y-1/2 bg-[#136fb0] rounded-full h-auto hover:bg-[#1e7bbf]'
+              : ''
+              }`}
           >
             {collapsed ? (
               <ChevronsRight size={10} color='white' />
@@ -338,9 +333,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
 
         <div className='flex-1 flex flex-col'>
           <nav
-            className={`flex-1 ${
-              collapsed ? 'px-2' : 'px-4'
-            } py-2 space-y-2 overflow-y-auto scrollbar-thin`}
+            className={`flex-1 ${collapsed ? 'px-2' : 'px-4'
+              } py-2 space-y-2 overflow-y-auto scrollbar-thin`}
           >
             <div className='space-y-1'>
               {menuItems.map((item) => (
@@ -447,9 +441,8 @@ const Sidebar: React.FC<SidebarProps> = ({ onNavigate }) => {
         </div> */}
 
         <nav
-          className={`flex-1 ${
-            collapsed ? 'px-2' : 'px-4'
-          } py-3 space-y-2 overflow-y-auto scrollbar-thin`}
+          className={`flex-1 ${collapsed ? 'px-2' : 'px-4'
+            } py-3 space-y-2 overflow-y-auto scrollbar-thin`}
         >
           <div className='space-y-1'>
             {menuItems.map((item) => (
