@@ -94,7 +94,7 @@ export const routeConfig: RouteConfig[] = [
     path: '/executions',
     name: 'Executions',
     component: 'ExecutionsNew',
-    icon: 'Play',
+    icon: 'CirclePlay',
     requiresAuth: true,
     meta: {
       title: 'Executions - APIFlow',
@@ -323,18 +323,18 @@ export function getRouteByPath(path: string): RouteConfig | undefined {
 
 export function getRoutesForRole(userRole: string): RouteConfig[] {
   return routeConfig.filter(
-    (route) => !route.roles || route.roles.includes(userRole)
+    (route) => !route.roles || route.roles.includes(userRole),
   );
 }
 
 export function getRoutesForFeature(features: string[]): RouteConfig[] {
   return routeConfig.filter(
-    (route) => !route.feature || features.includes(route.feature)
+    (route) => !route.feature || features.includes(route.feature),
   );
 }
 
 export function generateBreadcrumbs(
-  currentPath: string
+  currentPath: string,
 ): Array<{ name: string; path: string }> {
   const parts = currentPath.split('/').filter(Boolean);
   const breadcrumbs = [{ name: 'Dashboard', path: '/' }];
