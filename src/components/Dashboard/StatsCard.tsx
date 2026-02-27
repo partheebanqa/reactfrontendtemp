@@ -21,15 +21,15 @@ export default function StatsCard({
   iconBgColor = 'bg-blue-100',
 }: StatsCardProps) {
   return (
-    <Card className='p-6 hover:shadow-md transition-shadow'>
+    <Card className='p-3 md:p-6 hover:shadow-md transition-shadow'>
       <CardContent className='p-0'>
         <div className='flex items-center justify-between'>
           <div>
-            <p className='text-sm font-medium text-slate-600'>{title}</p>
-            <p className='text-3xl font-bold text-slate-900 mt-2'>{value}</p>
+            <p className='text-xs md:text-sm font-medium text-slate-600'>{title}</p>
+            <p className='text-md md:text-3xl font-bold text-slate-900 mt-2'>{value}</p>
           </div>
           <div
-            className={`w-12 h-12 ${iconBgColor} rounded-lg flex items-center justify-center text-xl`}
+            className={`w-6 md:w-12 h-6 md:h-12 ${iconBgColor} rounded-lg flex items-center justify-center text-xl`}
           >
             {icon}
           </div>
@@ -42,8 +42,8 @@ export default function StatsCard({
                   changeType === 'positive'
                     ? 'text-green-600 font-medium'
                     : changeType === 'negative'
-                    ? 'text-red-600 font-medium'
-                    : 'text-slate-600 font-medium'
+                      ? 'text-red-600 font-medium'
+                      : 'text-slate-600 font-medium'
                 }
               >
                 {change}

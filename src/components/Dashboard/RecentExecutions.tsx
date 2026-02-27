@@ -63,8 +63,8 @@ const getTypeIcon = (exec: Execution) => {
     lower === 'testsuite'
       ? 'Tests'
       : lower === 'requestchain'
-      ? 'Chain'
-      : 'Execution';
+        ? 'Chain'
+        : 'Execution';
 
   const url = getExecutionUrl(exec.type, exec.entityId, exec.executionId);
 
@@ -88,7 +88,7 @@ const getTypeIcon = (exec: Execution) => {
 export default function RecentExecutions({ data }: RecentExecutionsProps) {
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className='p-3 md:p-6'>
         <CardTitle className='flex items-center justify-between'>
           <div className='flex items-center gap-2'>
             <h3 className='text-[18px]'>Recent Executions</h3>
@@ -97,9 +97,9 @@ export default function RecentExecutions({ data }: RecentExecutionsProps) {
         </CardTitle>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className='p-3 md:p-6'>
         {!data || data.length === 0 ? (
-          <div className='text-center py-8'>
+          <div className='text-center py-2 md:py-8'>
             <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
               <Activity className='h-8 w-8 text-gray-400' />
             </div>
