@@ -44,7 +44,7 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
-import { generateDynamicValueById } from '@/lib/request-utils';
+import { generateDynamicValueById, getMethodColor } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
 import {
   collectionActions,
@@ -2635,22 +2635,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   };
 
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-
-  const getMethodColor = (method: string) => {
-    const colors = {
-      GET: 'text-green-600 bg-green-50 border-green-200',
-      POST: 'text-blue-600 bg-blue-50 border-blue-200',
-      PUT: 'text-orange-600 bg-orange-50 border-orange-200',
-      DELETE: 'text-red-600 bg-red-50 border-red-200',
-      PATCH: 'text-purple-600 bg-purple-50 border-purple-200',
-      HEAD: 'text-gray-600 bg-gray-50 border-gray-200',
-      OPTIONS: 'text-indigo-600 bg-indigo-50 border-indigo-200',
-    };
-    return (
-      colors[method as keyof typeof colors] ||
-      'text-gray-600 bg-gray-50 border-gray-200'
-    );
-  };
 
   const handleVariableSelect = (variables: SelectedVariable[]) => {
     setSelectedVariable(variables);

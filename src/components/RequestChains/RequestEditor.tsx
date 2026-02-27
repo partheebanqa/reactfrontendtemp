@@ -57,6 +57,7 @@ import {
   buildUrlWithParams,
   generateDynamicValueById,
   hasResponseChanged,
+  getMethodColor,
 } from '@/lib/request-utils';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
@@ -2743,7 +2744,6 @@ export function RequestEditor({
           className='flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-cyan-500 hover:bg-cyan-400 text-black font-semibold transition-colors whitespace-nowrap border-0'
           title={`Bind a variable to ${subField}`}
         >
-          {/* <Plus className='w-3 h-3' /> */}
           Substitute Variable
         </button>
 
@@ -2854,23 +2854,26 @@ export function RequestEditor({
     <div className='space-y-4'>
       <VariableAutocomplete />
       <div className='flex items-center space-x-2'>
-        <Select
+        <select
           value={initialRequest.method}
-          onValueChange={(value) => onUpdate({ method: value as any })}
+          onChange={(e) => onUpdate({ method: e.target.value as any })}
+          className={`w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+            initialRequest.method as any,
+          )}`}
+          style={{ appearance: 'auto' }}
         >
-          <SelectTrigger className='w-24'>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='GET'>GET</SelectItem>
-            <SelectItem value='POST'>POST</SelectItem>
-            <SelectItem value='PUT'>PUT</SelectItem>
-            <SelectItem value='DELETE'>DELETE</SelectItem>
-            <SelectItem value='PATCH'>PATCH</SelectItem>
-            <SelectItem value='HEAD'>HEAD</SelectItem>
-            <SelectItem value='OPTIONS'>OPTIONS</SelectItem>
-          </SelectContent>
-        </Select>
+          {['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'].map(
+            (m) => (
+              <option
+                key={m}
+                value={m}
+                className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+              >
+                {m}
+              </option>
+            ),
+          )}
+        </select>
         <Input
           value={url}
           onChange={(e) => handleInputChange(e, setUrl)}

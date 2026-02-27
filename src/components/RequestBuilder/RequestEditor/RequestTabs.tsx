@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import CreateCollectionModal from '../CreateCollectionModel/CreateCollectionModel';
+import { methodColor } from '@/lib/request-utils';
 
 interface RequestTabsProps {
   onTabChange?: (request: CollectionRequest) => void;
@@ -150,23 +151,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
       title: 'cURL Imported Successfully',
       description: 'Request has been populated from cURL command',
     });
-  };
-
-  const methodColor = (method?: string) => {
-    switch ((method || '').toUpperCase()) {
-      case 'GET':
-        return 'text-green-600';
-      case 'POST':
-        return 'text-blue-600';
-      case 'PUT':
-        return 'text-orange-600';
-      case 'DELETE':
-        return 'text-red-600';
-      case 'PATCH':
-        return 'text-purple-600';
-      default:
-        return 'text-gray-600';
-    }
   };
 
   const handleCreateNewRequest = async () => {
