@@ -2740,10 +2740,10 @@ export function RequestEditor({
             e.stopPropagation();
             setInlinePickerTarget(isOpen ? null : { field, index, subField });
           }}
-          className='flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-colors whitespace-nowrap'
+          className='flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-cyan-500 hover:bg-cyan-400 text-black font-semibold transition-colors whitespace-nowrap border-0'
           title={`Bind a variable to ${subField}`}
         >
-          <Plus className='w-3 h-3' />
+          {/* <Plus className='w-3 h-3' /> */}
           Substitute Variable
         </button>
 
@@ -3081,7 +3081,10 @@ export function RequestEditor({
 
             <div className='space-y-2'>
               {params.map((param, index) => (
-                <div key={param.id} className='flex items-center space-x-2'>
+                <div
+                  key={param.id}
+                  className='flex items-center space-x-2 group'
+                >
                   <div className='relative flex items-center flex-1'>
                     <input
                       type='text'
@@ -3101,7 +3104,7 @@ export function RequestEditor({
                       className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
-                    <div className='absolute right-2'>
+                    <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <InlineVariablePicker
                         field='param'
                         index={index}
@@ -3128,7 +3131,7 @@ export function RequestEditor({
                       className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} for variables)'
                     />
-                    <div className='absolute right-2'>
+                    <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <InlineVariablePicker
                         field='param'
                         index={index}
@@ -3163,7 +3166,11 @@ export function RequestEditor({
 
             <div className='space-y-2'>
               {headers.map((header, index) => (
-                <div key={header.id} className='flex items-center space-x-2'>
+                <div
+                  key={header.id}
+                  className='flex items-center space-x-2 group'
+                >
+                  {' '}
                   <div className='relative flex items-center flex-1'>
                     <input
                       type='text'
@@ -3183,7 +3190,7 @@ export function RequestEditor({
                       className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
-                    <div className='absolute right-2'>
+                    <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <InlineVariablePicker
                         field='header'
                         index={index}
@@ -3210,7 +3217,7 @@ export function RequestEditor({
                       className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Value (use {{variableName}} for variables)'
                     />
-                    <div className='absolute right-2'>
+                    <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                       <InlineVariablePicker
                         field='header'
                         index={index}
@@ -3278,7 +3285,7 @@ export function RequestEditor({
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Bearer Token
                 </label>
-                <div className='relative flex items-center'>
+                <div className='relative flex items-center group'>
                   <input
                     type='text'
                     name='auth-token'
@@ -3300,7 +3307,7 @@ export function RequestEditor({
                     className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     placeholder='Enter bearer token or use {{tokenVariable}}'
                   />
-                  <div className='absolute right-2'>
+                  <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                     <InlineVariablePicker field='authorization' />
                   </div>
                 </div>
