@@ -966,7 +966,6 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
     case 'longitude':
       return Number((Math.random() * 360 - 180).toFixed(6)).toString();
 
-    // financial
     case 'creditCard':
     case 'creditCardNumber': {
       const cardNumber =
