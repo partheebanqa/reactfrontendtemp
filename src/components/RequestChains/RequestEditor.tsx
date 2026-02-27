@@ -163,8 +163,6 @@ const TYPE_COLORS: Record<VariableType, TypeColorConfig> = {
 function tokenizeUrl(raw: string): UrlSegment[] {
   const tokens: UrlSegment[] = [];
   try {
-    // First, temporarily replace {{varName}} with a placeholder so it
-    // survives the split as a single token
     const varPattern = /\{\{(\w+)\}\}/g;
     const placeholders: string[] = [];
     const withPlaceholders = raw.replace(varPattern, (match) => {
@@ -2179,6 +2177,14 @@ export function RequestEditor({
     top: 0,
     left: 0,
   });
+  const [inlinePickerTarget, setInlinePickerTarget] = useState<{
+    field: 'header' | 'param' | 'authorization';
+    index?: number;
+    key?: string;
+    subField?: 'key' | 'value'; // ADD THIS
+  } | null>(null);
+
+  const inlinePickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const parsed = tokenizeUrl(url);
@@ -2633,6 +2639,147 @@ export function RequestEditor({
     };
   }, [initialRequest.id]);
 
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (
+        inlinePickerRef.current &&
+        !inlinePickerRef.current.contains(e.target as Node)
+      ) {
+        setInlinePickerTarget(null);
+      }
+    }
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
+
+  const handleInlineVariableSelect = (variableName: string) => {
+    if (!inlinePickerTarget) return;
+
+    const { field, index, subField = 'value' } = inlinePickerTarget;
+
+    if (field === 'header' && index !== undefined) {
+      const newHeaders = [...headers];
+      newHeaders[index] = {
+        ...newHeaders[index],
+        [subField]: `{{${variableName}}}`,
+      };
+      setHeaders(newHeaders);
+
+      const existingVars = (initialRequest.variables || []).filter(
+        (v: any) => !(v.field === 'header' && v.key === newHeaders[index].key),
+      );
+      const newVar = {
+        field: 'header',
+        key: newHeaders[index].key,
+        variable: variableName,
+      };
+      onUpdate({ headers: newHeaders, variables: [...existingVars, newVar] });
+    }
+
+    if (field === 'param' && index !== undefined) {
+      const newParams = [...params];
+      newParams[index] = {
+        ...newParams[index],
+        [subField]: `{{${variableName}}}`,
+      };
+      setParams(newParams);
+
+      const existingVars = (initialRequest.variables || []).filter(
+        (v: any) => !(v.field === 'param' && v.key === newParams[index].key),
+      );
+      const newVar = {
+        field: 'param',
+        key: newParams[index].key,
+        variable: variableName,
+      };
+      onUpdate({ params: newParams, variables: [...existingVars, newVar] });
+    }
+
+    if (field === 'authorization') {
+      const newToken = `{{${variableName}}}`;
+      setAuth((prev) => ({ ...prev, token: newToken }));
+
+      const existingVars = (initialRequest.variables || []).filter(
+        (v: any) => !(v.field === 'authorization' && v.key === 'token'),
+      );
+      const newVar = {
+        field: 'authorization',
+        key: 'token',
+        variable: variableName,
+      };
+      onUpdate({ authToken: newToken, variables: [...existingVars, newVar] });
+    }
+
+    setInlinePickerTarget(null);
+  };
+
+  const InlineVariablePicker = ({
+    field,
+    index,
+    subField = 'value',
+  }: {
+    field: 'header' | 'param' | 'authorization';
+    index?: number;
+    subField?: 'key' | 'value';
+  }) => {
+    const isOpen =
+      inlinePickerTarget?.field === field &&
+      (index === undefined || inlinePickerTarget?.index === index) &&
+      (inlinePickerTarget?.subField ?? 'value') === subField;
+
+    const allVars = getAllAvailableVariables();
+
+    return (
+      <div
+        className='relative inline-flex'
+        ref={isOpen ? inlinePickerRef : undefined}
+      >
+        <button
+          type='button'
+          onClick={(e) => {
+            e.stopPropagation();
+            setInlinePickerTarget(isOpen ? null : { field, index, subField });
+          }}
+          className='flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-colors whitespace-nowrap'
+          title={`Bind a variable to ${subField}`}
+        >
+          <Plus className='w-3 h-3' />
+          Substitute Variable
+        </button>
+
+        {isOpen && (
+          <div
+            className='absolute right-0 top-8 z-50'
+            style={{ minWidth: 280 }}
+          >
+            <VariablePicker
+              staticVariables={allVars
+                .filter((v) => v.name.startsWith('S_'))
+                .map((v) => ({
+                  name: v.name,
+                  value: String(v.value ?? v.initialValue ?? ''),
+                }))}
+              dynamicVariables={allVars
+                .filter((v) => v.name.startsWith('D_'))
+                .map((v) => ({
+                  name: v.name,
+                  value: String(v.value ?? v.initialValue ?? ''),
+                }))}
+              extractedVariables={allVars
+                .filter((v) => v.name.startsWith('E_'))
+                .map((v) => ({
+                  name: v.name,
+                  value: String(v.value ?? v.initialValue ?? ''),
+                }))}
+              bindingLabel={subField}
+              onSelect={handleInlineVariableSelect}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const handleConfirmSubstitutions = () => {
     const allVariables = getAllAvailableVariables();
     const substitutedUrl = replaceVariables(url, allVariables);
@@ -2935,53 +3082,60 @@ export function RequestEditor({
             <div className='space-y-2'>
               {params.map((param, index) => (
                 <div key={param.id} className='flex items-center space-x-2'>
-                  <input
-                    type='text'
-                    name={`param-key-${index}`}
-                    value={param.key}
-                    onChange={(e) =>
-                      handleInputChange(e, (value) => {
-                        const newParams = [...params];
-                        newParams[index] = {
-                          ...newParams[index],
-                          key: value,
-                        };
-                        setParams(newParams);
-                      })
-                    }
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                    placeholder='Key'
-                  />
-                  <input
-                    type='text'
-                    name={`param-value-${index}`}
-                    value={param.value}
-                    onChange={(e) =>
-                      handleInputChange(e, (value) => {
-                        const newParams = [...params];
-                        newParams[index] = {
-                          ...newParams[index],
-                          value: value,
-                        };
-                        setParams(newParams);
-                      })
-                    }
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                    placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
-                  />
-
-                  <button
-                    onClick={() =>
-                      updateParam(index, { enabled: !param.enabled })
-                    }
-                    className={`p-2 rounded-lg transition-colors ${
-                      param.enabled
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-50'
-                    }`}
-                  ></button>
+                  <div className='relative flex items-center flex-1'>
+                    <input
+                      type='text'
+                      name={`param-key-${index}`}
+                      value={param.key}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) => {
+                          const newParams = [...params];
+                          newParams[index] = {
+                            ...newParams[index],
+                            key: value,
+                          };
+                          setParams(newParams);
+                        })
+                      }
+                      onKeyUp={(e) => handleAutocomplete(e)}
+                      className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Key'
+                    />
+                    <div className='absolute right-2'>
+                      <InlineVariablePicker
+                        field='param'
+                        index={index}
+                        subField='key'
+                      />
+                    </div>
+                  </div>
+                  <div className='relative flex items-center flex-1'>
+                    <input
+                      type='text'
+                      name={`param-value-${index}`}
+                      value={param.value}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) => {
+                          const newParams = [...params];
+                          newParams[index] = {
+                            ...newParams[index],
+                            value: value,
+                          };
+                          setParams(newParams);
+                        })
+                      }
+                      onKeyUp={(e) => handleAutocomplete(e)}
+                      className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Value (use {{variableName}} for variables)'
+                    />
+                    <div className='absolute right-2'>
+                      <InlineVariablePicker
+                        field='param'
+                        index={index}
+                        subField='value'
+                      />
+                    </div>
+                  </div>
                   <button
                     onClick={() => removeParam(index)}
                     className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
@@ -3010,58 +3164,60 @@ export function RequestEditor({
             <div className='space-y-2'>
               {headers.map((header, index) => (
                 <div key={header.id} className='flex items-center space-x-2'>
-                  <input
-                    type='text'
-                    name={`header-key-${index}`}
-                    value={header.key}
-                    onChange={(e) =>
-                      handleInputChange(e, (value) => {
-                        const newHeaders = [...headers];
-                        newHeaders[index] = {
-                          ...newHeaders[index],
-                          key: value,
-                        };
-                        setHeaders(newHeaders);
-                      })
-                    }
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                    placeholder='Key'
-                  />
-                  <input
-                    type='text'
-                    name={`header-value-${index}`}
-                    value={header.value}
-                    onChange={(e) =>
-                      handleInputChange(e, (value) => {
-                        const newHeaders = [...headers];
-                        newHeaders[index] = {
-                          ...newHeaders[index],
-                          value: value,
-                        };
-                        setHeaders(newHeaders);
-                      })
-                    }
-                    onKeyUp={(e) => handleAutocomplete(e)}
-                    className='flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
-                    placeholder='Value (use {{variableName}} or {{dynamicVar}} for variables)'
-                  />
-                  {processedRequest.headers?.[index]?.value !== header.value &&
-                    processedRequest.headers?.[index]?.value && (
-                      <div className='flex-1 px-2 py-1 bg-blue-50 border border-blue-200 rounded text-xs font-mono'>
-                        → {processedRequest.headers[index]?.value}
-                      </div>
-                    )}
-                  <button
-                    onClick={() =>
-                      updateHeader(index, { enabled: !header.enabled })
-                    }
-                    className={`p-2 rounded-lg transition-colors ${
-                      header.enabled
-                        ? 'text-green-600 hover:bg-green-50'
-                        : 'text-gray-400 hover:bg-gray-50'
-                    }`}
-                  ></button>
+                  <div className='relative flex items-center flex-1'>
+                    <input
+                      type='text'
+                      name={`header-key-${index}`}
+                      value={header.key}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) => {
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            key: value,
+                          };
+                          setHeaders(newHeaders);
+                        })
+                      }
+                      onKeyUp={(e) => handleAutocomplete(e)}
+                      className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Key'
+                    />
+                    <div className='absolute right-2'>
+                      <InlineVariablePicker
+                        field='header'
+                        index={index}
+                        subField='key'
+                      />
+                    </div>
+                  </div>
+                  <div className='relative flex items-center flex-1'>
+                    <input
+                      type='text'
+                      name={`header-value-${index}`}
+                      value={header.value}
+                      onChange={(e) =>
+                        handleInputChange(e, (value) => {
+                          const newHeaders = [...headers];
+                          newHeaders[index] = {
+                            ...newHeaders[index],
+                            value: value,
+                          };
+                          setHeaders(newHeaders);
+                        })
+                      }
+                      onKeyUp={(e) => handleAutocomplete(e)}
+                      className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      placeholder='Value (use {{variableName}} for variables)'
+                    />
+                    <div className='absolute right-2'>
+                      <InlineVariablePicker
+                        field='header'
+                        index={index}
+                        subField='value'
+                      />
+                    </div>
+                  </div>
                   <button
                     onClick={() => removeHeader(index)}
                     className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors'
@@ -3122,27 +3278,32 @@ export function RequestEditor({
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Bearer Token
                 </label>
-                <input
-                  type='text'
-                  name='auth-token'
-                  autoComplete='off'
-                  autoCorrect='off'
-                  autoCapitalize='off'
-                  spellCheck={false}
-                  value={auth.token}
-                  onChange={(e) =>
-                    setAuth((prev) => ({ ...prev, token: e.target.value }))
-                  }
-                  onBlur={(e) =>
-                    setAuth((prev) => ({
-                      ...prev,
-                      token: e.target.value.trim(),
-                    }))
-                  }
-                  onKeyUp={(e) => handleAutocomplete(e)}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
-                  placeholder='Enter bearer token or use {{tokenVariable}}'
-                />
+                <div className='relative flex items-center'>
+                  <input
+                    type='text'
+                    name='auth-token'
+                    autoComplete='off'
+                    autoCorrect='off'
+                    autoCapitalize='off'
+                    spellCheck={false}
+                    value={auth.token}
+                    onChange={(e) =>
+                      setAuth((prev) => ({ ...prev, token: e.target.value }))
+                    }
+                    onBlur={(e) =>
+                      setAuth((prev) => ({
+                        ...prev,
+                        token: e.target.value.trim(),
+                      }))
+                    }
+                    onKeyUp={(e) => handleAutocomplete(e)}
+                    className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    placeholder='Enter bearer token or use {{tokenVariable}}'
+                  />
+                  <div className='absolute right-2'>
+                    <InlineVariablePicker field='authorization' />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

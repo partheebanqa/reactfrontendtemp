@@ -1085,7 +1085,17 @@ export const buildUrlWithParams = (
     }
 
     const queryString = enabledParams
-      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .map((p) => {
+        const encodedKey = encodeURIComponent(p.key).replace(
+          /%7B%7B(.+?)%7D%7D/gi,
+          '{{$1}}',
+        );
+        const encodedValue = encodeURIComponent(p.value).replace(
+          /%7B%7B(.+?)%7D%7D/gi,
+          '{{$1}}',
+        );
+        return `${encodedKey}=${encodedValue}`;
+      })
       .join('&');
 
     return `${cleanUrl}?${queryString}`;
