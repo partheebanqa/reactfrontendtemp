@@ -12,14 +12,26 @@ export const RequestChainPagination = ({
   const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
 
   return (
-    <div className='flex items-center justify-between px-6 py-4 border-t'>
-   
-<div className='text-sm text-slate-500'>
-  Showing {startIndex + 1} to {endIndex} of {totalItems} Request Chains
-</div>
+    <div className='flex flex-col items-center justify-between px-6 py-4 border-t overflow-auto'>
+
+      <div className='mb-1 text-sm text-slate-500'>
+        Showing {startIndex + 1} to {endIndex} of {totalItems} Request Chains
+      </div>
 
       <div className='flex items-center space-x-2'>
         <Button
+          variant='outline'
+          size='sm'
+          onClick={() =>
+            setCurrentPage((prev: number) => Math.max(1, prev - 1))
+          }
+          disabled={currentPage === 1}
+          className='flex md:hidden'
+        >
+          <ChevronLeft size={16} />
+        </Button>
+        <Button
+          className='hidden md:flex'
           variant='outline'
           size='sm'
           onClick={() =>
@@ -63,6 +75,7 @@ export const RequestChainPagination = ({
           )}
         </div>
         <Button
+          className='hidden md:flex'
           variant='outline'
           size='sm'
           onClick={() =>
@@ -71,6 +84,19 @@ export const RequestChainPagination = ({
           disabled={currentPage === totalPages}
         >
           Next
+          <ChevronRight size={16} />
+        </Button>
+
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={() =>
+            setCurrentPage((prev: number) => Math.min(totalPages, prev + 1))
+          }
+          disabled={currentPage === totalPages}
+          className='flex md:hidden'
+        >
+
           <ChevronRight size={16} />
         </Button>
       </div>

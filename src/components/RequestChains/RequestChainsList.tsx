@@ -415,7 +415,7 @@ export function RequestChainsList({
       />
 
       {/* Filters and Search */}
-      <div className='flex flex-col lg:flex-row gap-3'>
+      <div className='flex flex-col lg:flex-row gap-2'>
         {/* Search bar - takes up available space on desktop, full width on mobile */}
         <div className='relative flex-1 lg:max-w-md'>
           <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
@@ -428,7 +428,7 @@ export function RequestChainsList({
         </div>
 
         {/* Filters - responsive grid */}
-        <div className='flex flex-wrap gap-2 lg:gap-3'>
+        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-3">
           <Select
             value={environmentFilter}
             onValueChange={setEnvironmentFilter}
@@ -450,7 +450,6 @@ export function RequestChainsList({
               ))}
             </SelectContent>
           </Select>
-
           <Select
             value={statusFilter}
             onValueChange={(value: typeof statusFilter) =>
@@ -466,9 +465,8 @@ export function RequestChainsList({
               <SelectItem value='inactive'>Disabled</SelectItem>
             </SelectContent>
           </Select>
-
           <Select value={tagsFilter} onValueChange={setTagsFilter}>
-            <SelectTrigger className='w-48'>
+            <SelectTrigger className='w-full sm:w-48'>
               <SelectValue placeholder='All tags' />
             </SelectTrigger>
             <SelectContent>
@@ -485,7 +483,6 @@ export function RequestChainsList({
               ))}
             </SelectContent>
           </Select>
-
           <Select
             value={`${sortBy}-${sortOrder}`}
             onValueChange={(value) => {
@@ -507,19 +504,21 @@ export function RequestChainsList({
             </SelectContent>
           </Select>
 
-          <Button
-            variant='default'
-            className='w-full sm:w-auto hover-scale'
-            onClick={onRefresh}
-            disabled={refreshing}
-          >
-            <RefreshCw
-              className={`mr-2 ${refreshing ? 'animate-spin' : ''}`}
-              size={16}
-            />
-            {refreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
+
         </div>
+
+        <Button
+          variant='default'
+          className='w-full sm:w-auto hover-scale'
+          onClick={onRefresh}
+          disabled={refreshing}
+        >
+          <RefreshCw
+            className={`mr-2 ${refreshing ? 'animate-spin' : ''}`}
+            size={16}
+          />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Results Summary */}
@@ -536,13 +535,13 @@ export function RequestChainsList({
 
       {!loading && paginatedChains.length > 0 && (
         <>
-          <div className='space-y-3'>
+          <div className='space-y-2 md:space-y-3'>
             {paginatedChains.map((chain) => (
               <Card
                 key={chain.id}
                 className='shadow-none hover:shadow-md hover:transition-shadow'
               >
-                <CardContent className='p-4 md:p-6'>
+                <CardContent className='p-2 md:p-6 overflow-auto'>
                   <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
                     {/* Left section - Icon, Name, and Details */}
                     <div className='flex items-start md:items-center space-x-3 md:space-x-4 flex-1 min-w-0'>
