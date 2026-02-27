@@ -966,7 +966,6 @@ export function generateDynamicValueById(id: string, params: any = {}): string {
     case 'longitude':
       return Number((Math.random() * 360 - 180).toFixed(6)).toString();
 
-    // financial
     case 'creditCard':
     case 'creditCardNumber': {
       const cardNumber =
@@ -1085,7 +1084,17 @@ export const buildUrlWithParams = (
     }
 
     const queryString = enabledParams
-      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .map((p) => {
+        const encodedKey = encodeURIComponent(p.key).replace(
+          /%7B%7B(.+?)%7D%7D/gi,
+          '{{$1}}',
+        );
+        const encodedValue = encodeURIComponent(p.value).replace(
+          /%7B%7B(.+?)%7D%7D/gi,
+          '{{$1}}',
+        );
+        return `${encodedKey}=${encodedValue}`;
+      })
       .join('&');
 
     return `${cleanUrl}?${queryString}`;
@@ -1265,4 +1274,37 @@ export const validateBaseUrl = (url: string): boolean => {
   const baseUrlRegex =
     /^https?:\/\/(?:www\.)?[-a-zA-Z0-9@:%.\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%\+.~#?&\/=]*)$/;
   return baseUrlRegex.test(url);
+};
+
+export const methodColor = (method?: string) => {
+  switch ((method || '').toUpperCase()) {
+    case 'GET':
+      return 'text-green-600';
+    case 'POST':
+      return 'text-blue-600';
+    case 'PUT':
+      return 'text-orange-600';
+    case 'DELETE':
+      return 'text-red-600';
+    case 'PATCH':
+      return 'text-purple-600';
+    default:
+      return 'text-gray-600';
+  }
+};
+
+export const getMethodColor = (method: string) => {
+  const colors = {
+    GET: 'text-green-600 bg-green-50 border-green-200',
+    POST: 'text-blue-600 bg-blue-50 border-blue-200',
+    PUT: 'text-orange-600 bg-orange-50 border-orange-200',
+    DELETE: 'text-red-600 bg-red-50 border-red-200',
+    PATCH: 'text-purple-600 bg-purple-50 border-purple-200',
+    HEAD: 'text-gray-600 bg-gray-50 border-gray-200',
+    OPTIONS: 'text-indigo-600 bg-indigo-50 border-indigo-200',
+  };
+  return (
+    colors[method as keyof typeof colors] ||
+    'text-gray-600 bg-gray-50 border-gray-200'
+  );
 };

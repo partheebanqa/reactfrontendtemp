@@ -92,6 +92,7 @@ import {
   hasResponseChanged,
   getUsedVariablesForChain,
   syncParamsFromUrl,
+  methodColor,
 } from '@/lib/request-utils';
 import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
@@ -2026,19 +2027,6 @@ export function RequestChainEditor({
     return saved;
   };
 
-  const getMethodColor = (method: string) => {
-    const colors = {
-      GET: 'text-green-600',
-      POST: 'text-orange-600',
-      PUT: 'text-blue-600',
-      DELETE: 'text-red-600',
-      PATCH: 'text-purple-600',
-      HEAD: 'text-gray-600',
-      OPTIONS: 'text-gray-600',
-    };
-    return colors[method as keyof typeof colors] || 'text-gray-600';
-  };
-
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
       const transformedRequests: APIRequest[] = importedRequests.map((req) => {
@@ -2694,7 +2682,7 @@ export function RequestChainEditor({
                                         editingNameId={editingNameId}
                                         tempName={tempName}
                                         executionLog={executionLog}
-                                        getMethodColor={getMethodColor}
+                                        getMethodColor={methodColor}
                                         onToggleExpand={toggleRequestExpanded}
                                         onToggleSelect={() => {
                                           setFormData({
