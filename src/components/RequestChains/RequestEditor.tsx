@@ -3104,16 +3104,9 @@ export function RequestEditor({
                         })
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
-                      className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
-                    <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
-                      <InlineVariablePicker
-                        field='param'
-                        index={index}
-                        subField='key'
-                      />
-                    </div>
                   </div>
                   <div className='relative flex items-center flex-1'>
                     <input
@@ -3190,16 +3183,9 @@ export function RequestEditor({
                         })
                       }
                       onKeyUp={(e) => handleAutocomplete(e)}
-                      className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
+                      className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm'
                       placeholder='Key'
                     />
-                    <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
-                      <InlineVariablePicker
-                        field='header'
-                        index={index}
-                        subField='key'
-                      />
-                    </div>
                   </div>
                   <div className='relative flex items-center flex-1'>
                     <input
