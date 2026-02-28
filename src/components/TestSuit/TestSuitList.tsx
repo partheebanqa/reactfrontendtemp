@@ -371,8 +371,8 @@ const TestSuites: React.FC = () => {
         }
       />
 
-      <div className='flex flex-col justify-between lg:flex-row gap-4'>
-        <div className='relative flex-1'>
+      <div className='flex flex-col lg:flex-row gap-2'>
+        <div className='relative flex-1 lg:max-w-md'>
           <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
           <Input
             placeholder='Search test suites...'
@@ -381,78 +381,79 @@ const TestSuites: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-
-        <Select value={environmentFilter} onValueChange={setEnvironmentFilter}>
-          <SelectTrigger className='w-48'>
-            <SelectValue placeholder='All environments' />
-          </SelectTrigger>
-          <SelectContent>
-            {envOptions.map((name) => (
-              <SelectItem key={name} value={name}>
-                {name === 'all' ? (
-                  'All environments'
-                ) : (
-                  <div className='flex items-center gap-2'>
-                    <span>{name}</span>
-                  </div>
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-
+        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-3">
+          <Select value={environmentFilter} onValueChange={setEnvironmentFilter}>
+            <SelectTrigger className='w-48'>
+              <SelectValue placeholder='All environments' />
+            </SelectTrigger>
+            <SelectContent>
+              {envOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name === 'all' ? (
+                    'All environments'
+                  ) : (
+                    <div className='flex items-center gap-2'>
+                      <span>{name}</span>
+                    </div>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className='w-48'>
-            {/* <Filter className='w-4 h-4 mr-2' /> */}
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='All statuses'>All status</SelectItem>
-            <SelectItem value='generated'>Generated</SelectItem>
-            <SelectItem value='generating'>Generating</SelectItem>
-          </SelectContent>
-        </Select>
 
-        <Select value={tagsFilter} onValueChange={setTagsFilter}>
-          <SelectTrigger className='w-48'>
-            <SelectValue placeholder='All tags' />
-          </SelectTrigger>
-          <SelectContent>
-            {tagsOptions.map((name) => (
-              <SelectItem key={name} value={name}>
-                {name === 'all' ? (
-                  'All Tags'
-                ) : (
-                  <div className='flex items-center gap-2'>
-                    <span>{name}</span>
-                  </div>
-                )}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
-        <Select
-          value={`${sortBy}-${sortOrder}`}
-          onValueChange={(value) => {
-            const [field, order] = value.split('-');
-            setSortBy(field as typeof sortBy);
-            setSortOrder(order as typeof sortOrder);
-          }}
-        >
-          <SelectTrigger className='w-full sm:w-[180px]'>
-            <SelectValue placeholder='Sort by' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='name-asc'>Name A-Z</SelectItem>
-            <SelectItem value='name-desc'>Name Z-A</SelectItem>
-            <SelectItem value='created-desc'>Newest First</SelectItem>
-            <SelectItem value='created-asc'>Oldest First</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className='w-full sm:w-[180px]'>
+              {/* <Filter className='w-4 h-4 mr-2' /> */}
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='All statuses'>All status</SelectItem>
+              <SelectItem value='generated'>Generated</SelectItem>
+              <SelectItem value='generating'>Generating</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={tagsFilter} onValueChange={setTagsFilter}>
+            <SelectTrigger className='w-48'>
+              <SelectValue placeholder='All tags' />
+            </SelectTrigger>
+            <SelectContent>
+              {tagsOptions.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name === 'all' ? (
+                    'All Tags'
+                  ) : (
+                    <div className='flex items-center gap-2'>
+                      <span>{name}</span>
+                    </div>
+                  )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={`${sortBy}-${sortOrder}`}
+            onValueChange={(value) => {
+              const [field, order] = value.split('-');
+              setSortBy(field as typeof sortBy);
+              setSortOrder(order as typeof sortOrder);
+            }}
+          >
+            <SelectTrigger className='w-full sm:w-[180px]'>
+              <SelectValue placeholder='Sort by' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='name-asc'>Name A-Z</SelectItem>
+              <SelectItem value='name-desc'>Name Z-A</SelectItem>
+              <SelectItem value='created-desc'>Newest First</SelectItem>
+              <SelectItem value='created-asc'>Oldest First</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
         <Button
           variant='default'

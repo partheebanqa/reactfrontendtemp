@@ -112,76 +112,177 @@ export const TestCaseDetail: React.FC<TestCaseDetailProps> = ({ testCase }) => {
   };
 
   return (
-    <div className="border border-gray-200 rounded-lg mb-4 overflow-hidden">
-      <div
-        className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            {isExpanded ? (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            )}
+    <>
+      <div className="hidden md:block border border-gray-200 rounded-lg mb-4 overflow-hidden">
+        <div
+          className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              {isExpanded ? (
+                <ChevronDown className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+              ) : (
+                <ChevronRight className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+              )}
 
-            <div>
-              <h3 className="font-semibold text-gray-900">{testCase.name}</h3>
-              <div className="flex items-center space-x-2 mt-1">
-                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(testCase.status)}`}>
-                  {testCase.status.toUpperCase()}
-                </span>
-                <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getSeverityColor(testCase.severity)}`}>
-                  {testCase.severity.toUpperCase()}
-                </span>
+              <div>
+                <h3 className="font-semibold text-gray-900">{testCase.name}</h3>
+                <div className="flex items-center space-x-2 mt-1">
+                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(testCase.status)}`}>
+                    {testCase.status.toUpperCase()}
+                  </span>
+                  <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getSeverityColor(testCase.severity)}`}>
+                    {testCase.severity.toUpperCase()}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center space-x-6 text-sm text-gray-500">
-            {/* <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-6 text-sm text-gray-500">
+              {/* <div className="flex items-center space-x-1">
               <Globe className="w-4 h-4" />
               <span>{testCase.method}</span>
             </div> */}
-            <div className="flex items-center space-x-1">
-              <Clock className="w-4 h-4" />
-              <span>{testCase.duration}ms</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <AlertCircle className="w-4 h-4" />
-              <span>{testCase.responseSize}B</span>
+              <div className="flex items-center space-x-1">
+                <Clock className="w-4 h-4" />
+                <span>{testCase.duration}ms</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <AlertCircle className="w-4 h-4" />
+                <span>{testCase.responseSize}B</span>
+              </div>
             </div>
           </div>
         </div>
+
+
+
+        {isExpanded && (
+          <div className="p-4 border-t border-gray-200 bg-white">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Endpoint</h4>
+                <CodeBlock
+                  language="http"
+                  code={`${testCase.method.toUpperCase()} ${testCase.url}`}
+                />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Request cURL</h4>
+                <CodeBlock language="bash" code={prettyCurl(testCase.requestCurl)} />
+              </div>
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Response</h4>
+                <CodeBlock
+                  language="json"
+                  code={formatResponse(testCase.response)}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
+      <div className="block md:hidden border border-gray-200 dark:border-gray-800 rounded-xl mb-4 overflow-hidden bg-white dark:bg-gray-900">
 
+        {/* HEADER */}
+        <div
+          className="p-4 cursor-pointer bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+          onClick={() => setIsExpanded(!isExpanded)}
+        >
+          <div className="flex items-start gap-3">
 
+            {/* Expand Icon */}
+            {isExpanded ? (
+              <ChevronDown className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+            ) : (
+              <ChevronRight className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+            )}
 
-      {isExpanded && (
-        <div className="p-4 border-t border-gray-200 bg-white">
-          <div className="space-y-4">
+            {/* Main Content */}
+            <div className="flex-1 min-w-0">
+
+              {/* Title */}
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate">
+                {testCase.name}
+              </h3>
+
+              {/* Status + Severity */}
+              <div className="flex flex-wrap items-center gap-2 mt-2">
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(
+                    testCase.status
+                  )}`}
+                >
+                  {testCase.status.toUpperCase()}
+                </span>
+
+                <span
+                  className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${getSeverityColor(
+                    testCase.severity
+                  )}`}
+                >
+                  {testCase.severity.toUpperCase()}
+                </span>
+              </div>
+
+              {/* Metrics (Mobile Grid) */}
+              <div className="mt-3 grid grid-cols-2 sm:flex sm:items-center sm:gap-6 gap-3 text-xs sm:text-sm text-gray-500">
+
+                <div className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  <span>{testCase.duration}ms</span>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{testCase.responseSize}B</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* EXPANDED CONTENT */}
+        {isExpanded && (
+          <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-5">
+
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Endpoint</h4>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                Endpoint
+              </h4>
               <CodeBlock
                 language="http"
                 code={`${testCase.method.toUpperCase()} ${testCase.url}`}
               />
             </div>
+
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Request cURL</h4>
-              <CodeBlock language="bash" code={prettyCurl(testCase.requestCurl)} />
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                Request cURL
+              </h4>
+              <CodeBlock
+                language="bash"
+                code={prettyCurl(testCase.requestCurl)}
+              />
             </div>
+
             <div>
-              <h4 className="font-medium text-gray-900 mb-2">Response</h4>
+              <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+                Response
+              </h4>
               <CodeBlock
                 language="json"
                 code={formatResponse(testCase.response)}
               />
             </div>
-          </div>
-        </div>
-      )}
 
-    </div>
+          </div>
+        )}
+      </div>
+    </>
+
   );
 };

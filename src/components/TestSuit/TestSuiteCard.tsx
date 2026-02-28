@@ -170,44 +170,45 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
     navigate(`/executions/report?suiteId=${suite.id}`);
   };
   return (
-    <div className='bg-white rounded-lg border mb-3 p-4'>
-      <div className='flex items-center justify-between gap-4'>
-        <div className='flex-shrink-0'>
-          <Layers
-            className='bg-green-100 p-2 rounded'
-            color='#0f766e'
-            size={40}
-          />
-        </div>
+    <>
+      <div className='bg-white rounded-lg border mb-3 p-4 overflow-auto hidden md:block'>
+        <div className='flex items-center justify-between gap-4'>
+          <div className='flex-shrink-0'>
+            <Layers
+              className='bg-green-100 p-2 rounded'
+              color='#0f766e'
+              size={40}
+            />
+          </div>
 
-        <div className='flex-1'>
-          <div className='flex items-center space-x-3 mb-2'>
-            <h3 className='font-semibold text-lg'>{suite.name}</h3>
-            {getStatusBadge(suite.status)}
-            <Badge
-              variant='outline'
-              className={`
-    flex items-center gap-1
+          <div className='flex-1'>
+            <div className='flex items-center space-x-3 mb-2'>
+              <h3 className='text-base md:text-lg font-[600] truncate'>{suite.name}</h3>
+              {getStatusBadge(suite.status)}
+              <Badge
+                variant='outline'
+                className={`
+    flex items-center gap-1 text-xs
     ${suite?.environment?.name?.toLowerCase().includes('prod')
-                  ? 'bg-green-100 text-green-800 border-green-200'
-                  : ''
-                }
+                    ? 'bg-green-100 text-green-800 border-green-200'
+                    : ''
+                  }
     ${suite?.environment?.name?.toLowerCase().includes('stage')
-                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                  : ''
-                }
+                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                    : ''
+                  }
     ${suite?.environment?.name?.toLowerCase().includes('dev')
-                  ? 'bg-blue-100 text-blue-800 border-blue-200'
-                  : ''
-                }
+                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                    : ''
+                  }
     ${!suite?.environment?.name || suite?.environment?.name === 'No Environment'
-                  ? 'bg-gray-100 text-gray-700 border-gray-200'
-                  : ''
-                }
+                    ? 'bg-gray-100 text-gray-700 border-gray-200'
+                    : ''
+                  }
   `}
-            >
-              {/* Dot */}
-              <span
+              >
+                {/* Dot */}
+                {/* <span
                 className={`h-2 w-2 rounded-full 
       ${suite?.environment?.name?.toLowerCase().includes('prod')
                     ? 'bg-green-600'
@@ -227,45 +228,45 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
                     : ''
                   }
     `}
-              />
+              /> */}
 
-              {suite?.environment?.name || 'No Environment'}
-            </Badge>
-          </div>
+                {suite?.environment?.name || 'No Environment'}
+              </Badge>
+            </div>
 
-          <p className='text-gray-600 text-sm mb-3'>{suite.description}</p>
+            <p className='text-gray-600 text-sm mb-3'>{suite.description}</p>
 
-          {/* <div className="flex items-center space-x-1 text-sm text-gray-500 mb-3">
+            {/* <div className="flex items-center space-x-1 text-sm text-gray-500 mb-3">
             <span>Environment:</span>
             <div className="flex items-center">
               {suite?.environment?.name || "No Environment"}
             </div>
           </div> */}
 
-          <div className='flex items-center space-x-6 text-sm text-gray-500 mb-3'>
-            <span>Created: {formatDate(suite.createdAt)}</span>
-            <div className='flex items-center space-x-1'>
-              <span>ID: {suite.id}</span>
-              <Info className='w-3 h-3' />
-            </div>
-          </div>
-
-
-          {
-            (suite?.tags?.length ?? 0) > 0 && (
-              <div className='flex items-center space-x-2'>
-                {suite.tags!.map((tag) => (
-                  <Badge
-                    key={tag}
-                    variant='outline'
-                    className={getTagColor(tag)}
-                  >
-                    {tag}
-                  </Badge>
-                ))}
+            <div className='flex items-center space-x-6 text-sm text-gray-500 mb-3'>
+              <span>Created: {formatDate(suite.createdAt)}</span>
+              <div className='flex items-center space-x-1'>
+                <span>ID: {suite.id}</span>
+                <Info className='w-3 h-3' />
               </div>
-            )}
-          {/* <div className='flex items-center space-x-4'>
+            </div>
+
+
+            {
+              (suite?.tags?.length ?? 0) > 0 && (
+                <div className='flex items-center space-x-2'>
+                  {suite.tags!.map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant='outline'
+                      className={getTagColor(tag)}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            {/* <div className='flex items-center space-x-4'>
             <Badge
               variant='outline'
               className='text-blue-600 bg-blue-50 border-blue-200'
@@ -285,73 +286,73 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
               {suite.securityTests} Security
             </Badge>
           </div> */}
-        </div>
+          </div>
 
-        <div className='flex items-center space-x-2'>
-          <TooltipProvider>
-            {/* Play / Execute */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='text-green-600 hover:text-green-700'
-                  onClick={() => {
-                    if (!suite?.isExecutable) {
-                      toast({
-                        title: 'Oops!',
-                        description:
-                          'You haven’t selected any test cases yet. Pick a few and let’s run them.',
-                      });
-                      return;
-                    }
-                    onExecute(suite.id);
-                  }}
-                >
-                  <Play className='w-4 h-4' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Run Suite</TooltipContent>
-            </Tooltip>
-
-            {/* Edit */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant='ghost'
-                  size='icon'
-                  className='text-gray-600 hover:text-blue-600'
-                  onClick={() => onEdit(suite)}
-                >
-                  <Edit className='w-4 h-4' />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Edit Suite</TooltipContent>
-            </Tooltip>
-
+          <div className='flex items-center space-x-2'>
             <TooltipProvider>
-              <DropdownMenu>
-                {/* Trigger with Tooltip */}
-                <Tooltip>
-                  <DropdownMenuTrigger asChild>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='text-muted-foreground hover:text-foreground'
-                      >
-                        <EllipsisVertical className='w-4 h-4' />
-                      </Button>
-                    </TooltipTrigger>
-                  </DropdownMenuTrigger>
+              {/* Play / Execute */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='text-green-600 hover:text-green-700'
+                    onClick={() => {
+                      if (!suite?.isExecutable) {
+                        toast({
+                          title: 'Oops!',
+                          description:
+                            'You haven’t selected any test cases yet. Pick a few and let’s run them.',
+                        });
+                        return;
+                      }
+                      onExecute(suite.id);
+                    }}
+                  >
+                    <Play className='w-4 h-4' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Run Suite</TooltipContent>
+              </Tooltip>
 
-                  <TooltipContent side='top'>Suite Actions</TooltipContent>
-                </Tooltip>
+              {/* Edit */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant='ghost'
+                    size='icon'
+                    className='text-gray-600 hover:text-blue-600'
+                    onClick={() => onEdit(suite)}
+                  >
+                    <Edit className='w-4 h-4' />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit Suite</TooltipContent>
+              </Tooltip>
 
-                {/* Menu */}
-                <DropdownMenuContent
-                  align='end'
-                  className='
+              <TooltipProvider>
+                <DropdownMenu>
+                  {/* Trigger with Tooltip */}
+                  <Tooltip>
+                    <DropdownMenuTrigger asChild>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant='ghost'
+                          size='icon'
+                          className='text-muted-foreground hover:text-foreground'
+                        >
+                          <EllipsisVertical className='w-4 h-4' />
+                        </Button>
+                      </TooltipTrigger>
+                    </DropdownMenuTrigger>
+
+                    <TooltipContent side='top'>Suite Actions</TooltipContent>
+                  </Tooltip>
+
+                  {/* Menu */}
+                  <DropdownMenuContent
+                    align='end'
+                    className='
       bg-white dark:bg-gray-900
       border border-gray-200 dark:border-gray-700
       shadow-lg
@@ -359,75 +360,279 @@ const TestSuiteCard: React.FC<TestSuiteCardProps> = ({
       min-w-[200px]
       py-1
     '
-                >
-                  {/* Duplicate */}
-                  <button
-                    onClick={() => onClone(suite.id)}
-                    className='flex items-center w-full px-4 py-2 text-sm
-        hover:bg-gray-100 dark:hover:bg-gray-700'
                   >
-                    <CopyPlus className='h-4 w-4 mr-2' />
-                    Duplicate
-                  </button>
-
-                  <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
-
-                  {/* CI/CD */}
-                  <button
-                    className='flex items-center w-full px-4 py-2 text-sm
+                    {/* Duplicate */}
+                    <button
+                      onClick={() => onClone(suite.id)}
+                      className='flex items-center w-full px-4 py-2 text-sm
         hover:bg-gray-100 dark:hover:bg-gray-700'
-                  >
-                    <Workflow className='h-4 w-4 mr-2' />
-                    CI/CD
-                  </button>
+                    >
+                      <CopyPlus className='h-4 w-4 mr-2' />
+                      Duplicate
+                    </button>
 
-                  {/* Reports */}
-                  <button
-                    onClick={handleClickReport}
-                    className='flex items-center w-full px-4 py-2 text-sm
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+
+                    {/* CI/CD */}
+                    <button
+                      className='flex items-center w-full px-4 py-2 text-sm
         hover:bg-gray-100 dark:hover:bg-gray-700'
-                  >
-                    <ChartNoAxesCombined className='h-4 w-4 mr-2' />
-                    Reports
-                  </button>
+                    >
+                      <Workflow className='h-4 w-4 mr-2' />
+                      CI/CD
+                    </button>
 
-                  <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                    {/* Reports */}
+                    <button
+                      onClick={handleClickReport}
+                      className='flex items-center w-full px-4 py-2 text-sm
+        hover:bg-gray-100 dark:hover:bg-gray-700'
+                    >
+                      <ChartNoAxesCombined className='h-4 w-4 mr-2' />
+                      Reports
+                    </button>
 
-                  {/* Delete */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <button
-                        className='flex items-center w-full px-4 py-2 text-sm
+                    <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+
+                    {/* Delete */}
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <button
+                          className='flex items-center w-full px-4 py-2 text-sm
             text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      >
-                        <Trash2 className='h-4 w-4 mr-2' />
-                        Delete
-                      </button>
-                    </AlertDialogTrigger>
-
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete this chain?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will permanently delete “{suite.name}”. This
-                          action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <Button onClick={() => onDelete(suite.id)}>
+                        >
+                          <Trash2 className='h-4 w-4 mr-2' />
                           Delete
-                        </Button>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                        </button>
+                      </AlertDialogTrigger>
+
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete this chain?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete “{suite.name}”. This
+                            action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <Button onClick={() => onDelete(suite.id)}>
+                            Delete
+                          </Button>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TooltipProvider>
             </TooltipProvider>
-          </TooltipProvider>
+          </div>
         </div>
       </div>
-    </div>
+
+      <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 mb-2 p-3 block md:hidden lg:hidden">
+
+        {/* Top Section */}
+        <div className="flex items-start gap-3">
+
+          {/* Icon */}
+          <div className="flex-shrink-0">
+            <Layers
+              className="bg-green-100 dark:bg-green-900/30 p-2 rounded-lg"
+              color="#0f766e"
+              size={28}
+            />
+          </div>
+
+          {/* Title + Status */}
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm sm:text-base font-semibold truncate">
+                {suite.name}
+              </h3>
+              {getStatusBadge(suite.status)}
+              <Badge
+                variant="outline"
+                className={`text-xs px-2 py-0.5
+            ${suite?.environment?.name?.toLowerCase().includes('prod')
+                    ? 'bg-green-100 text-green-800 border-green-200'
+                    : ''}
+            ${suite?.environment?.name?.toLowerCase().includes('stage')
+                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                    : ''}
+            ${suite?.environment?.name?.toLowerCase().includes('dev')
+                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                    : ''}
+            ${!suite?.environment?.name ||
+                    suite?.environment?.name === 'No Environment'
+                    ? 'bg-gray-100 text-gray-700 border-gray-200'
+                    : ''}
+          `}
+              >
+                {suite?.environment?.name || 'No Environment'}
+              </Badge>
+            </div>
+
+            {/* Environment Badge */}
+            {/* <div className="mt-2">
+              <Badge
+                variant="outline"
+                className={`text-xs px-2 py-0.5
+            ${suite?.environment?.name?.toLowerCase().includes('prod')
+                    ? 'bg-green-100 text-green-800 border-green-200'
+                    : ''}
+            ${suite?.environment?.name?.toLowerCase().includes('stage')
+                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                    : ''}
+            ${suite?.environment?.name?.toLowerCase().includes('dev')
+                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                    : ''}
+            ${!suite?.environment?.name ||
+                    suite?.environment?.name === 'No Environment'
+                    ? 'bg-gray-100 text-gray-700 border-gray-200'
+                    : ''}
+          `}
+              >
+                {suite?.environment?.name || 'No Environment'}
+              </Badge>
+            </div> */}
+          </div>
+        </div>
+
+        {/* Description */}
+        {suite.description && (
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-3 line-clamp-2">
+            {suite.description}
+          </p>
+        )}
+
+        {/* Meta Info */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6 text-xs text-gray-500 mt-1">
+          <span>Created: {formatDate(suite.createdAt)}</span>
+          <span className="truncate">ID: {suite.id}</span>
+        </div>
+
+        {/* Tags */}
+        {(suite?.tags?.length ?? 0) > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {suite.tags!.map((tag) => (
+              <Badge
+                key={tag}
+                variant="outline"
+                className={`text-xs ${getTagColor(tag)}`}
+              >
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        )}
+
+        {/* Actions Section (Bottom for Mobile) */}
+        <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-800 mt-2 pt-1">
+
+          {/* Left Actions */}
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-green-600 hover:text-green-700 h-8 w-8"
+              onClick={() => {
+                if (!suite?.isExecutable) {
+                  toast({
+                    title: 'Oops!',
+                    description:
+                      'You haven’t selected any test cases yet.',
+                  });
+                  return;
+                }
+                onExecute(suite.id);
+              }}
+            >
+              <Play className="w-4 h-4" />
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-gray-600 hover:text-blue-600 h-8 w-8"
+              onClick={() => onEdit(suite)}
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+              >
+                <EllipsisVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align="end"
+              className="w-48"
+            >
+              <button
+                onClick={() => onClone(suite.id)}
+                className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <CopyPlus className="h-4 w-4 mr-2" />
+                Duplicate
+              </button>
+
+              <button
+                className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <Workflow className="h-4 w-4 mr-2" />
+                CI/CD
+              </button>
+
+              <button
+                onClick={handleClickReport}
+                className="flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                <ChartNoAxesCombined className="h-4 w-4 mr-2" />
+                Reports
+              </button>
+
+              <div className="border-t my-1" />
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <button className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </button>
+                </AlertDialogTrigger>
+
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Delete this suite?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently delete “{suite.name}”.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <Button onClick={() => onDelete(suite.id)}>
+                      Delete
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+        </div>
+      </div>
+    </>
   );
 };
 

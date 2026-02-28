@@ -65,9 +65,9 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
   return (
     <div className='space-y-3 mb-3'>
       {/* Overview Metrics */}
-      <div className='bg-white rounded-lg border border-gray-200  p-6'>
-        <h2 className='text-xl font-bold text-gray-900 mb-6 flex items-center'>
-          <Activity className='w-6 h-6 mr-2 text-blue-600' />
+      <div className='bg-white rounded-lg border border-gray-200 p-3 md:p-6'>
+        <h2 className='text-md md:text-xl font-bold text-gray-900 mb-6 flex items-center'>
+          {/* <Activity className='w-6 h-6 mr-2 text-blue-600' /> */}
           Request-Level Metrics
         </h2>
 
@@ -76,40 +76,40 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
             <div className='flex items-center justify-center w-12 h-12 bg-blue-100 rounded-full mx-auto mb-2'>
               <Globe className='w-6 h-6 text-blue-600' />
             </div>
-            <p className='text-2xl font-bold text-gray-900'>
+            <p className='text-md md:text-2xl font-bold text-gray-900'>
               {metrics.totalRequests}
             </p>
-            <p className='text-sm text-gray-500'>Total Requests</p>
+            <p className='text-xs md:text-sm text-gray-500'>Total Requests</p>
           </div>
 
           <div className='text-center'>
             <div className='flex items-center justify-center w-12 h-12 bg-green-100 rounded-full mx-auto mb-2'>
               <Database className='w-6 h-6 text-green-600' />
             </div>
-            <p className='text-2xl font-bold text-gray-900'>
+            <p className='text-md md:text-2xl font-bold text-gray-900'>
               {metrics.uniqueEndpoints}
             </p>
-            <p className='text-sm text-gray-500'>Unique Endpoints</p>
+            <p className='text-xs md:text-sm text-gray-500'>Unique Endpoints</p>
           </div>
 
           <div className='text-center'>
             <div className='flex items-center justify-center w-12 h-12 bg-purple-100 rounded-full mx-auto mb-2'>
               <Clock className='w-6 h-6 text-purple-600' />
             </div>
-            <p className='text-2xl font-bold text-gray-900'>
+            <p className='text-md md:text-2xl font-bold text-gray-900'>
               {formatDuration(metrics.averageResponseTime)}
             </p>
-            <p className='text-sm text-gray-500'>Avg Response Time</p>
+            <p className='text-xs md:text-sm text-gray-500'>Avg Response Time</p>
           </div>
 
           <div className='text-center'>
             <div className='flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full mx-auto mb-2'>
               <TrendingUp className='w-6 h-6 text-orange-600' />
             </div>
-            <p className='text-2xl font-bold text-gray-900'>
+            <p className='text-md md:text-2xl font-bold text-gray-900'>
               {formatBytes(metrics.totalDataTransferred)}
             </p>
-            <p className='text-sm text-gray-500'>Data Transferred</p>
+            <p className='text-xs md:text-sm text-gray-500'>Data Transferred</p>
           </div>
         </div>
       </div>
@@ -117,8 +117,8 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
       {/* Performance Insights */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Response Time Range */}
-        <div className='bg-white rounded-lg border border-gray-200 p-6'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+        <div className='bg-white rounded-lg border border-gray-200 p-3 md:p-6'>
+          <h3 className='text-md md:text-xl font-semibold text-gray-900 mb-4'>
             Response Time Range
           </h3>
           <div className='space-y-4'>
@@ -153,8 +153,8 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
         </div>
 
         {/* HTTP Methods Distribution */}
-        <div className='bg-white rounded-lg border border-gray-200 p-6'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+        <div className='bg-white rounded-lg border border-gray-200 p-3 md:p-6'>
+          <h3 className='text-md md:text-xl font-semibold text-gray-900 mb-4'>
             HTTP Methods
           </h3>
           <div className='space-y-3'>
@@ -189,8 +189,8 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
       {/* Status Codes and Error Types */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
         {/* Status Code Distribution */}
-        <div className='bg-white rounded-lg border border-gray-200 p-6'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+        <div className='bg-white rounded-lg border border-gray-200 p-3 md:p-6'>
+          <h3 className='text-md md:text-xl font-semibold text-gray-900 mb-4'>
             Status Code Distribution
           </h3>
           <div className='space-y-3'>
@@ -226,8 +226,8 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
 
         {/* Error Types */}
         {Object.keys(metrics.errorTypes || {}).length > 0 && (
-          <div className='bg-white rounded-lg border border-gray-200 p-6'>
-            <h3 className='text-lg font-semibold text-gray-900 mb-4 flex items-center'>
+          <div className='bg-white rounded-lg border border-gray-200 p-3 md:p-6'>
+            <h3 className='text-md md:text-xl font-semibold text-gray-900 mb-4 flex items-center'>
               <AlertTriangle className='w-5 h-5 mr-2 text-red-600' />
               Error Types
             </h3>
@@ -263,8 +263,8 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
       {/* Performance Extremes */}
       <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 '>
         {/* Slowest Requests */}
-        <div className='bg-white rounded-lg border border-gray-200 p-6'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-4 flex items-center'>
+        <div className='bg-white rounded-lg border border-gray-200 p-3 md:p-6'>
+          <h3 className='text-md md:text-xl font-semibold text-gray-900 mb-4 flex items-center'>
             <TrendingUp className='w-5 h-5 mr-2 text-red-600' />
             Slowest Requests
           </h3>
@@ -295,7 +295,7 @@ export const RequestMetrics: React.FC<RequestMetricsProps> = ({ metrics }) => {
 
         {/* Fastest Requests */}
         <div className='bg-white rounded-lg border border-gray-200 p-6'>
-          <h3 className='text-lg font-semibold text-gray-900 mb-4 flex items-center'>
+          <h3 className='text-md md:text-xl font-semibold text-gray-900 mb-4 flex items-center'>
             <TrendingDown className='w-5 h-5 mr-2 text-green-600' />
             Fastest Requests
           </h3>
