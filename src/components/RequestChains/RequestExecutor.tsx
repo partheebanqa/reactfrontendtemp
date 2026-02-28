@@ -392,8 +392,8 @@ export function RequestExecutor({
                 typeof value === 'number'
                   ? 'number'
                   : typeof value === 'boolean'
-                  ? 'boolean'
-                  : 'string',
+                    ? 'boolean'
+                    : 'string',
               source: 'extracted',
               extractionPath: request.extractVariables.find(
                 (e) => e.name === name
@@ -523,8 +523,8 @@ export function RequestExecutor({
                       typeof value === 'number'
                         ? 'number'
                         : typeof value === 'boolean'
-                        ? 'boolean'
-                        : 'string',
+                          ? 'boolean'
+                          : 'string',
                     source: 'extracted',
                     extractionPath: variable.path,
                   };
@@ -644,15 +644,14 @@ export function RequestExecutor({
     <div className='bg-card rounded-xl border border-border p-4 sm:p-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4'>
         <div>
-          <h3 className='text-lg font-semibold text-foreground'>
+          <h3 className='text-md md:text-lg font-semibold text-foreground'>
             Request Execution
           </h3>
           <p className='text-sm text-muted-foreground'>
             {request
               ? 'Individual request execution'
-              : `${
-                  processedRequests?.filter((r) => r.enabled).length ?? 0
-                } requests`}
+              : `${processedRequests?.filter((r) => r.enabled).length ?? 0
+              } requests`}
           </p>
         </div>
         <div className='flex flex-wrap gap-2 sm:gap-3'>
@@ -683,11 +682,10 @@ export function RequestExecutor({
                       disabled={
                         !chainName?.trim() || (!!savedChainId && !chainId)
                       }
-                      className={`hover-scale ${
-                        !chainName?.trim() || (!!savedChainId && !chainId)
-                          ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
-                          : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
-                      } disabled:opacity-70`}
+                      className={`hover-scale ${!chainName?.trim() || (!!savedChainId && !chainId)
+                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
+                        : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
+                        } disabled:opacity-70`}
                     >
                       <Save className='w-4 h-4' />
                       Save
@@ -711,12 +709,11 @@ export function RequestExecutor({
                     isRunAllExecuting ||
                     (!savedChainId && !chainId)
                   }
-                  className={`hover-scale ${
-                    processedRequests.filter((r) => r.enabled).length === 0 ||
+                  className={`hover-scale ${processedRequests.filter((r) => r.enabled).length === 0 ||
                     (!savedChainId && !chainId)
-                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      : 'bg-[#136fb0] text-white'
-                  }`}
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-[#136fb0] text-white'
+                    }`}
                 >
                   <Play className='w-4 h-4' />
                   Execute
@@ -729,11 +726,10 @@ export function RequestExecutor({
                   disabled={
                     !chainName?.trim() || isExecuting || isRunAllExecuting
                   }
-                  className={`hover-scale ${
-                    !chainName?.trim()
-                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
-                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0 py-4]'
-                  } disabled:opacity-70`}
+                  className={`hover-scale ${!chainName?.trim()
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
+                    : 'bg-[#136fb0] text-white hover:bg-[#136fb0 py-4]'
+                    } disabled:opacity-70`}
                 >
                   <Save className='w-4 h-4' />
                   Update
@@ -810,13 +806,12 @@ export function RequestExecutor({
                 </div>
                 <div className='flex items-center space-x-2 flex-shrink-0'>
                   <span
-                    className={`px-2 py-1 text-xs font-medium rounded ${
-                      log.status === 'success'
-                        ? 'bg-green-100 text-green-800'
-                        : log.status === 'error'
+                    className={`px-2 py-1 text-xs font-medium rounded ${log.status === 'success'
+                      ? 'bg-green-100 text-green-800'
+                      : log.status === 'error'
                         ? 'bg-red-100 text-red-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}
+                      }`}
                   >
                     {log.response?.status || log.status}
                   </span>
@@ -881,13 +876,12 @@ export function RequestExecutor({
                           <div>
                             <span className='font-medium'>Status:</span>
                             <span
-                              className={`ml-2 px-2 py-1 text-xs rounded ${
-                                log.response.status < 300
-                                  ? 'bg-green-100 text-green-800'
-                                  : log.response.status < 400
+                              className={`ml-2 px-2 py-1 text-xs rounded ${log.response.status < 300
+                                ? 'bg-green-100 text-green-800'
+                                : log.response.status < 400
                                   ? 'bg-yellow-100 text-yellow-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}
+                                }`}
                             >
                               {log.response.status}
                             </span>

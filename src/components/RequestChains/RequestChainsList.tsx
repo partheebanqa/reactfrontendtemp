@@ -250,7 +250,7 @@ export function RequestChainsList({
   };
 
   return (
-    <div className='space-y-3 px-2 md:px-0'>
+    <div className='space-y-3'>
       <BreadCum
         title='Request Chains'
         subtitle='Test complex user flows from login to checkout in automated sequences'
@@ -630,7 +630,7 @@ export function RequestChainsList({
                         </p>
 
                         <div className='flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 mt-2 text-xs md:text-sm text-muted-foreground'>
-                          <span className='flex items-center font-[500] text-[#64748b]'>
+                          <span className='flex items-center font-[500] text-[#64748b] hidden md:block lg:block'>
                             <Dot size={32} className='text-red-500 -ml-1' />
                             {chain?.chainRequests?.length} steps
                           </span>

@@ -231,10 +231,10 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
       <div className='border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3'>
         <div className='flex justify-between items-start mb-6'>
           <div>
-            <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+            <h1 className='text-lg md:text-3xl font-bold text-gray-900 mb-2'>
               {data.name}
             </h1>
-            <p className='text-gray-600'>{data.description}</p>
+            <p className='text-sm md:text-md text-gray-600'>{data.description}</p>
           </div>
 
           <div>
@@ -250,8 +250,8 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
           <div className='flex items-center space-x-3'>
             <Calendar className='w-5 h-5 text-blue-500' />
             <div>
-              <p className='text-sm text-gray-500'>Execution Date</p>
-              <p className='text-sm font-semibold'>
+              <p className='text-xs md:text-sm text-gray-500'>Execution Date</p>
+              <p className='text-xs md:text-sm font-semibold'>
                 {(() => {
                   const { dateTime, tz } = convertDateStamp(
                     data.lastExecutionDate
@@ -265,24 +265,24 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
           <div className='flex items-center space-x-3'>
             <Clock className='w-5 h-5 text-green-500' />
             <div>
-              <p className='text-sm text-gray-500'>Duration</p>
-              <p className='font-semibold'>{formatDuration(data.duration)}</p>
+              <p className='text-xs md:text-sm text-gray-500'>Duration</p>
+              <p className='text-xs md:text-sm font-semibold'>{formatDuration(data.duration)}</p>
             </div>
           </div>
 
           <div className='flex items-center space-x-3'>
             <User className='w-5 h-5 text-purple-500' />
             <div>
-              <p className='text-sm text-gray-500'>Executed By</p>
-              <p className='font-semibold text-xs'>{data.executedBy}</p>
+              <p className='text-xs md:text-sm text-gray-500'>Executed By</p>
+              <p className='text-xs md:text-sm font-semibold text-xs'>{data.executedBy}</p>
             </div>
           </div>
 
           <div className='flex items-center space-x-3'>
             <Database className='w-5 h-5 text-orange-500' />
             <div>
-              <p className='text-sm text-gray-500'>Environment</p>
-              <p className='font-semibold text-xs'>{data.environmentId}</p>
+              <p className='text-xs md:text-sm text-gray-500'>Environment</p>
+              <p className='text-xs md:text-sm font-semibold text-xs'>{data.environmentId}</p>
             </div>
           </div>
         </div>
@@ -329,7 +329,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
         </div>
       </div>
 
-      <div className='grid grid-cols-2 md:grid-cols-4 gap-6 mb-3 mt-3'>
+      <div className='grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-6 mb-3 mt-3'>
         {metrics.map((metric, index) => (
           <div
             key={index}
@@ -337,13 +337,13 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
           >
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-sm text-gray-500 mb-1'>{metric.title}</p>
-                <p className='text-2xl font-bold text-gray-900'>
+                <p className='text-xs md:text-sm text-gray-500 mb-1'>{metric.title}</p>
+                <p className='text-md md:text-2xl font-bold text-gray-900'>
                   {metric.value}
                 </p>
               </div>
               <div className={`p-3 rounded-full ${metric.color}`}>
-                <metric.icon className='w-6 h-6' />
+                <metric.icon className='w-4 h-4 md:w-6 md:h-6' />
               </div>
             </div>
           </div>
