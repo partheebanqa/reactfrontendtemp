@@ -32,6 +32,7 @@ interface PrePostRequestProps {
   staticVariables?: { name: string; value: string }[];
   dynamicVariables?: { name: string; value: string }[];
   extractedVariables?: Record<string, any>;
+  onRemoveExtraction?: (name: string) => void;
 }
 
 export function PrePostRequest({
@@ -50,14 +51,18 @@ export function PrePostRequest({
   staticVariables = [],
   dynamicVariables = [],
   extractedVariables = [],
+  onRemoveExtraction,
 }: PrePostRequestProps) {
   const [postResponseScript, setPostResponseScript] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
-    'assertions'
+    'assertions',
   );
   const enabledCount = assertions.filter((a) => a.enabled === true).length;
 
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
+  const [deleteTargetExtracted, setDeleteTargetExtracted] = useState<
+    string | null
+  >(null);
 
   const handleDeleteVariable = (path: string) => {
     if (onRemoveVariable) {
@@ -283,8 +288,19 @@ export function PrePostRequest({
                                   <code className='text-xs font-mono font-medium'>
                                     {`{{${name}}}`}
                                   </code>
+                                  {onRemoveExtraction && (
+                                    <button
+                                      onClick={() =>
+                                        setDeleteTargetExtracted(name)
+                                      }
+                                      className='transition-colors p-0.5 rounded hover:text-red-500 text-blue-600 dark:text-blue-400'
+                                      title='Remove extracted variable'
+                                    >
+                                      <Trash2 className='w-3 h-3' />
+                                    </button>
+                                  )}
                                 </div>
-                              )
+                              ),
                             )}
                           </div>
                         </td>
@@ -352,6 +368,37 @@ export function PrePostRequest({
               }
             >
               Delete
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={deleteTargetExtracted !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetExtracted(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove extracted variable?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove the extracted variable "
+              {deleteTargetExtracted && `{{${deleteTargetExtracted}}}`}". It
+              will no longer be available for use in subsequent requests.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              onClick={() => {
+                if (deleteTargetExtracted && onRemoveExtraction) {
+                  onRemoveExtraction(deleteTargetExtracted);
+                }
+                setDeleteTargetExtracted(null);
+              }}
+            >
+              Remove
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

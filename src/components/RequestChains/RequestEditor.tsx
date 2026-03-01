@@ -737,6 +737,27 @@ export function RequestEditor({
             }),
           );
         }
+
+        // Restore extracted variable definitions from extractVariables config
+        // so they show in post-response tab even without re-running
+        if (
+          initialRequest.extractVariables &&
+          Array.isArray(initialRequest.extractVariables) &&
+          initialRequest.extractVariables.length > 0
+        ) {
+          const restoredVars: Record<string, any> = {};
+          initialRequest.extractVariables.forEach((extraction: any) => {
+            const varName = extraction.variableName || extraction.name;
+            if (!varName) return;
+            // Already have a value from saved execution? Use it
+            if (saved?.extractedVariables?.[varName] !== undefined) {
+              restoredVars[varName] = saved.extractedVariables[varName];
+            }
+          });
+          if (Object.keys(restoredVars).length > 0) {
+            setExtractedVariables((prev) => ({ ...prev, ...restoredVars }));
+          }
+        }
       } else if (saved && !isRecent) {
         delete map[initialRequest.id];
         localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
@@ -744,7 +765,11 @@ export function RequestEditor({
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
     }
-  }, [initialRequest.id, hideResponseExplorer]);
+  }, [
+    initialRequest.id,
+    initialRequest.extractVariables,
+    hideResponseExplorer,
+  ]);
 
   const replaceVariables = (text: string, variables: Variable[]): string => {
     if (!text) return text;
@@ -2109,14 +2134,12 @@ export function RequestEditor({
   const buildVariablesPayload = (bodyVars: SelectedVariable[]) => {
     const variables: { field: string; key: string; variable: string }[] = [];
 
-    // Body variables (from JsonVariableSubstitution)
     bodyVars.forEach((v) => {
       if (v.path && v.name) {
         variables.push({ field: 'body', key: v.path, variable: v.name });
       }
     });
 
-    // Auth token variable (if it's a {{variable}} reference)
     const authTokenMatch = auth.token.match(/^\{\{(\w+)\}\}$/);
     if (authTokenMatch) {
       variables.push({
@@ -2126,7 +2149,6 @@ export function RequestEditor({
       });
     }
 
-    // Header variables
     headers.forEach((h) => {
       const match = h.value?.match(/^\{\{(\w+)\}\}$/);
       if (match && h.key) {
@@ -2134,7 +2156,6 @@ export function RequestEditor({
       }
     });
 
-    // Param variables
     params.forEach((p) => {
       const match = p.value?.match(/^\{\{(\w+)\}\}$/);
       if (match && p.key) {
@@ -3315,6 +3336,8 @@ export function RequestEditor({
               showAssertions={true}
               staticVariables={usedRequestVariables.staticVars}
               dynamicVariables={usedRequestVariables.dynamicVars}
+              extractedVariables={extractedVariables}
+              onRemoveExtraction={handleRemoveExtraction}
               onAssertionsChange={(newAssertions) => {
                 setAssertions(newAssertions);
                 handleAssertionsUpdate(newAssertions);
@@ -3969,6 +3992,8 @@ export function RequestEditor({
             showAssertions={true}
             staticVariables={usedRequestVariables.staticVars}
             dynamicVariables={usedRequestVariables.dynamicVars}
+            extractedVariables={extractedVariables}
+            onRemoveExtraction={handleRemoveExtraction}
           />
         </TabsContent>
 
