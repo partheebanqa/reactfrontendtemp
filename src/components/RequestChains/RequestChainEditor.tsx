@@ -261,6 +261,8 @@ export function RequestChainEditor({
     };
   });
 
+  console.log('formData123:', formData);
+
   const lastSyncedChainUpdatedAt = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -1094,7 +1096,6 @@ export function RequestChainEditor({
 
     const startTime = Date.now();
     const processedRequest = processRequestWithVariables(request, variables);
-
     {
       const token = (
         processedRequest.authToken ||
@@ -1423,9 +1424,15 @@ export function RequestChainEditor({
         description: `Running ${selectedRequests.length} selected requests sequentially...`,
       });
 
+      console.log('request123');
+
       for (let i = 0; i < selectedRequests.length; i++) {
+        console.log('selectedRequests123:', selectedRequests);
+
         const rawRequest = selectedRequests[i];
         const request = syncParamsFromUrl(rawRequest);
+
+        console.log('requestB:', request);
 
         const originalIndex = formData.chainRequests.findIndex(
           (r) => r.id === request.id,
@@ -1478,6 +1485,8 @@ export function RequestChainEditor({
                 originalIndex,
                 allExtractedVarsInCurrentExecution,
               );
+
+            console.log('request:', request);
 
             log = await executeSingleRequest(
               request,

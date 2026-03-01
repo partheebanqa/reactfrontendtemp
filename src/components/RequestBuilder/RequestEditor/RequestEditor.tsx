@@ -1042,6 +1042,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       } else {
         setSelectedFolderId('');
       }
+
       if (
         activeRequest.variable &&
         Array.isArray(activeRequest.variable) &&
@@ -1054,33 +1055,36 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       } else {
         setSelectedVariable([]);
       }
+      // Restore previously extracted variables from localStorage on initial load
+      if (
+        activeRequest.extractVariables &&
+        Array.isArray(activeRequest.extractVariables) &&
+        activeRequest.extractVariables.length > 0 &&
+        activeCollection?.id
+      ) {
+        activeRequest.extractVariables.forEach((extraction: any) => {
+          const variableName = extraction.name;
+          if (!variableName) return;
 
-      // if (
-      //   activeRequest?.extractVariables &&
-      //   Array.isArray(activeRequest?.extractVariables) &&
-      //   activeRequest.extractVariables.length > 0 &&
-      //   responseData?.body &&
-      //   onExtractVariable
-      // ) {
-      //   activeRequest.extractVariables.forEach((extraction: any) => {
-      //     if (extraction.source === 'response_body' && extraction.path) {
-      //       try {
-      //         const value = getValueByPath(responseData.body, extraction.path);
-      //         if (value !== undefined) {
-      //           onExtractVariable({
-      //             variableName: extraction.name,
-      //             name: extraction.name,
-      //             source: extraction.source,
-      //             path: extraction.path,
-      //             value: value,
-      //           });
-      //         }
-      //       } catch (error) {
-      //         console.error('Error extracting variable:', error);
-      //       }
-      //     }
-      //   });
-      // }
+          const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
+          const storedData = localStorage.getItem(storageKey);
+
+          if (storedData) {
+            try {
+              const parsed = JSON.parse(storedData);
+              if (parsed.value) {
+                collectionActions.setExtractedVariableRequest(
+                  activeRequest.id,
+                  variableName,
+                  String(parsed.value),
+                );
+              }
+            } catch (e) {
+              console.error('Error restoring extracted variable:', e);
+            }
+          }
+        });
+      }
     } else if (!isSaving && !activeRequest) {
       setLoadedRequestId(undefined);
       setAssertions([]);
@@ -1089,7 +1093,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       setPendingSubstitutions([]);
       setResponseData(null);
     }
-  }, [activeRequest, isSaving]);
+  }, [activeRequest, isSaving, activeCollection?.id]);
 
   useEffect(() => {
     if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
@@ -1779,11 +1783,32 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
-        const existingIds = new Set(assertions.map((a) => a.id));
-        const filtered = generatedAssertions.filter(
-          (a) => !existingIds.has(a.id),
+
+        // Preserve assertions that are already saved (loaded from the request)
+        // Only add newly generated ones that don't already exist by description+type
+        const assertionsMatch = (a: any, b: any) =>
+          a.description === b.description &&
+          a.category === b.category &&
+          a.type === b.type &&
+          a.operator === b.operator;
+
+        const mergedAssertions = generatedAssertions.map((newA) => {
+          const existing = assertions.find((ex) => assertionsMatch(ex, newA));
+          if (existing) {
+            // Keep the existing one (preserves enabled state, expectedValue, id)
+            return { ...newA, enabled: existing.enabled ?? true };
+          }
+          return { ...newA, enabled: false };
+        });
+
+        // Keep any custom assertions the user added manually
+        const customAssertions = assertions.filter(
+          (a) =>
+            a.isCustom === true &&
+            !mergedAssertions.some((m) => assertionsMatch(m, a)),
         );
-        setAssertions([...assertions, ...filtered]);
+
+        setAssertions([...mergedAssertions, ...customAssertions]);
       }
     } catch (error: any) {
       const backendErrorMessage =
@@ -3248,6 +3273,25 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               staticVariables={usedVariables.staticVars}
               dynamicVariables={usedVariables.dynamicVars}
               extractedVariables={requestSpecificExtractedVariables}
+              onRemoveExtraction={(variableName) => {
+                if (activeRequest?.id) {
+                  collectionActions.removeExtractedVariableRequest(
+                    activeRequest.id,
+                    variableName,
+                  );
+                }
+                if (activeCollection?.id) {
+                  localStorage.removeItem(
+                    `extracted_var_${activeCollection.id}_${variableName}`,
+                  );
+                }
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+                if (onRemoveExtraction) {
+                  onRemoveExtraction(variableName);
+                }
+              }}
             />
           )}
 

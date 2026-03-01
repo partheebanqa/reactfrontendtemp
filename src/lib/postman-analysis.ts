@@ -27,6 +27,8 @@ export interface AnalyzedRequest {
     };
   }>;
   hasAuthWarning: boolean;
+  // NEW: flag specifically for 401 + no auth configured
+  has401WithNoAuth?: boolean;
 }
 
 function extractAuthToken(request: APIRequest): string | undefined {
@@ -40,7 +42,7 @@ function extractAuthToken(request: APIRequest): string | undefined {
 
   if (request.headers) {
     const authHeader = request.headers.find(
-      (h) => h.key.toLowerCase() === 'authorization'
+      (h) => h.key.toLowerCase() === 'authorization',
     );
     if (authHeader) {
       const match = authHeader.value.match(/Bearer\s+(.+)/i);
@@ -52,7 +54,7 @@ function extractAuthToken(request: APIRequest): string | undefined {
 }
 
 function extractQueryParams(
-  request: APIRequest
+  request: APIRequest,
 ): Array<{ name: string; value: string }> {
   const params: Array<{ name: string; value: string }> = [];
 
@@ -69,7 +71,7 @@ function extractQueryParams(
       const url = new URL(
         request.url.startsWith('http')
           ? request.url
-          : `https://example.com${request.url}`
+          : `https://example.com${request.url}`,
       );
       url.searchParams.forEach((value, key) => {
         if (!params.some((p) => p.name === key)) {
@@ -86,7 +88,7 @@ function extractQueryParams(
 
 function searchInResponse(
   responseBody: string,
-  searchValue: string
+  searchValue: string,
 ): string | null {
   try {
     const parsed = JSON.parse(responseBody);
@@ -94,7 +96,7 @@ function searchInResponse(
     const findPath = (
       obj: any,
       target: string,
-      currentPath: string = ''
+      currentPath: string = '',
     ): string | null => {
       if (typeof obj !== 'object' || obj === null) {
         if (String(obj) === target) {
@@ -132,9 +134,74 @@ function isAuthEndpoint(name: string, url: string): boolean {
   );
 }
 
+function getHostname(url: string): string | null {
+  try {
+    return new URL(url.startsWith('http') ? url : `https://example.com${url}`)
+      .hostname;
+  } catch {
+    return null;
+  }
+}
+
+function looksLikeJWT(value: any): boolean {
+  if (typeof value !== 'string') return false;
+  const parts = value.split('.');
+  return parts.length === 3 && parts.every((part) => part.length > 0);
+}
+
+function looksLikeToken(value: any): boolean {
+  return typeof value === 'string' && value.length > 20;
+}
+
+/**
+ * Searches a parsed response body for the first token-like value.
+ * Returns the dot-notation path, or null if not found.
+ */
+function findTokenPathInResponse(parsed: any): string | null {
+  const commonPaths = [
+    'token',
+    'accessToken',
+    'access_token',
+    'authToken',
+    'auth_token',
+    'data.token',
+    'data.accessToken',
+    'data.access_token',
+    'result.token',
+    'result.accessToken',
+  ];
+
+  const getNestedValue = (obj: any, path: string): any =>
+    path.split('.').reduce((current, key) => current?.[key], obj);
+
+  for (const path of commonPaths) {
+    const value = getNestedValue(parsed, path);
+    if (value && (looksLikeJWT(value) || looksLikeToken(value))) {
+      return path;
+    }
+  }
+
+  // Deep search for JWT/token-shaped values
+  const findDeep = (obj: any, currentPath: string = ''): string | null => {
+    if (looksLikeJWT(obj) || looksLikeToken(obj)) {
+      return currentPath;
+    }
+    if (typeof obj === 'object' && obj !== null) {
+      for (const key in obj) {
+        const newPath = currentPath ? `${currentPath}.${key}` : key;
+        const result = findDeep(obj[key], newPath);
+        if (result) return result;
+      }
+    }
+    return null;
+  };
+
+  return findDeep(parsed);
+}
+
 export function analyzeRequestChain(
   requests: APIRequest[],
-  executionLogs: Record<string, any>
+  executionLogs: Record<string, any>,
 ): AnalyzedRequest[] {
   const analyzed: AnalyzedRequest[] = [];
 
@@ -204,7 +271,77 @@ export function analyzeRequestChain(
     let authSource: AnalyzedRequest['authSource'] | undefined;
     let suggestedAuthSource: AnalyzedRequest['suggestedAuthSource'] | undefined;
     let hasAuthWarning = false;
+    let has401WithNoAuth = false;
 
+    const requestLog = executionLogs[request.id];
+    const got401 = requestLog?.response?.status === 401;
+    const hasNoAuth = !authToken || authToken.trim() === '';
+
+    // ── NEW: 401 with no auth configured ──────────────────────────────────────
+    if (got401 && hasNoAuth) {
+      hasAuthWarning = true;
+      has401WithNoAuth = true;
+
+      const currentHostname = getHostname(request.url);
+
+      for (let j = 0; j < i; j++) {
+        const prevRequest = requests[j];
+        const prevLog = executionLogs[prevRequest.id];
+
+        let tokenPath: string | null = null;
+
+        if (prevLog?.response?.body) {
+          try {
+            const parsed = JSON.parse(prevLog.response.body);
+            tokenPath = findTokenPathInResponse(parsed);
+          } catch (e) {
+            console.error(
+              'Failed to parse response for 401 token detection:',
+              e,
+            );
+          }
+        }
+
+        const prevHostname = getHostname(prevRequest.url);
+        const sameDomain =
+          currentHostname && prevHostname && currentHostname === prevHostname;
+
+        const isCandidate =
+          tokenPath ||
+          isAuthEndpoint(prevRequest.name, prevRequest.url) ||
+          sameDomain;
+
+        if (isCandidate) {
+          const reasonParts: string[] = [
+            'This request returned 401 Unauthorized.',
+          ];
+          if (tokenPath) {
+            reasonParts.push(
+              `Found potential auth token at path "${tokenPath}" in "${prevRequest.name}".`,
+            );
+          } else if (sameDomain) {
+            reasonParts.push(
+              `"${prevRequest.name}" shares the same domain and may contain auth data.`,
+            );
+          } else {
+            reasonParts.push(
+              `"${prevRequest.name}" appears to be an authentication endpoint.`,
+            );
+          }
+
+          suggestedAuthSource = {
+            apiIndex: j,
+            apiName: prevRequest.name,
+            path: tokenPath || 'data.token',
+            reason: reasonParts.join(' '),
+          };
+          break;
+        }
+      }
+    }
+    // ── END NEW ───────────────────────────────────────────────────────────────
+
+    // Existing logic: auth token is present but hardcoded (not a variable)
     if (authToken && !authToken.startsWith('{{')) {
       const firstOccurrence = valueToFirstSource.get(authToken);
 
@@ -223,74 +360,11 @@ export function analyzeRequestChain(
             if (prevLog?.response?.body) {
               try {
                 const parsed = JSON.parse(prevLog.response.body);
-
-                const commonPaths = [
-                  'token',
-                  'accessToken',
-                  'access_token',
-                  'authToken',
-                  'auth_token',
-                  'data.token',
-                  'data.accessToken',
-                  'data.access_token',
-                  'result.token',
-                  'result.accessToken',
-                ];
-
-                const getNestedValue = (obj: any, path: string): any => {
-                  return path
-                    .split('.')
-                    .reduce((current, key) => current?.[key], obj);
-                };
-
-                const looksLikeJWT = (value: any): boolean => {
-                  if (typeof value !== 'string') return false;
-                  const parts = value.split('.');
-                  return (
-                    parts.length === 3 && parts.every((part) => part.length > 0)
-                  );
-                };
-
-                for (const path of commonPaths) {
-                  const value = getNestedValue(parsed, path);
-                  if (
-                    value &&
-                    (looksLikeJWT(value) ||
-                      (typeof value === 'string' && value.length > 20))
-                  ) {
-                    tokenPath = path;
-                    break;
-                  }
-                }
-
-                if (!tokenPath) {
-                  const findJWTPath = (
-                    obj: any,
-                    currentPath: string = ''
-                  ): string | null => {
-                    if (looksLikeJWT(obj)) {
-                      return currentPath;
-                    }
-
-                    if (typeof obj === 'object' && obj !== null) {
-                      for (const key in obj) {
-                        const newPath = currentPath
-                          ? `${currentPath}.${key}`
-                          : key;
-                        const result = findJWTPath(obj[key], newPath);
-                        if (result) return result;
-                      }
-                    }
-
-                    return null;
-                  };
-
-                  tokenPath = findJWTPath(parsed);
-                }
+                tokenPath = findTokenPathInResponse(parsed);
               } catch (e) {
                 console.error(
                   'Failed to parse response for token detection:',
-                  e
+                  e,
                 );
               }
             }
@@ -360,6 +434,7 @@ export function analyzeRequestChain(
       suggestedAuthSource,
       queryParams: allParams,
       hasAuthWarning,
+      has401WithNoAuth,
     });
   }
 

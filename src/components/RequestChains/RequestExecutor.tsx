@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Copy,
   Save,
+  Globe,
 } from 'lucide-react';
 import { toast, useToast } from '@/hooks/use-toast';
 import type {
@@ -22,6 +23,7 @@ import type {
 import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
 import { Button } from '../ui/button';
 import { useLocation } from 'wouter';
+import { useDataManagement } from '@/hooks/useDataManagement';
 
 interface Variable {
   id?: string;
@@ -45,12 +47,12 @@ interface RequestExecutorProps {
   chainName?: string;
   onExecutionComplete: (
     logs: ExecutionLog[],
-    extractedVariables: Variable[]
+    extractedVariables: Variable[],
   ) => void;
   onVariableUpdate: (variables: Variable[]) => void;
   onExecutionStateChange?: (
     isExecuting: boolean,
-    currentRequestIndex: number
+    currentRequestIndex: number,
   ) => void;
   onPreExecute?: () => Promise<RequestChain | null>;
   onPostExecute?: () => void;
@@ -73,11 +75,14 @@ export function RequestExecutor({
   onResponse,
   isRunAllExecuting,
 }: RequestExecutorProps) {
+  const { activeEnvironment } = useDataManagement();
+  console.log('activeEnvironment:', activeEnvironment);
+
   const [location, setLocation] = useLocation();
   const [isExecuting, setIsExecuting] = useState(false);
   const [currentRequestIndex, setCurrentRequestIndex] = useState(-1);
   const [savedChainId, setSavedChainId] = useState<string | undefined>(
-    undefined
+    undefined,
   );
   const { toast } = useToast();
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
@@ -128,7 +133,7 @@ export function RequestExecutor({
 
   const extractDataFromResponse = (
     response: any,
-    extractVariables: any[]
+    extractVariables: any[],
   ): Record<string, any> => {
     const extracted: Record<string, any> = {};
     if (extractVariables && Array.isArray(extractVariables)) {
@@ -146,7 +151,7 @@ export function RequestExecutor({
 
   const executeRequest = async (
     request: APIRequest,
-    currentVars: Variable[]
+    currentVars: Variable[],
   ): Promise<ExecutionLog> => {
     const startTime = new Date().toISOString();
     const logId = Date.now().toString() + Math.random();
@@ -158,7 +163,7 @@ export function RequestExecutor({
         if (header.enabled) {
           processedHeaders[header.key] = replaceVariables(
             header.value,
-            currentVars
+            currentVars,
           );
         }
       });
@@ -172,7 +177,7 @@ export function RequestExecutor({
         if (param.enabled) {
           url.searchParams.set(
             param.key,
-            replaceVariables(param.value, currentVars)
+            replaceVariables(param.value, currentVars),
           );
         }
       });
@@ -188,7 +193,7 @@ export function RequestExecutor({
         if (bearerToken) {
           processedHeaders['Authorization'] = `Bearer ${replaceVariables(
             bearerToken,
-            currentVars
+            currentVars,
           )}`;
         }
       } else if (
@@ -197,7 +202,7 @@ export function RequestExecutor({
         request.authPassword
       ) {
         const credentials = btoa(
-          `${request.authUsername}:${request.authPassword}`
+          `${request.authUsername}:${request.authPassword}`,
         );
         processedHeaders['Authorization'] = `Basic ${credentials}`;
       } else if (
@@ -208,12 +213,12 @@ export function RequestExecutor({
         if (request.authApiLocation === 'header') {
           processedHeaders[request.authApiKey] = replaceVariables(
             request.authApiValue,
-            currentVars
+            currentVars,
           );
         } else {
           url.searchParams.set(
             request.authApiKey,
-            replaceVariables(request.authApiValue, currentVars)
+            replaceVariables(request.authApiValue, currentVars),
           );
         }
       }
@@ -234,7 +239,7 @@ export function RequestExecutor({
           headers: Object.fromEntries(response.headers.entries()),
           cookies: parseCookies(response.headers.get('set-cookie') || ''),
         },
-        request.extractVariables || []
+        request.extractVariables || [],
       );
 
       const log: ExecutionLog = {
@@ -394,9 +399,11 @@ export function RequestExecutor({
                   : typeof value === 'boolean'
                     ? 'boolean'
                     : 'string',
+                    ? 'boolean'
+                    : 'string',
               source: 'extracted',
               extractionPath: request.extractVariables.find(
-                (e) => e.name === name
+                (e) => e.name === name,
               )?.path,
             };
             newExtractedVars.push(newVar);
@@ -406,7 +413,7 @@ export function RequestExecutor({
           const updatedAllVars = [...allVariables];
           newExtractedVars.forEach((newVar) => {
             const existingIndex = updatedAllVars.findIndex(
-              (v) => v.name === newVar.name
+              (v) => v.name === newVar.name,
             );
             if (existingIndex >= 0) {
               updatedAllVars[existingIndex] = {
@@ -498,7 +505,7 @@ export function RequestExecutor({
               r.name === response.requestName ||
               r.id === response.requestId ||
               r.url === requestUrl ||
-              r.name === response.requestName?.trim()
+              r.name === response.requestName?.trim(),
           );
 
           if (
@@ -525,12 +532,14 @@ export function RequestExecutor({
                         : typeof value === 'boolean'
                           ? 'boolean'
                           : 'string',
+                          ? 'boolean'
+                          : 'string',
                     source: 'extracted',
                     extractionPath: variable.path,
                   };
 
                   const existingIndex = currentVars.findIndex(
-                    (v) => v.name === newVar.name
+                    (v) => v.name === newVar.name,
                   );
                   if (existingIndex >= 0) {
                     currentVars[existingIndex] = newVar;
@@ -543,7 +552,7 @@ export function RequestExecutor({
             } catch (error) {
               console.error(
                 'Error parsing response body for variable extraction:',
-                error
+                error,
               );
             }
           }
@@ -558,7 +567,7 @@ export function RequestExecutor({
         onVariableUpdate(currentVars);
 
         const successCount = logs.filter(
-          (log) => log.status === 'success'
+          (log) => log.status === 'success',
         ).length;
         const totalCount = logs.length;
       }
@@ -643,16 +652,30 @@ export function RequestExecutor({
   return (
     <div className='bg-card rounded-xl border border-border p-4 sm:p-6'>
       <div className='flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4'>
-        <div>
-          <h3 className='text-md md:text-lg font-semibold text-foreground'>
-            Request Execution
-          </h3>
-          <p className='text-sm text-muted-foreground'>
-            {request
-              ? 'Individual request execution'
-              : `${processedRequests?.filter((r) => r.enabled).length ?? 0
-              } requests`}
-          </p>
+        <div className='space-y-2'>
+          <div>
+            <h3 className='text-lg font-semibold text-foreground'>
+              Request Execution
+            </h3>
+            <p className='text-sm text-muted-foreground'>
+              {request
+                ? 'Individual request execution'
+                : `${
+                    processedRequests?.filter((r) => r.enabled).length ?? 0
+                  } requests`}
+            </p>
+          </div>
+
+          {/* Environment Badge */}
+          <div className='flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md w-fit'>
+            <Globe className='w-4 h-4 text-blue-600 dark:text-blue-400' />
+            <span className='text-xs text-gray-500 dark:text-gray-400'>
+              Environment:
+            </span>
+            <span className='text-xs font-semibold text-blue-700 dark:text-blue-400'>
+              {activeEnvironment?.name || 'No Environment'}
+            </span>
+          </div>
         </div>
         <div className='flex flex-wrap gap-2 sm:gap-3'>
           {isExecuting ? (
@@ -806,12 +829,13 @@ export function RequestExecutor({
                 </div>
                 <div className='flex items-center space-x-2 flex-shrink-0'>
                   <span
-                    className={`px-2 py-1 text-xs font-medium rounded ${log.status === 'success'
-                      ? 'bg-green-100 text-green-800'
-                      : log.status === 'error'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                      }`}
+                    className={`px-2 py-1 text-xs font-medium rounded ${
+                      log.status === 'success'
+                        ? 'bg-green-100 text-green-800'
+                        : log.status === 'error'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                    }`}
                   >
                     {log.response?.status || log.status}
                   </span>
@@ -876,12 +900,13 @@ export function RequestExecutor({
                           <div>
                             <span className='font-medium'>Status:</span>
                             <span
-                              className={`ml-2 px-2 py-1 text-xs rounded ${log.response.status < 300
-                                ? 'bg-green-100 text-green-800'
-                                : log.response.status < 400
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-red-100 text-red-800'
-                                }`}
+                              className={`ml-2 px-2 py-1 text-xs rounded ${
+                                log.response.status < 300
+                                  ? 'bg-green-100 text-green-800'
+                                  : log.response.status < 400
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                              }`}
                             >
                               {log.response.status}
                             </span>
@@ -897,7 +922,7 @@ export function RequestExecutor({
                             <pre className='font-mono text-muted-foreground bg-card p-2 rounded border text-xs overflow-x-auto scrollbar-thin max-h-40'>
                               {formatResponseBody(
                                 log.response.body,
-                                log.response.headers['content-type']
+                                log.response.headers['content-type'],
                               )}
                             </pre>
                           </div>
@@ -931,7 +956,7 @@ export function RequestExecutor({
                                   {String(value)}
                                 </span>
                               </div>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
