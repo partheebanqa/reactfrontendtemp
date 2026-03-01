@@ -262,20 +262,20 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
 
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+      <div className="bg-white rounded-lg border border-gray-200 p-3 md:p-6">
+        <h2 className="text-md md:text-xl font-bold text-gray-900 mb-4 flex items-center">
           <Globe className="w-6 h-6 mr-2 text-blue-600" />
           API Endpoints ({entries.length} endpoints)
         </h2>
 
-        <div className="space-y-4">
+        <div className="space-y-4 hidden md:block">
           {entries.map((group) => {
             const isExpanded = expandedUrls.has(group.key);
             const rate = successPct(group.passed, group.total);
 
             return (
               <div key={group.key} className="border border-gray-200 rounded-lg overflow-hidden">
-                {/* Row header (one per URL) */}
+
                 <div
                   className="p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
                   onClick={() => toggleUrl(group.key)}
@@ -288,23 +288,9 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
                         <ChevronUp className="w-5 h-5 text-gray-400" />
                       )}
 
-                      {/* Method chips summary */}
-                      {/* <div className="flex items-center gap-2">
-                        {Object.keys(group.methods).map((m) => (
-                          <span
-                            key={m}
-                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getMethodColor(
-                              m
-                            )}`}
-                          >
-                            {m}
-                          </span>
-                        ))}
-                      </div> */}
-
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate" title={group.endpoint}>
-                          {truncateText(group.endpoint, 70)}
+                        <p className="text-xs md:text-lg font-medium text-gray-900" title={group.endpoint}>
+                          {group.endpoint}
                         </p>
                         <p className="text-sm text-gray-500">
                           {group.total} test case{group.total === 1 ? "" : "s"}
@@ -358,6 +344,116 @@ export const RequestGrouping: React.FC<RequestGroupingProps> = ({ report, testCa
                             {/* <span className="text-sm text-gray-500">
                               {mb.total} test case{mb.total === 1 ? "" : "s"} • {mb.avgDuration}ms avg
                             </span> */}
+                          </div>
+
+                          <div className="space-y-3">
+                            {mb.testCases.map((tc) => (
+                              <TestCaseDetail key={tc.id} testCase={tc} />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="space-y-4 block md:hidden">
+          {entries.map((group) => {
+            const isExpanded = expandedUrls.has(group.key);
+            const rate = successPct(group.passed, group.total);
+
+            return (
+              <div
+                key={group.key}
+                className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden bg-white dark:bg-gray-900"
+              >
+                {/* HEADER */}
+                <div
+                  className="p-4 cursor-pointer bg-gray-50 dark:bg-gray-800/40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  onClick={() => toggleUrl(group.key)}
+                >
+                  {/* Top Row */}
+                  <div className="flex items-start gap-3">
+                    {isExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+                    ) : (
+                      <ChevronUp className="w-5 h-5 text-gray-400 mt-1 flex-shrink-0" />
+                    )}
+
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className="text-sm sm:text-base font-semibold text-gray-900 dark:text-white truncate"
+                        title={group.endpoint}
+                      >
+                        {group.endpoint}
+                      </p>
+
+                      <p className="text-xs text-gray-500 mt-1">
+                        {group.total} test case{group.total === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Stats Grid - Mobile Optimized */}
+                  <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:flex md:items-center md:justify-between gap-3 text-xs sm:text-sm">
+
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>{group.passed} Passed</span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-red-600">
+                      <XCircle className="w-4 h-4" />
+                      <span>{group.failed} Failed</span>
+                    </div>
+
+                    {group.skipped > 0 && (
+                      <div className="flex items-center gap-1 text-yellow-600">
+                        <AlertTriangle className="w-4 h-4" />
+                        <span>{group.skipped} Skipped</span>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-1 text-gray-500">
+                      <Clock className="w-4 h-4" />
+                      <span>{group.avgDuration}ms avg</span>
+                    </div>
+
+                    <div
+                      className={`font-semibold ${rate >= 80
+                        ? "text-green-600"
+                        : rate >= 60
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                        }`}
+                    >
+                      {rate}% Success
+                    </div>
+                  </div>
+                </div>
+
+                {/* EXPANDED SECTION */}
+                {isExpanded && (
+                  <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+                    <div className="p-4 space-y-6">
+                      {Object.values(group.methods).map((mb) => (
+                        <div key={mb.method} className="space-y-3">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span
+                              className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium border ${getMethodColor(
+                                mb.method
+                              )}`}
+                            >
+                              {mb.method}
+                            </span>
+
+                            <span className="text-xs text-gray-500">
+                              {mb.total} cases • {mb.avgDuration}ms avg
+                            </span>
                           </div>
 
                           <div className="space-y-3">
