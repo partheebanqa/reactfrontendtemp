@@ -2743,9 +2743,10 @@ export function RequestEditor({
             e.stopPropagation();
             setInlinePickerTarget(isOpen ? null : { field, index, subField });
           }}
-          className='flex items-center gap-1 px-2 py-1 text-[10px] rounded bg-cyan-500 hover:bg-cyan-400 text-black font-semibold transition-colors whitespace-nowrap border-0'
+          className='flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-colors whitespace-nowrap'
           title={`Bind a variable to ${subField}`}
         >
+          <Plus className='w-3 h-3' />
           Substitute Variable
         </button>
 
