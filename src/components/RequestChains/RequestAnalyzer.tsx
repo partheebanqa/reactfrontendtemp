@@ -335,13 +335,6 @@ export function RequestAnalyzer({
                 <Zap className='w-4 h-4 mr-2' />
                 Apply to All Requests
               </Button>
-              <Button
-                size='sm'
-                variant='ghost'
-                onClick={() => setJustExtractedVariable(null)}
-              >
-                Dismiss
-              </Button>
             </div>
           </div>
         )}
