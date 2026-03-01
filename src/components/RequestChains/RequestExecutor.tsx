@@ -399,8 +399,6 @@ export function RequestExecutor({
                   : typeof value === 'boolean'
                     ? 'boolean'
                     : 'string',
-                    ? 'boolean'
-                    : 'string',
               source: 'extracted',
               extractionPath: request.extractVariables.find(
                 (e) => e.name === name,
@@ -530,8 +528,6 @@ export function RequestExecutor({
                       typeof value === 'number'
                         ? 'number'
                         : typeof value === 'boolean'
-                          ? 'boolean'
-                          : 'string',
                           ? 'boolean'
                           : 'string',
                     source: 'extracted',
@@ -705,10 +701,11 @@ export function RequestExecutor({
                       disabled={
                         !chainName?.trim() || (!!savedChainId && !chainId)
                       }
-                      className={`hover-scale ${!chainName?.trim() || (!!savedChainId && !chainId)
-                        ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
-                        : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
-                        } disabled:opacity-70`}
+                      className={`hover-scale ${
+                        !chainName?.trim() || (!!savedChainId && !chainId)
+                          ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
+                          : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
+                      } disabled:opacity-70`}
                     >
                       <Save className='w-4 h-4' />
                       Save
@@ -732,11 +729,12 @@ export function RequestExecutor({
                     isRunAllExecuting ||
                     (!savedChainId && !chainId)
                   }
-                  className={`hover-scale ${processedRequests.filter((r) => r.enabled).length === 0 ||
+                  className={`hover-scale ${
+                    processedRequests.filter((r) => r.enabled).length === 0 ||
                     (!savedChainId && !chainId)
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    : 'bg-[#136fb0] text-white'
-                    }`}
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                      : 'bg-[#136fb0] text-white'
+                  }`}
                 >
                   <Play className='w-4 h-4' />
                   Execute
@@ -749,10 +747,11 @@ export function RequestExecutor({
                   disabled={
                     !chainName?.trim() || isExecuting || isRunAllExecuting
                   }
-                  className={`hover-scale ${!chainName?.trim()
-                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
-                    : 'bg-[#136fb0] text-white hover:bg-[#136fb0 py-4]'
-                    } disabled:opacity-70`}
+                  className={`hover-scale ${
+                    !chainName?.trim()
+                      ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
+                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0 py-4]'
+                  } disabled:opacity-70`}
                 >
                   <Save className='w-4 h-4' />
                   Update

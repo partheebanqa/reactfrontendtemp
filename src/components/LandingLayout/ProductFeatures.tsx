@@ -29,7 +29,42 @@ const features = [
     title: 'Rapid Test Creation',
     subtitle:
       'Record live app traffic with our Network Interceptor to build production-ready suites instantly.',
-    icon: <Bug size={25} />,
+    icon: (
+      <svg
+        viewBox='0 0 100 100'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+        className='w-[25px] h-[25px]'
+      >
+        <circle
+          cx='50'
+          cy='50'
+          r='40'
+          stroke='#1e3a5f'
+          strokeWidth='3'
+          fill='none'
+        />
+        <path d='M 40 30 L 40 70 L 70 50 Z' fill='#1e3a5f' />
+        <path
+          d='M 10 25 L 25 25'
+          stroke='#0d9488'
+          strokeWidth='2'
+          strokeLinecap='round'
+        />
+        <path
+          d='M 10 50 L 28 50'
+          stroke='#0d9488'
+          strokeWidth='2'
+          strokeLinecap='round'
+        />
+        <path
+          d='M 10 75 L 25 75'
+          stroke='#0d9488'
+          strokeWidth='2'
+          strokeLinecap='round'
+        />
+      </svg>
+    ),
     image: RadipTest,
     to: '/member-management',
   },
@@ -37,7 +72,46 @@ const features = [
     title: 'Integration & Flow Testing',
     subtitle:
       'Map complex API chains automatically with our Smart Correlation Engine.',
-    icon: <TestTubeDiagonal size={25} />,
+    icon: (
+      <svg
+        viewBox='0 0 100 100'
+        fill='none'
+        xmlns='http://www.w3.org/2000/svg'
+        className='w-[25px] h-[25px]'
+      >
+        <circle
+          cx='30'
+          cy='30'
+          r='12'
+          stroke='#1e3a5f'
+          strokeWidth='3'
+          fill='none'
+        />
+        <circle
+          cx='70'
+          cy='30'
+          r='12'
+          stroke='#1e3a5f'
+          strokeWidth='3'
+          fill='none'
+        />
+        <circle
+          cx='50'
+          cy='70'
+          r='12'
+          stroke='#0d9488'
+          strokeWidth='3'
+          fill='none'
+        />
+
+        <path d='M 35 40 L 45 60' stroke='#1e3a5f' strokeWidth='2.5' />
+        <path d='M 65 40 L 55 60' stroke='#1e3a5f' strokeWidth='2.5' />
+
+        <circle cx='30' cy='30' r='4' fill='#1e3a5f' />
+        <circle cx='70' cy='30' r='4' fill='#1e3a5f' />
+        <circle cx='50' cy='70' r='4' fill='#0d9488' />
+      </svg>
+    ),
     image: Integration,
     to: '/course-management',
   },
