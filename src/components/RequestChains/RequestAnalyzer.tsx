@@ -15,6 +15,7 @@ import {
   Zap,
   ArrowRight,
   Database,
+  ShieldAlert,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -38,7 +39,7 @@ interface RequestAnalyzerProps {
   onExtractVariable?: (
     requestId: string,
     path: string,
-    suggestedName: string
+    suggestedName: string,
   ) => void;
   onApplyToAllRequests?: (variableName: string) => void;
   onApplyToRequest?: (requestId: string, variableName: string) => void;
@@ -53,7 +54,7 @@ const hasVariablePattern = (text: string): boolean => {
 
 const substituteVariables = (
   text: string,
-  extractedVariablesByRequest: Record<string, Record<string, any>>
+  extractedVariablesByRequest: Record<string, Record<string, any>>,
 ): string => {
   if (!text) return text;
 
@@ -77,9 +78,6 @@ const UrlDisplay = ({
   extractedVariablesByRequest: Record<string, Record<string, any>>;
 }) => {
   const hasVariables = hasVariablePattern(url);
-  const substitutedUrl = hasVariables
-    ? substituteVariables(url, extractedVariablesByRequest)
-    : url;
 
   if (!hasVariables) {
     return <p className='text-xs text-muted-foreground mt-1 truncate'>{url}</p>;
@@ -116,7 +114,7 @@ export function RequestAnalyzer({
 }: RequestAnalyzerProps) {
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
   const [expandedResponses, setExpandedResponses] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [justExtractedVariable, setJustExtractedVariable] = useState<{
     requestId: string;
@@ -183,7 +181,7 @@ export function RequestAnalyzer({
   const handleExtractClick = (
     sourceRequest: any,
     path: string,
-    suggestedName: string
+    suggestedName: string,
   ) => {
     if (!onExtractVariable) return;
 
@@ -196,15 +194,15 @@ export function RequestAnalyzer({
   };
 
   const successCount = executionLogs.filter(
-    (log) => log.status === 'success'
+    (log) => log.status === 'success',
   ).length;
   const failedCount = executionLogs.filter(
-    (log) => log.status === 'error'
+    (log) => log.status === 'error',
   ).length;
   const extractionCount = Object.keys(extractedVariablesByRequest).length;
 
   const totalExtractedVariables = Object.values(
-    extractedVariablesByRequest
+    extractedVariablesByRequest,
   ).reduce((sum, vars) => sum + Object.keys(vars).length, 0);
 
   const substitutedCount = requests.reduce((count, request) => {
@@ -232,13 +230,13 @@ export function RequestAnalyzer({
 
   const availableAuthToken = (() => {
     for (const [requestId, variables] of Object.entries(
-      extractedVariablesByRequest
+      extractedVariablesByRequest,
     )) {
       const authVar = Object.entries(variables).find(([key, value]) => {
         if (!value || typeof value !== 'string') return false;
         const looksLikeJWT =
           /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
-            value as string
+            value as string,
           );
         const looksLikeToken = (value as string).length > 20;
         return looksLikeJWT || looksLikeToken;
@@ -249,6 +247,24 @@ export function RequestAnalyzer({
     }
     return null;
   })();
+
+  const findExtractedTokenForSuggestion = (
+    analysis: any,
+  ): { key: string; value: string } | null => {
+    if (!analysis?.suggestedAuthSource) return null;
+    const sourceRequest = requests[analysis.suggestedAuthSource.apiIndex];
+    if (!sourceRequest) return null;
+    const extractedVars = extractedVariablesByRequest[sourceRequest.id] || {};
+    const found = Object.entries(extractedVars).find(([, value]) => {
+      if (!value || typeof value !== 'string') return false;
+      const looksLikeJWT =
+        /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+          value as string,
+        );
+      return looksLikeJWT || (value as string).length > 20;
+    });
+    return found ? { key: found[0], value: String(found[1]) } : null;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -334,9 +350,12 @@ export function RequestAnalyzer({
           {requests.map((request, index) => {
             const analysis = analysisResults[index];
             const executionLog = executionLogs.find(
-              (log) => log.requestId === request.id
+              (log) => log.requestId === request.id,
             );
             const isResponseExpanded = expandedResponses.has(request.id);
+
+            const extractedTokenForSuggestion =
+              findExtractedTokenForSuggestion(analysis);
 
             return (
               <div
@@ -356,6 +375,12 @@ export function RequestAnalyzer({
                         <span className='font-medium truncate'>
                           {request.name || request.url || 'Unnamed Request'}
                         </span>
+                        {analysis?.has401WithNoAuth && (
+                          <Badge className='bg-orange-100 text-orange-800 border border-orange-300 flex items-center gap-1'>
+                            <ShieldAlert className='w-3 h-3' />
+                            401 — No Auth
+                          </Badge>
+                        )}
                       </div>
                       <UrlDisplay
                         url={request.url}
@@ -396,142 +421,235 @@ export function RequestAnalyzer({
                       Dependencies
                     </h4>
 
-                    {analysis?.hasAuthWarning && (
-                      <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded'>
-                        <AlertTriangle className='w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5' />
+                    {analysis?.has401WithNoAuth && (
+                      <div className='flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded'>
+                        <ShieldAlert className='w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5' />
                         <div className='flex-1 min-w-0'>
-                          <p className='font-medium text-amber-900 text-sm'>
-                            Auth Token Not Found
+                          <p className='font-medium text-orange-900 text-sm'>
+                            401 Unauthorized — No Auth Configured
                           </p>
-                          <p className='text-xs text-amber-700 mt-1'>
-                            Token is used but not extracted from previous
-                            responses
+                          <p className='text-xs text-orange-700 mt-1'>
+                            This request returned 401 and has no authentication
+                            set up.
                           </p>
+
                           {analysis.suggestedAuthSource && (
-                            <div className='mt-2 flex items-start gap-2'>
-                              <div className='flex-1'>
-                                <p className='text-xs text-amber-700'>
-                                  💡 <strong>Suggestion:</strong> Extract token
-                                  from "{analysis.suggestedAuthSource.apiName}"
-                                  at{' '}
-                                  <code className='bg-amber-100 px-1 rounded'>
-                                    {analysis.suggestedAuthSource.path}
-                                  </code>
-                                </p>
-                              </div>
-                              {(() => {
-                                const sourceRequestIndex =
-                                  analysis.suggestedAuthSource.apiIndex;
-                                const sourceRequest =
-                                  requests[sourceRequestIndex];
-                                const extractedVars =
-                                  extractedVariablesByRequest[
-                                    sourceRequest?.id
-                                  ] || {};
+                            <div className='mt-2 space-y-2'>
+                              <p className='text-xs text-orange-700'>
+                                💡 <strong>Suggestion:</strong>{' '}
+                                {analysis.suggestedAuthSource.reason}
+                              </p>
+                              <p className='text-xs text-orange-600'>
+                                Extract from{' '}
+                                <strong>
+                                  "{analysis.suggestedAuthSource.apiName}"
+                                </strong>{' '}
+                                at path{' '}
+                                <code className='bg-orange-100 px-1 rounded'>
+                                  {analysis.suggestedAuthSource.path}
+                                </code>
+                              </p>
 
-                                const extractedAuthVar = Object.entries(
-                                  extractedVars
-                                ).find(([key, value]) => {
-                                  if (!value || typeof value !== 'string')
-                                    return false;
-                                  const looksLikeJWT =
-                                    /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
-                                      value as string
-                                    );
-                                  const looksLikeToken =
-                                    (value as string).length > 20;
-                                  return looksLikeJWT || looksLikeToken;
-                                });
-
-                                if (extractedAuthVar) {
-                                  return (
-                                    <div className='flex gap-2'>
-                                      <button
-                                        onClick={() => {
-                                          if (onApplyToRequest) {
-                                            onApplyToRequest(
-                                              request.id,
-                                              extractedAuthVar[0]
-                                            );
-                                          }
-                                        }}
-                                        className='px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1 whitespace-nowrap'
-                                      >
-                                        <Zap className='w-3 h-3' />
-                                        Apply to This Request
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          if (onApplyToAllRequests) {
-                                            onApplyToAllRequests(
-                                              extractedAuthVar[0]
-                                            );
-                                          }
-                                        }}
-                                        className='px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap'
-                                      >
-                                        <Zap className='w-3 h-3' />
-                                        Apply to All
-                                      </button>
-                                    </div>
-                                  );
-                                }
-
-                                return (
+                              <div className='flex flex-wrap gap-2 mt-2'>
+                                {extractedTokenForSuggestion ? (
+                                  // Token already extracted — show Apply buttons
+                                  <>
+                                    <button
+                                      onClick={() => {
+                                        if (onApplyToRequest) {
+                                          onApplyToRequest(
+                                            request.id,
+                                            extractedTokenForSuggestion.key,
+                                          );
+                                        }
+                                      }}
+                                      className='px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                    >
+                                      <Zap className='w-3 h-3' />
+                                      Apply to This Request
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (onApplyToAllRequests) {
+                                          onApplyToAllRequests(
+                                            extractedTokenForSuggestion.key,
+                                          );
+                                        }
+                                      }}
+                                      className='px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                    >
+                                      <Zap className='w-3 h-3' />
+                                      Apply to All Requests
+                                    </button>
+                                  </>
+                                ) : (
+                                  // Token not yet extracted — show Extract button
                                   <button
                                     onClick={() => {
-                                      if (
-                                        !analysis.suggestedAuthSource ||
-                                        !onExtractVariable
-                                      )
-                                        return;
-
-                                      const sourceRequestIndex =
-                                        analysis.suggestedAuthSource.apiIndex;
                                       const sourceRequest =
-                                        requests[sourceRequestIndex];
-
-                                      if (!sourceRequest) {
-                                        console.error(
-                                          'Source request not found at index:',
-                                          sourceRequestIndex
-                                        );
-                                        return;
-                                      }
-
-                                      if (!analysis.suggestedAuthSource.path) {
-                                        console.error(
-                                          'No path specified for extraction'
-                                        );
-                                        return;
-                                      }
-
+                                        requests[
+                                          analysis.suggestedAuthSource.apiIndex
+                                        ];
+                                      if (!sourceRequest) return;
                                       const pathParts =
                                         analysis.suggestedAuthSource.path.split(
-                                          '.'
+                                          '.',
                                         );
                                       const suggestedName =
                                         pathParts[pathParts.length - 1] ||
                                         'authToken';
-
                                       handleExtractClick(
                                         sourceRequest,
                                         analysis.suggestedAuthSource.path,
-                                        suggestedName
+                                        suggestedName,
                                       );
                                     }}
-                                    className='px-3 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                    className='px-3 py-1 bg-orange-600 text-white rounded text-xs hover:bg-orange-700 transition-colors flex items-center gap-1 whitespace-nowrap'
                                   >
                                     <Plus className='w-3 h-3' />
-                                    Extract Now
+                                    Extract Token & Fix Auth
                                   </button>
-                                );
-                              })()}
+                                )}
+                              </div>
                             </div>
+                          )}
+
+                          {/* Fallback: no suggestion found but got 401 */}
+                          {!analysis.suggestedAuthSource && (
+                            <p className='text-xs text-orange-600 mt-2'>
+                              No previous requests found that could provide auth
+                              data. Add a login/auth request before this one.
+                            </p>
                           )}
                         </div>
                       </div>
                     )}
+
+                    {/* Existing: hardcoded auth token warning */}
+                    {analysis?.hasAuthWarning &&
+                      !analysis?.has401WithNoAuth && (
+                        <div className='flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded'>
+                          <AlertTriangle className='w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5' />
+                          <div className='flex-1 min-w-0'>
+                            <p className='font-medium text-amber-900 text-sm'>
+                              Auth Token Not Found
+                            </p>
+                            <p className='text-xs text-amber-700 mt-1'>
+                              Token is used but not extracted from previous
+                              responses
+                            </p>
+                            {analysis.suggestedAuthSource && (
+                              <div className='mt-2 flex items-start gap-2'>
+                                <div className='flex-1'>
+                                  <p className='text-xs text-amber-700'>
+                                    💡 <strong>Suggestion:</strong> Extract
+                                    token from "
+                                    {analysis.suggestedAuthSource.apiName}" at{' '}
+                                    <code className='bg-amber-100 px-1 rounded'>
+                                      {analysis.suggestedAuthSource.path}
+                                    </code>
+                                  </p>
+                                </div>
+                                {(() => {
+                                  const sourceRequest =
+                                    requests[
+                                      analysis.suggestedAuthSource.apiIndex
+                                    ];
+                                  const extractedVars =
+                                    extractedVariablesByRequest[
+                                      sourceRequest?.id
+                                    ] || {};
+
+                                  const extractedAuthVar = Object.entries(
+                                    extractedVars,
+                                  ).find(([key, value]) => {
+                                    if (!value || typeof value !== 'string')
+                                      return false;
+                                    const looksLikeJWT =
+                                      /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(
+                                        value as string,
+                                      );
+                                    const looksLikeToken =
+                                      (value as string).length > 20;
+                                    return looksLikeJWT || looksLikeToken;
+                                  });
+
+                                  if (extractedAuthVar) {
+                                    return (
+                                      <div className='flex gap-2'>
+                                        <button
+                                          onClick={() => {
+                                            if (onApplyToRequest) {
+                                              onApplyToRequest(
+                                                request.id,
+                                                extractedAuthVar[0],
+                                              );
+                                            }
+                                          }}
+                                          className='px-3 py-1 bg-green-600 text-white rounded text-xs hover:bg-green-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                        >
+                                          <Zap className='w-3 h-3' />
+                                          Apply to This Request
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (onApplyToAllRequests) {
+                                              onApplyToAllRequests(
+                                                extractedAuthVar[0],
+                                              );
+                                            }
+                                          }}
+                                          className='px-3 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                        >
+                                          <Zap className='w-3 h-3' />
+                                          Apply to All
+                                        </button>
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <button
+                                      onClick={() => {
+                                        if (
+                                          !analysis.suggestedAuthSource ||
+                                          !onExtractVariable
+                                        )
+                                          return;
+
+                                        const sourceRequestIndex =
+                                          analysis.suggestedAuthSource.apiIndex;
+                                        const sourceRequest =
+                                          requests[sourceRequestIndex];
+
+                                        if (!sourceRequest) return;
+
+                                        const pathParts =
+                                          analysis.suggestedAuthSource.path.split(
+                                            '.',
+                                          );
+                                        const suggestedName =
+                                          pathParts[pathParts.length - 1] ||
+                                          'authToken';
+
+                                        handleExtractClick(
+                                          sourceRequest,
+                                          analysis.suggestedAuthSource.path,
+                                          suggestedName,
+                                        );
+                                      }}
+                                      className='px-3 py-1 bg-amber-600 text-white rounded text-xs hover:bg-amber-700 transition-colors flex items-center gap-1 whitespace-nowrap'
+                                    >
+                                      <Plus className='w-3 h-3' />
+                                      Extract Now
+                                    </button>
+                                  );
+                                })()}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                     {analysis?.authSource && (
                       <div className='flex items-start gap-2 p-2 bg-white border border-gray-200 rounded'>
@@ -549,6 +667,7 @@ export function RequestAnalyzer({
                       </div>
                     )}
                   </div>
+
                   {analysis?.queryParams && analysis.queryParams.length > 0 && (
                     <div className='space-y-2'>
                       <h4 className='text-sm font-medium text-gray-900'>
@@ -584,9 +703,9 @@ export function RequestAnalyzer({
                                         sourceRequest?.id
                                       ] || {};
                                     const alreadyExtracted = Object.entries(
-                                      extractedVars
+                                      extractedVars,
                                     ).find(
-                                      ([key, value]) => value === param.value
+                                      ([key, value]) => value === param.value,
                                     );
 
                                     if (alreadyExtracted) {
@@ -603,7 +722,7 @@ export function RequestAnalyzer({
                                               if (onApplyToRequest) {
                                                 onApplyToRequest(
                                                   request.id,
-                                                  alreadyExtracted[0]
+                                                  alreadyExtracted[0],
                                                 );
                                               }
                                             }}
@@ -631,7 +750,7 @@ export function RequestAnalyzer({
                                               onExtractVariable(
                                                 sourceRequest.id,
                                                 param.source.path,
-                                                suggestedName
+                                                suggestedName,
                                               );
                                             }
                                           }}
@@ -699,7 +818,7 @@ export function RequestAnalyzer({
                                   {String(value).length > 50 ? '...' : ''}
                                 </p>
                               </div>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
@@ -712,7 +831,7 @@ export function RequestAnalyzer({
                           Assertions (
                           {
                             executionLog.response.assertions.filter(
-                              (a: any) => a.status === 'passed'
+                              (a: any) => a.status === 'passed',
                             ).length
                           }
                           /{executionLog.response.assertions.length} passed)
@@ -725,7 +844,7 @@ export function RequestAnalyzer({
                                 className={`flex items-center gap-2 p-2 rounded text-xs ${
                                   assertion.status === 'passed'
                                     ? 'bg-green-50 text-green-800 border border-green-200'
-                                    : 'bg-red-50 text-red-800 border border-red-200'
+                                    : 'bg-orange-50 text-orange-800 border border-orange-200'
                                 }`}
                               >
                                 {assertion.status === 'passed' ? (
@@ -740,7 +859,7 @@ export function RequestAnalyzer({
                                   {assertion.description}
                                 </span>
                               </div>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
