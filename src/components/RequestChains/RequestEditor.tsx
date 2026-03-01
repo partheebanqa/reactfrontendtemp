@@ -346,13 +346,29 @@ export function RequestEditor({
   }, [params]);
 
   useEffect(() => {
-    onUpdate({
-      authUsername: auth.username,
-      authPassword: auth.password,
-      authToken: auth.token,
-    });
+    const token = auth.token.trim();
+    if (token) {
+      onUpdate({
+        authUsername: auth.username,
+        authPassword: auth.password,
+        authToken: token,
+        authorizationType: 'bearer',
+        authorization: {
+          token: token,
+        },
+      });
+    } else {
+      onUpdate({
+        authUsername: auth.username,
+        authPassword: auth.password,
+        authToken: '',
+        authorizationType: 'none',
+        authorization: {
+          token: '',
+        },
+      });
+    }
   }, [auth]);
-
   useEffect(() => {
     setUrl(initialRequest.url || '');
     setBody(initialRequest.body || '');
@@ -1155,49 +1171,14 @@ export function RequestEditor({
       safeRequest.bodyFormData = null;
       safeRequest.bodyRawContent = body;
     } else {
-      safeRequest.bodyFormData = null;
-      safeRequest.bodyRawContent = '';
-    }
-
-    {
-      const token = (
-        safeRequest.authToken ||
-        safeRequest.authorization?.token ||
-        ''
-      ).trim();
-      if (token) {
-        (safeRequest as any).authorizationType = 'bearer';
-        (safeRequest as any).authorization = {
-          ...(safeRequest.authorization || {}),
-          token,
-        };
-
-        const headers = Array.isArray(safeRequest.headers)
-          ? [...safeRequest.headers]
-          : [];
-        const authIdx = headers.findIndex(
-          (h) => h?.key?.toLowerCase() === 'authorization',
-        );
-        const value = `Bearer ${token}`;
-        if (authIdx >= 0) {
-          headers[authIdx] = {
-            ...headers[authIdx],
-            value,
-            enabled: true,
-          };
-        } else {
-          headers.push({
-            id: `temp_${Date.now()}`,
-            key: 'Authorization',
-            value,
-            enabled: true,
-          });
-        }
-        (safeRequest as any).headers = headers;
-      } else {
-        (safeRequest as any).authorizationType = 'none';
-        (safeRequest as any).authorization = {};
-      }
+      (safeRequest as any).authorizationType = 'none';
+      (safeRequest as any).authorization = {};
+      const headers = Array.isArray(safeRequest.headers)
+        ? [...safeRequest.headers]
+        : [];
+      (safeRequest as any).headers = headers.filter(
+        (h) => h?.key?.toLowerCase() !== 'authorization',
+      );
     }
 
     if (!safeRequest.url) {
