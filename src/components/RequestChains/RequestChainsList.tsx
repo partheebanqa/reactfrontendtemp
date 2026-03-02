@@ -18,6 +18,9 @@ import {
   RefreshCw,
   ChartNoAxesCombined,
   CopyPlus,
+  Edit2,
+  MoreVertical,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,6 +62,7 @@ import {
 import { RequestChainPreviewDialog } from './RequestChainPreview';
 import { Loader } from '../Loader';
 import { navigate } from 'wouter/use-browser-location';
+import React from 'react';
 
 interface RequestChainsListProps {
   chains: RequestChain[];
@@ -248,6 +252,14 @@ export function RequestChainsList({
       'bg-gray-100 text-gray-700 border-gray-200'
     );
   };
+
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+
+  const toggleMenu = (id: string) => {
+    setOpenMenuId((prev) => (prev === id ? null : id));
+  };
+
+
 
   return (
     <div className='space-y-3'>
@@ -535,7 +547,7 @@ export function RequestChainsList({
 
       {!loading && paginatedChains.length > 0 && (
         <>
-          <div className='space-y-2 md:space-y-3'>
+          <div className='hidden lg:block space-y-2 md:space-y-3'>
             {paginatedChains.map((chain) => (
               <Card
                 key={chain.id}
@@ -852,6 +864,210 @@ export function RequestChainsList({
             ))}
           </div>
 
+          <div className="lg:hidden space-y-4">
+            {paginatedChains.map((chain) => (
+              <div
+                key={chain.id}
+                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                {/* Card Header */}
+                <div className="p-4 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-transparent">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 flex-shrink-0">
+                        <Link2 className="w-6 h-6 text-white" />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-slate-900 truncate">{chain.name}</h3>
+
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          <span className="text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                            {chain.environment?.name || 'No Environment'}
+                          </span>
+
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${chain?.enabled
+                              ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                              : "bg-slate-100 text-slate-800 border-slate-200"
+                              }`}
+                          >
+                            {chain.enabled ? 'Enabled' : 'Disabled'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="relative flex-shrink-0">
+                      <button
+                        onClick={() => toggleMenu(chain.id)}
+                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                      >
+                        <MoreVertical className="w-5 h-5" />
+                      </button>
+
+                      {openMenuId === chain.id && (
+                        <>
+                          <div className="fixed inset-0 z-10" onClick={() => setOpenMenuId(null)} />
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-20">
+                            <button
+                              onClick={() => onCloneChain(chain.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3"
+                            >
+                              <Copy className="w-4 h-4" />
+                              Duplicate
+                            </button>
+
+                            <button
+                              onClick={() => handleClickReport(chain.id)}
+                              className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3"
+                            >
+                              <BarChart3 className="w-4 h-4" />
+                              Reports
+                            </button>
+
+                            <div className="border-t border-slate-100 my-1" />
+
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <button className='flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700'>
+                                  <Trash2 className='w-4 h-4 mr-2' />
+                                  Delete
+                                </button>
+                              </AlertDialogTrigger>
+
+                              <AlertDialogContent className='max-w-md'>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Delete this chain?
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will permanently delete "{chain.name}
+                                    ". This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>
+                                    Cancel
+                                  </AlertDialogCancel>
+
+                                  <Button
+                                    variant='destructive'
+                                    onClick={() => onDeleteChain(chain.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Body */}
+                <div className="p-4 space-y-3">
+                  <p className="text-sm text-slate-600">{chain.description}</p>
+
+                  <div className="bg-slate-50 rounded-lg p-3 border border-slate-200">
+                    <div className="flex items-center flex-wrap gap-1.5 text-xs">
+                      {chain?.chainRequests &&
+                        chain.chainRequests.length > 0 && (
+                          <>
+                            {chain.chainRequests
+                              .slice(0, 3)
+                              .map((step, idx) => {
+                                const isLastVisible =
+                                  idx ===
+                                  Math.min(chain.chainRequests.length, 3) - 1;
+
+                                return (
+                                  <React.Fragment key={`${chain.id}-flowm-${idx}`}>
+                                    <span className="px-2 py-1 bg-white text-slate-700 rounded font-medium border border-slate-200">
+                                      {step.name.slice(0, 60)}
+                                    </span>
+
+
+                                    {!isLastVisible && (
+                                      <span className="text-slate-400 font-bold">→</span>
+                                    )}
+
+
+                                    {isLastVisible &&
+                                      chain.chainRequests.length > 3 && (
+                                        <span className="text-slate-400 font-bold">
+                                          → ...
+                                        </span>
+                                      )}
+                                  </React.Fragment>
+                                );
+                              })}
+                          </>
+                        )}
+                    </div>
+                  </div>
+
+                  {(chain?.tags?.length ?? 0) > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {chain?.tags?.map((tag, idx) => (
+                        <span
+                          key={`${chain.id}-tagm-${idx}`}
+                          className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+
+
+                  <div className="flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
+                    <span className="font-mono bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                      ID: {chain.id.slice(0, 21)}...
+                    </span>
+                    <span>•</span>
+                    <span>Created:  {new Date(chain.createdAt).toLocaleDateString()}</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 pt-2">
+                    <button
+                      onClick={() => onToggleChain(chain?.id)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-teal-600/30 transition-all duration-200"
+                    >
+                      <Play className="w-4 h-4" />
+                      <span className="text-xs">Execute</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setPreviewChain(chain);
+                        setPreviewOpen(true);
+                      }}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors border border-slate-200"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="text-xs">View</span>
+                    </button>
+
+                    <button
+                      onClick={() => onEditChain(chain)}
+                      className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-50 text-blue-700 rounded-lg font-medium hover:bg-blue-100 transition-colors border border-blue-200"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      <span className="text-xs">Edit</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* {renderPagination()} */}
+          </div>
+
           {/* Pagination footer */}
           <RequestChainPagination
             totalItems={totalItems}
@@ -860,7 +1076,8 @@ export function RequestChainsList({
             setCurrentPage={setCurrentPage}
           />
         </>
-      )}
+      )
+      }
 
       <RequestChainPreviewDialog
         open={previewOpen}
@@ -868,23 +1085,25 @@ export function RequestChainsList({
         chain={previewChain}
       />
 
-      {!loading && filteredAndSortedChains.length === 0 && (
-        <div className='text-center py-12 px-4'>
-          <Workflow className='w-12 h-12 md:w-16 md:h-16 text-muted-foreground mx-auto mb-4' />
-          <h3 className='text-base md:text-lg font-medium mb-2'>
-            No request chains found
-          </h3>
-          <p className='text-sm md:text-base text-muted-foreground mb-6 max-w-md mx-auto'>
-            {searchTerm || statusFilter !== 'all'
-              ? 'Try adjusting your search or filter criteria.'
-              : 'Create your first request chain to automate your API workflows.'}
-          </p>
-          <Button onClick={onCreateChain} className='gap-2'>
-            <Plus className='w-4 h-4' />
-            Create Request Chain
-          </Button>
-        </div>
-      )}
-    </div>
+      {
+        !loading && filteredAndSortedChains.length === 0 && (
+          <div className='text-center py-12 px-4'>
+            <Workflow className='w-12 h-12 md:w-16 md:h-16 text-muted-foreground mx-auto mb-4' />
+            <h3 className='text-base md:text-lg font-medium mb-2'>
+              No request chains found
+            </h3>
+            <p className='text-sm md:text-base text-muted-foreground mb-6 max-w-md mx-auto'>
+              {searchTerm || statusFilter !== 'all'
+                ? 'Try adjusting your search or filter criteria.'
+                : 'Create your first request chain to automate your API workflows.'}
+            </p>
+            <Button onClick={onCreateChain} className='gap-2'>
+              <Plus className='w-4 h-4' />
+              Create Request Chain
+            </Button>
+          </div>
+        )
+      }
+    </div >
   );
 }

@@ -53,6 +53,8 @@ import FaqPageNew from '@/pages/FaqPageNew';
 import JsonViewer from '@/pages/JsonViewer';
 import UTFEncoderDecoder from '@/pages/UTFEncoderDecoder';
 import BS64EncoderDecoder from '@/pages/BS64EncoderDecoder';
+import RequestChainsList from '@/components/RequestChains/RequestChainList';
+import TestSuiteList from '@/components/TestSuit/TestSuiteListNew';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -95,9 +97,11 @@ export default function Router() {
           <Route path='/dashboard' component={Dashboard} />
           <Route path='/request-builder' component={RequestBuilderPage} />
           <Route path='/request-chains' component={RequestChains} />
+          <Route path='/request-chains-list' component={RequestChainsList} />
           <Route path='/request-chains/create' component={RequestChainCreate} />
           <Route path='/request-chains/:id/edit' component={RequestChainEdit} />
           <Route path='/test-suites' component={TestSuites} />
+          <Route path='/test-suites-list' component={TestSuiteList} />
           <Route path='/test-suites/:id/edit' component={CreateTestSuit} />
           <Route path='/test-suites/creates' component={EditTestSuite} />
           <Route path='test-suites/create-new' component={CreateTestSuit} />
