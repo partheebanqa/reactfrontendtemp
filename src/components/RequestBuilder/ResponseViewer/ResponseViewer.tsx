@@ -653,6 +653,8 @@ const ResponseViewer = ({
   };
 
   const parseRequestFromCurl = () => {
+    console.log('responseData123:', responseData);
+
     if (responseData?.actualRequest) {
       return responseData.actualRequest;
     }
@@ -1100,6 +1102,8 @@ const ResponseViewer = ({
 
   const requestDetails = parseRequestFromCurl();
 
+  console.log('requestDetails123:', requestDetails);
+
   if (!responseData) {
     return (
       <div className='flex-1 flex items-center justify-center bg-white dark:bg-gray-900 p-2'>
@@ -1458,6 +1462,100 @@ const ResponseViewer = ({
                 </table>
               </div>
             </div>
+
+            {requestDetails.authorizationType &&
+              requestDetails.authorizationType !== 'none' &&
+              requestDetails.authorization && (
+                <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>
+                  <h3 className='text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3'>
+                    Authorization:
+                  </h3>
+                  <div className='space-y-2'>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0'>
+                        Type
+                      </span>
+                      <span className='px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-medium capitalize'>
+                        {requestDetails.authorizationType === 'bearer'
+                          ? 'Bearer Token'
+                          : requestDetails.authorizationType === 'basic'
+                            ? 'Basic Auth'
+                            : requestDetails.authorizationType === 'apiKey'
+                              ? 'API Key'
+                              : requestDetails.authorizationType}
+                      </span>
+                    </div>
+
+                    {requestDetails.authorizationType === 'bearer' &&
+                      requestDetails.authorization.token && (
+                        <div className='flex items-start space-x-2'>
+                          <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0 mt-1.5'>
+                            Token
+                          </span>
+                          <div className='flex-1 min-w-0 bg-gray-50 dark:bg-gray-800 rounded-lg p-2 relative group'>
+                            <p className='text-xs font-mono text-gray-700 dark:text-gray-300 break-all pr-8'>
+                              {requestDetails.authorization.token}
+                            </p>
+                            <button
+                              onClick={() =>
+                                handleCopy(
+                                  requestDetails.authorization.token,
+                                  'auth-token',
+                                )
+                              }
+                              className='absolute top-2 right-2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded opacity-0 group-hover:opacity-100 transition-opacity'
+                              title='Copy token'
+                            >
+                              {copiedItem === 'auth-token' ? (
+                                <CheckCircle className='w-3.5 h-3.5 text-green-500' />
+                              ) : (
+                                <Copy className='w-3.5 h-3.5' />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                    {requestDetails.authorizationType === 'basic' && (
+                      <>
+                        {requestDetails.authorization.username && (
+                          <div className='flex items-center space-x-2'>
+                            <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0'>
+                              User
+                            </span>
+                            <span className='text-sm font-mono text-gray-700 dark:text-gray-300'>
+                              {requestDetails.authorization.username}
+                            </span>
+                          </div>
+                        )}
+                        {requestDetails.authorization.password && (
+                          <div className='flex items-center space-x-2'>
+                            <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0'>
+                              Pass
+                            </span>
+                            <span className='text-sm font-mono text-gray-700 dark:text-gray-300'>
+                              {'•'.repeat(8)}
+                            </span>
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    {requestDetails.authorizationType === 'apiKey' &&
+                      requestDetails.authorization.key && (
+                        <div className='flex items-center space-x-2'>
+                          <span className='text-xs font-medium text-gray-500 dark:text-gray-400 uppercase w-16 flex-shrink-0'>
+                            Key
+                          </span>
+                          <span className='text-sm font-mono text-gray-700 dark:text-gray-300'>
+                            {requestDetails.authorization.key}:{' '}
+                            {requestDetails.authorization.value}
+                          </span>
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
 
             {requestDetails.body && (
               <div className='bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4'>

@@ -13,10 +13,8 @@ import {
   FolderPlus,
   Trash2,
   Edit,
-  Star,
   X,
   Save,
-  Copy,
   Search,
   Zap,
   Import,
@@ -24,7 +22,6 @@ import {
   Shield,
   Key,
   Rocket,
-  Gauge,
 } from 'lucide-react';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -102,7 +99,6 @@ const Sidebar: React.FC = () => {
     deleteRequestMutation,
     duplicateRequestMutation,
     markAuthRequestMutation,
-
     renameRequestMutation,
     deleteCollectionMutation,
     handleCreateRequest,
@@ -2227,6 +2223,7 @@ const Sidebar: React.FC = () => {
           <AlertDialogContent className='max-w-3xl bg-[#0d1117] border border-gray-700 text-white max-h-[90vh] overflow-y-auto scrollbar-thin'>
             <AlertDialogHeader>
               <AlertDialogTitle className='text-cyan-400 text-xl'>
+                <Key className='h-5 w-5 inline-block mr-2' />
                 Set "{selectedRequest?.name}" as Auto Auth?
               </AlertDialogTitle>
               <AlertDialogDescription className='text-gray-400'>
@@ -2261,41 +2258,46 @@ const Sidebar: React.FC = () => {
               </div>
             </div>
 
-            <div className='mt-6'>
-              <h4 className='text-sm font-semibold mb-4 text-cyan-400'>
-                HOW TO ENABLE IT — 3 STEPS
-              </h4>
+            {selectedRequest &&
+              getAutoAuthState(selectedRequest) !== 'is-auth' && (
+                <div className='mt-6'>
+                  <h4 className='text-sm font-semibold mb-4 text-cyan-400'>
+                    HOW TO ENABLE IT — 3 STEPS
+                  </h4>
 
-              <div className='space-y-3 text-sm'>
-                <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
-                  <p className='font-medium text-white'>
-                    Step 1: Find your Login Request
-                  </p>
-                  <p className='text-gray-400 text-xs mt-1'>
-                    Open the API request that handles login and returns a token.
-                  </p>
-                </div>
+                  <div className='space-y-3 text-sm'>
+                    <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
+                      <p className='font-medium text-white'>
+                        Step 1: Find your Login Request
+                      </p>
+                      <p className='text-gray-400 text-xs mt-1'>
+                        Open the API request that handles login and returns a
+                        token.
+                      </p>
+                    </div>
 
-                <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
-                  <p className='font-medium text-white'>
-                    Step 2: Set a Token Extraction
-                  </p>
-                  <p className='text-gray-400 text-xs mt-1'>
-                    Extract the token from response body and store it as a
-                    variable.
-                  </p>
-                </div>
+                    <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
+                      <p className='font-medium text-white'>
+                        Step 2: Set a Token Extraction
+                      </p>
+                      <p className='text-gray-400 text-xs mt-1'>
+                        Extract the token from response body and store it as a
+                        variable.
+                      </p>
+                    </div>
 
-                <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
-                  <p className='font-medium text-white'>
-                    Step 3: Enable Auto Auth
-                  </p>
-                  <p className='text-gray-400 text-xs mt-1'>
-                    Mark this request as Auto Auth to apply token automatically.
-                  </p>
+                    <div className='border border-gray-700 bg-gray-800/50 rounded-lg p-3'>
+                      <p className='font-medium text-white'>
+                        Step 3: Enable Auto Auth
+                      </p>
+                      <p className='text-gray-400 text-xs mt-1'>
+                        Mark this request as Auto Auth to apply token
+                        automatically.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              )}
 
             <AlertDialogFooter className='mt-6'>
               <AlertDialogCancel className='bg-gray-800 border-gray-600 text-gray-300 hover:bg-gray-700 hover:text-white'>
