@@ -7,6 +7,7 @@ import {
   Play,
   AlertCircle,
   ChartColumn,
+  CirclePlay,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { executionService } from '@/services/executionService.service';
@@ -60,7 +61,7 @@ const Executions = () => {
   const [selectedExecution, setSelectedExecution] =
     useState<MappedExecution | null>(null);
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
-    null
+    null,
   );
 
   const queryParams = useQueryParams();
@@ -412,7 +413,7 @@ const Executions = () => {
         showCreateButton={false}
         buttonTitle='Run Execution'
         onClickCreateNew={() => console.log('Create execution')}
-        icon={ChartColumn}
+        icon={CirclePlay}
         iconBgClass='bg-blue-100'
         iconColor='#136fb0'
         iconSize={40}

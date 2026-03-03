@@ -10,6 +10,7 @@ import {
   Link2,
   CalendarClock,
   ChartColumn,
+  CirclePlay,
 } from 'lucide-react';
 import { useLocation } from 'wouter';
 
@@ -17,7 +18,7 @@ export default function QuickActions() {
   const [, setLocation] = useLocation();
 
   return (
-    <Card >
+    <Card>
       <CardHeader className='p-3 md:p-6'>
         <CardTitle className='text-lg font-semibold text-slate-900'>
           Quick Links
@@ -99,7 +100,9 @@ export default function QuickActions() {
                 <CalendarClock className='text-green-600' size={14} />
               </div>
               <div className='text-left'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>Schedule</p>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>
+                  Schedule
+                </p>
                 <p className='text-[10px] md:text-xs text-slate-500'>
                   {' '}
                   Automate test runs by setting up recurring execution jobs.
@@ -114,10 +117,12 @@ export default function QuickActions() {
           >
             <div className='flex items-center space-x-3'>
               <div className='w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center'>
-                <ChartColumn className='text-green-600' size={14} />
+                <CirclePlay className='text-green-600' size={14} />
               </div>
               <div className='text-left'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>Executions</p>
+                <p className='text-xs md:text-sm font-medium text-slate-900'>
+                  Executions
+                </p>
                 <p className='text-[10px] md:text-xs text-slate-500'>
                   Check how your tests performed and see what's next.
                 </p>

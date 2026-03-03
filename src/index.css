@@ -215,7 +215,7 @@
   }
 }
 
-/* Custom styles for APIFlow */
+/* Custom styles for OPTRAFLOW */
 .feature-gated-disabled {
   @apply opacity-50 cursor-not-allowed;
 }

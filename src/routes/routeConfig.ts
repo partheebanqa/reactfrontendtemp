@@ -22,7 +22,7 @@ export const routeConfig: RouteConfig[] = [
     icon: 'BarChart3',
     requiresAuth: true,
     meta: {
-      title: 'Dashboard - APIFlow',
+      title: 'Dashboard - OPTRAFLOW',
       description:
         'Overview of your API testing activities and performance metrics',
       keywords: ['dashboard', 'overview', 'metrics', 'api testing'],
@@ -36,7 +36,7 @@ export const routeConfig: RouteConfig[] = [
     requiresAuth: true,
     feature: 'request_builder',
     meta: {
-      title: 'Request Builder - APIFlow',
+      title: 'Request Builder - OPTRAFLOW',
       description: 'Visual no-code API request builder and testing interface',
       keywords: ['request builder', 'api testing', 'no-code', 'visual editor'],
     },
@@ -49,7 +49,7 @@ export const routeConfig: RouteConfig[] = [
     requiresAuth: true,
     feature: 'test_suites',
     meta: {
-      title: 'Test Suites - APIFlow',
+      title: 'Test Suites - OPTRAFLOW',
       description: 'Organize and manage collections of related API tests',
       keywords: [
         'test suites',
@@ -67,7 +67,7 @@ export const routeConfig: RouteConfig[] = [
     requiresAuth: true,
     feature: 'request_chains',
     meta: {
-      title: 'Request Chains - APIFlow',
+      title: 'Request Chains - OPTRAFLOW',
       description: 'Create sequential API request workflows and dependencies',
       keywords: [
         'request chains',
@@ -85,7 +85,7 @@ export const routeConfig: RouteConfig[] = [
     requiresAuth: true,
     feature: 'scheduler',
     meta: {
-      title: 'Scheduler - APIFlow',
+      title: 'Scheduler - OPTRAFLOW',
       description: 'Schedule automated API tests and monitoring',
       keywords: ['scheduler', 'automation', 'cron jobs', 'monitoring'],
     },
@@ -97,7 +97,7 @@ export const routeConfig: RouteConfig[] = [
     icon: 'CirclePlay',
     requiresAuth: true,
     meta: {
-      title: 'Executions - APIFlow',
+      title: 'Executions - OPTRAFLOW',
       description: 'Monitor test execution history and results',
       keywords: ['executions', 'test results', 'history', 'monitoring'],
     },
@@ -111,7 +111,7 @@ export const routeConfig: RouteConfig[] = [
     feature: 'cicd_integrations',
     roles: ['admin', 'developer'],
     meta: {
-      title: 'CI/CD Integration - APIFlow',
+      title: 'CI/CD Integration - OPTRAFLOW',
       description: 'Connect your CI/CD pipelines for automated testing',
       keywords: [
         'cicd',
@@ -131,7 +131,7 @@ export const routeConfig: RouteConfig[] = [
     requiresAuth: true,
     feature: 'advanced_reporting',
     meta: {
-      title: 'Reports - APIFlow',
+      title: 'Reports - OPTRAFLOW',
       description: 'Generate comprehensive testing analytics and insights',
       keywords: [
         'reports',
@@ -148,7 +148,7 @@ export const routeConfig: RouteConfig[] = [
     component: 'ExecutionReportPage',
     requiresAuth: true,
     meta: {
-      title: 'Execution Report - APIFlow',
+      title: 'Execution Report - OPTRAFLOW',
       description: 'Detailed execution report',
     },
   },
@@ -161,7 +161,7 @@ export const routeConfig: RouteConfig[] = [
     feature: 'data_management',
     roles: ['admin'],
     meta: {
-      title: 'Data Management - APIFlow',
+      title: 'Data Management - OPTRAFLOW',
       description: 'Manage data retention, exports, and cleanup policies',
       keywords: [
         'data management',
@@ -181,7 +181,7 @@ export const routeConfig: RouteConfig[] = [
     feature: 'billing',
     roles: ['admin'],
     meta: {
-      title: 'Plans & Billing - APIFlow',
+      title: 'Plans & Billing - OPTRAFLOW',
       description: 'Manage your subscription plans and billing details',
       keywords: ['plans', 'billing', 'subscriptions', 'payments', 'invoices'],
     },
@@ -193,7 +193,7 @@ export const routeConfig: RouteConfig[] = [
     icon: 'Wrench',
     requiresAuth: true,
     meta: {
-      title: 'Utilities - APIFlow',
+      title: 'Utilities - OPTRAFLOW',
       description: 'Developer tools and utilities for API testing',
       keywords: ['utilities', 'tools', 'encoder', 'decoder', 'jwt', 'hash'],
     },
@@ -205,7 +205,7 @@ export const routeConfig: RouteConfig[] = [
     icon: 'Bell',
     requiresAuth: true,
     meta: {
-      title: 'Notifications - APIFlow',
+      title: 'Notifications - OPTRAFLOW',
       description: 'Configure notification rules and alert preferences',
       keywords: [
         'notifications',
@@ -224,7 +224,7 @@ export const routeConfig: RouteConfig[] = [
     icon: 'User',
     requiresAuth: true,
     meta: {
-      title: 'Profile - APIFlow',
+      title: 'Profile - OPTRAFLOW',
       description: 'Manage your account settings and preferences',
       keywords: ['profile', 'account', 'settings', 'preferences', 'api keys'],
     },
@@ -237,7 +237,7 @@ export const routeConfig: RouteConfig[] = [
     requiresAuth: true,
     roles: ['admin'],
     meta: {
-      title: 'Settings - APIFlow',
+      title: 'Settings - OPTRAFLOW',
       description: 'Workspace configuration and team management',
       keywords: ['settings', 'workspace', 'team', 'configuration', 'billing'],
     },
@@ -251,7 +251,7 @@ export const publicRoutes: RouteConfig[] = [
     component: 'LandingPage',
     requiresAuth: false,
     meta: {
-      title: 'APIFlow - No-Code API Testing Platform',
+      title: 'OPTRAFLOW - No-Code API Testing Platform',
       description:
         'The most comprehensive no-code API testing platform for teams',
       keywords: ['api testing', 'no-code', 'automation', 'monitoring', 'saas'],
@@ -263,7 +263,7 @@ export const publicRoutes: RouteConfig[] = [
     component: 'PricingPage',
     requiresAuth: false,
     meta: {
-      title: 'Pricing - APIFlow',
+      title: 'Pricing - OPTRAFLOW',
       description: 'Choose the perfect plan for your API testing needs',
       keywords: ['pricing', 'plans', 'subscription', 'features', 'comparison'],
     },
@@ -274,7 +274,7 @@ export const publicRoutes: RouteConfig[] = [
     component: 'PrivacyPage',
     requiresAuth: false,
     meta: {
-      title: 'Privacy Policy - APIFlow',
+      title: 'Privacy Policy - OPTRAFLOW',
       description: 'How we protect and handle your data and privacy',
       keywords: ['privacy policy', 'data protection', 'gdpr', 'compliance'],
     },
@@ -285,8 +285,8 @@ export const publicRoutes: RouteConfig[] = [
     component: 'TermsPage',
     requiresAuth: false,
     meta: {
-      title: 'Terms of Service - APIFlow',
-      description: 'Terms and conditions for using the APIFlow platform',
+      title: 'Terms of Service - OPTRAFLOW',
+      description: 'Terms and conditions for using the OPTRAFLOW platform',
       keywords: ['terms of service', 'legal', 'conditions', 'agreement'],
     },
   },

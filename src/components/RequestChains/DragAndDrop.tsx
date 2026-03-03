@@ -93,8 +93,9 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
       <Card
         ref={setNodeRef}
         style={style}
-        className={`hidden md:block hover:shadow-sm transition-shadow group ${currentRequestIndex === requestIndex ? 'ring-2 ring-primary' : ''
-          } ${!isSelected ? 'opacity-50' : ''}`}
+        className={`hidden md:block hover:shadow-sm transition-shadow group ${
+          currentRequestIndex === requestIndex ? 'ring-2 ring-primary' : ''
+        } ${!isSelected ? 'opacity-50' : ''}`}
       >
         <CardContent className='p-2'>
           <div className='flex items-center'>
@@ -135,10 +136,11 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
               </TooltipProvider>
 
               <div
-                className={`w-8 h-8 ${currentRequestIndex === requestIndex
-                  ? 'bg-primary text-primary-foreground animate-pulse'
-                  : 'bg-blue-100 text-blue-600'
-                  } rounded-full flex items-center justify-center text-sm font-medium`}
+                className={`w-8 h-8 ${
+                  currentRequestIndex === requestIndex
+                    ? 'bg-primary text-primary-foreground animate-pulse'
+                    : 'bg-blue-100 text-blue-600'
+                } rounded-full flex items-center justify-center text-sm font-medium`}
               >
                 {currentRequestIndex === requestIndex ? (
                   <Loader2 className='w-4 h-4 animate-spin' />
@@ -151,7 +153,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
             <div className='flex-1 flex items-center space-x-4 ml-3'>
               <span
                 className={`py-1 px-2 text-xs font-semibold ${getMethodColor(
-                  request.method
+                  request.method,
                 )}`}
               >
                 {request.method}
@@ -211,7 +213,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                               onClick={() =>
                                 onStartEditName(
                                   request.id,
-                                  request.name || request.url || ''
+                                  request.name || request.url || '',
                                 )
                               }
                               disabled={isExecuting}
@@ -319,74 +321,70 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
     ${!isSelected ? 'opacity-60' : ''}
   `}
       >
-        <CardContent className="p-3 sm:p-4">
-
+        <CardContent className='p-3 sm:p-4'>
           {/* MOBILE-FIRST LAYOUT */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-
+          <div className='flex flex-col sm:flex-row sm:items-center gap-3'>
             {/* TOP ROW */}
-            <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
-
+            <div className='flex items-start sm:items-center gap-3 flex-1 min-w-0'>
               {/* Drag */}
               <button
-                className="cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted"
+                className='cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted'
                 {...attributes}
                 {...listeners}
                 disabled={isExecuting}
               >
-                <GripVertical className="w-4 h-4 text-muted-foreground" />
+                <GripVertical className='w-4 h-4 text-muted-foreground' />
               </button>
 
               {/* Checkbox */}
               <input
-                type="checkbox"
+                type='checkbox'
                 checked={isSelected}
                 onChange={onToggleSelect}
                 disabled={isExecuting}
-                className="w-4 h-4 accent-primary"
+                className='w-4 h-4 accent-primary'
               />
 
               {/* Step Circle */}
               <div
                 className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-medium
-            ${currentRequestIndex === requestIndex
-                    ? 'bg-primary text-primary-foreground animate-pulse'
-                    : 'bg-blue-100 text-blue-600'
-                  }
+            ${
+              currentRequestIndex === requestIndex
+                ? 'bg-primary text-primary-foreground animate-pulse'
+                : 'bg-blue-100 text-blue-600'
+            }
           `}
               >
                 {currentRequestIndex === requestIndex ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <Loader2 className='w-3 h-3 animate-spin' />
                 ) : (
                   requestIndex + 1
                 )}
               </div>
 
               {/* Method + Name */}
-              <div className="flex-1 min-w-0">
-
-                <div className="flex flex-wrap items-center gap-2">
-
+              <div className='flex-1 min-w-0'>
+                <div className='flex flex-wrap items-center gap-2'>
                   <span
                     className={`px-2 py-1 text-xs font-semibold rounded ${getMethodColor(
-                      request.method
+                      request.method,
                     )}`}
                   >
                     {request.method}
                   </span>
 
-                  <p className="text-sm sm:text-base font-medium truncate">
+                  <p className='text-sm sm:text-base font-medium truncate'>
                     {request.name || request.url || 'New Request'}
                   </p>
                 </div>
 
                 {/* Execution Result */}
                 {executionLog && (
-                  <div className="flex items-center gap-2 mt-1 text-xs">
+                  <div className='flex items-center gap-2 mt-1 text-xs'>
                     {executionLog.status === 'success' ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className='w-4 h-4 text-green-500' />
                     ) : (
-                      <XCircle className="w-4 h-4 text-red-500" />
+                      <XCircle className='w-4 h-4 text-red-500' />
                     )}
 
                     {executionLog.response && (
@@ -396,7 +394,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                             ? 'default'
                             : 'destructive'
                         }
-                        className="text-xs"
+                        className='text-xs'
                       >
                         {executionLog.response.status}
                       </Badge>
@@ -407,40 +405,38 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
             </div>
 
             {/* ACTIONS ROW */}
-            <div className="flex items-center justify-end gap-2">
-
+            <div className='flex items-center justify-end gap-2'>
               {/* Always visible on mobile */}
               <button
                 onClick={() => onDuplicate(request.id)}
                 disabled={isExecuting}
-                className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
+                className='p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
               >
-                <CopyPlus className="w-4 h-4" />
+                <CopyPlus className='w-4 h-4' />
               </button>
 
               <button
                 onClick={() => onRemove(request.id)}
                 disabled={isExecuting}
-                className="p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600"
+                className='p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-red-600'
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className='w-4 h-4' />
               </button>
 
               <Button
-                variant="ghost"
-                size="icon"
+                variant='ghost'
+                size='icon'
                 onClick={() => onToggleExpand(request.id)}
-                className="h-8 w-8"
+                className='h-8 w-8'
               >
                 {expandedRequests.has(request.id) ? (
-                  <ChevronUp className="w-4 h-4 text-primary" />
+                  <ChevronUp className='w-4 h-4 text-primary' />
                 ) : (
-                  <ChevronDown className="w-4 h-4 text-primary" />
+                  <ChevronDown className='w-4 h-4 text-primary' />
                 )}
               </Button>
             </div>
           </div>
-
 
           {children}
         </CardContent>
