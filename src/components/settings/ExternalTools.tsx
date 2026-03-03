@@ -68,7 +68,7 @@ const integrationSchema = z.object({
   type: z.enum(['slack', 'teams', 'jira', 'webhook'], {
     required_error: 'Please select an integration type',
   }),
-  webhookUrl: z.string().url('Please enter a valid webhook URL'),
+  // webhookUrl: z.string().url('Please enter a valid webhook URL'),
   description: z.string().optional(),
   settings: z
     .object({
@@ -99,8 +99,11 @@ interface Integration {
 }
 
 interface IntegrationConfig {
-  channel: string;
-  webhook_url: string;
+  channel?: string;
+  webhook_url?: string;
+  api_token?: string;
+  email?: string;
+  jira_url?: string;
 }
 
 export interface WorkSpaceIntegration {
@@ -123,8 +126,12 @@ export interface IntegrationPayload {
   type: string;
   description?: string;
   config: {
-    webhook_url: string;
-    channel: string;
+    webhook_url?: string;
+    channel?: string;
+    api_token?: string;
+    email?: string;
+    jira_url?: string;
+    project_key?: string;
   };
   events: string[];
 }
@@ -150,8 +157,13 @@ export function ExternalTools() {
     type: 'slack',
     description: '',
     config: {
+      api_token: '',
       webhook_url: '',
       channel: '#general',
+      email: "",
+      jira_url: "",
+      project_key: "",
+      issue_type: ""
     },
     events: [] as string[],
   });
@@ -195,6 +207,10 @@ export function ExternalTools() {
     { value: 'schedule_complete', label: 'Schedule Complete' },
     { value: 'execution_started', label: 'Execution Started' },
     { value: 'workspace_updated', label: 'Workspace Updated' },
+  ];
+
+  const jiraEvents = [
+    { value: 'test_failed', label: 'Test Failed' },
   ];
 
   const getIntegrationIcon = (type: string) => {
@@ -372,7 +388,7 @@ export function ExternalTools() {
         name: '',
         type: 'slack',
         description: '',
-        config: { webhook_url: '', channel: '#general' },
+        config: { webhook_url: '', channel: '#general', api_token: "", email: "", jira_url: "", project_key: "", issue_type: '' },
         events: [],
       });
       getIntegrations();
@@ -397,6 +413,11 @@ export function ExternalTools() {
       config: {
         webhook_url: integration.config?.webhook_url || '',
         channel: integration.config?.channel || '#general',
+        api_token: integrationForm?.config?.api_token || "",
+        project_key: integrationForm?.config?.project_key || "",
+        jira_url: integrationForm?.config?.jira_url || "",
+        email: integrationForm?.config?.email || "",
+        issue_type: integrationForm?.config?.issue_type || ""
       },
       events: integration.events || [],
     });
@@ -505,56 +526,146 @@ export function ExternalTools() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <label className='block text-sm font-medium mb-2'>
-                    Webhook URL
-                  </label>
-                  <Input
-                    type='text'
-                    name='config.webhook_url'
-                    value={integrationForm.config.webhook_url}
-                    onChange={handleChange}
-                    placeholder='https://hooks.slack.com/services/...'
-                    className='w-full border px-2 py-1 rounded'
-                  />
-                </div>
-
-                <div>
-                  <label className='block text-sm font-medium mb-2'>
-                    Description (Optional)
-                  </label>
-                  <Textarea
-                    name='description'
-                    value={integrationForm.description}
-                    onChange={handleChange}
-                    rows={2}
-                    className='w-full border px-2 py-1 rounded'
-                  />
-                </div>
-
-                <div>
-                  <label className='block text-sm font-medium mb-2'>
-                    Notification Events
-                  </label>
-                  <div className='grid grid-cols-3 gap-4'>
-                    {availableEvents.map((event) => (
-                      <label
-                        key={event.value}
-                        className='flex items-center space-x-2'
-                      >
-                        <input
-                          type='checkbox'
-                          checked={integrationForm.events.includes(event.value)}
-                          onChange={(e) =>
-                            handleEventChange(event.value, e.target.checked)
-                          }
-                        />
-                        <span className='text-sm'>{event.label}</span>
-                      </label>
-                    ))}
+                {integrationForm?.type !== "jira" && (
+                  <div>
+                    <label className='block text-sm font-medium mb-2'>
+                      Webhook URL
+                    </label>
+                    <Input
+                      type='text'
+                      name='config.webhook_url'
+                      value={integrationForm.config.webhook_url}
+                      onChange={handleChange}
+                      placeholder='https://hooks.slack.com/services/...'
+                      className='w-full border px-2 py-1 rounded'
+                    />
                   </div>
-                </div>
+                )}
+
+                {integrationForm?.type === "jira" && (
+                  <>
+                    <div>
+                      <label className='block text-sm font-medium mb-2'>
+                        Email
+                      </label>
+                      <Input
+                        type='mail'
+                        name='config.email'
+                        value={integrationForm.config.email}
+                        onChange={handleChange}
+                        placeholder='partheeban.moorthy@optraflow.com'
+                        className='w-full border px-2 py-1 rounded'
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium mb-2'>
+                        API Token
+                      </label>
+                      <Input
+                        type='text'
+                        name='config.api_token'
+                        value={integrationForm.config.api_token}
+                        onChange={handleChange}
+                        placeholder='https://hooks.slack.com/services/...'
+                        className='w-full border px-2 py-1 rounded'
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium mb-2'>
+                        Jira URL
+                      </label>
+                      <Input
+                        type='text'
+                        name='config.jira_url'
+                        value={integrationForm.config.jira_url}
+                        onChange={handleChange}
+                        placeholder='https://hooks.slack.com/services/...'
+                        className='w-full border px-2 py-1 rounded'
+                      />
+                    </div>
+                    <div>
+                      <label className='block text-sm font-medium mb-2'>
+                        Project Key
+                      </label>
+                      <Input
+                        type='text'
+                        name='config.project_key'
+                        value={integrationForm.config.project_key}
+                        onChange={handleChange}
+                        placeholder='AP'
+                        className='w-full border px-2 py-1 rounded'
+                      />
+                    </div>
+                  </>
+                )}
+                {integrationForm?.type !== "jira" && (
+                  <>
+                    <div>
+                      <label className='block text-sm font-medium mb-2'>
+                        Description (Optional)
+                      </label>
+                      <Textarea
+                        name='description'
+                        value={integrationForm.description}
+                        onChange={handleChange}
+                        rows={2}
+                        className='w-full border px-2 py-1 rounded'
+                      />
+                    </div>
+                  </>
+
+                )}
+
+                {integrationForm?.type !== "jira" && (
+                  <div>
+                    <label className='block text-sm font-medium mb-2'>
+                      Notification Events
+                    </label>
+                    <div className='grid grid-cols-3 gap-4'>
+                      {availableEvents.map((event) => (
+                        <label
+                          key={event.value}
+                          className='flex items-center space-x-2'
+                        >
+                          <input
+                            type='checkbox'
+                            checked={integrationForm.events.includes(event.value)}
+                            onChange={(e) =>
+                              handleEventChange(event.value, e.target.checked)
+                            }
+                          />
+                          <span className='text-sm'>{event.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+
+                {integrationForm?.type === "jira" && (
+                  <div>
+                    <label className='block text-sm font-medium mb-2'>
+                      Notification Events
+                    </label>
+                    <div className='grid grid-cols-3 gap-4'>
+                      {jiraEvents.map((event) => (
+                        <label
+                          key={event.value}
+                          className='flex items-center space-x-2'
+                        >
+                          <input
+                            type='checkbox'
+                            checked={integrationForm.events.includes(event.value)}
+                            onChange={(e) =>
+                              handleEventChange(event.value, e.target.checked)
+                            }
+                          />
+                          <span className='text-sm'>{event.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 <div className='flex justify-end gap-2 pt-4'>
                   <button
@@ -566,7 +677,7 @@ export function ExternalTools() {
                         name: '',
                         type: 'slack',
                         description: '',
-                        config: { webhook_url: '', channel: '#general' },
+                        config: { webhook_url: '', channel: '#general', api_token: "", email: '', project_key: '', jira_url: "", issue_type: "" },
                         events: [],
                       });
                     }}
