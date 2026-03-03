@@ -22,7 +22,7 @@ import {
   Import,
   CopyPlus,
   Shield,
-  KeyRound,
+  Key,
   Rocket,
   Gauge,
 } from 'lucide-react';
@@ -1227,7 +1227,7 @@ const Sidebar: React.FC = () => {
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                <Key className='h-3 w-3 text-blue-600 flex-shrink-0' />
                               </TooltipTrigger>
                               <TooltipContent side='top'>
                                 Auth Request
@@ -1439,7 +1439,7 @@ const Sidebar: React.FC = () => {
                                 {collection.preRequestId && (
                                   <TooltipContainer text='Auto Auth'>
                                     <div className='p-1'>
-                                      <KeyRound className='h-4 w-4 text-blue-600' />
+                                      <Key className='h-4 w-4 text-blue-600' />
                                     </div>
                                   </TooltipContainer>
                                 )}
@@ -1521,7 +1521,7 @@ const Sidebar: React.FC = () => {
                                               <TooltipProvider>
                                                 <Tooltip>
                                                   <TooltipTrigger asChild>
-                                                    <KeyRound className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                    <Key className='h-3 w-3 text-blue-600 flex-shrink-0' />
                                                   </TooltipTrigger>
                                                   <TooltipContent side='top'>
                                                     Auto Auth
@@ -1822,7 +1822,7 @@ const Sidebar: React.FC = () => {
                             }}
                             className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                           >
-                            <KeyRound className='h-4 w-4 mr-2' />
+                            <Key className='h-4 w-4 mr-2' />
                             Remove Auto Auth
                           </button>
                         ) : (
@@ -1835,7 +1835,7 @@ const Sidebar: React.FC = () => {
                             className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                           >
                             <div className='flex items-center text-blue-600 dark:text-blue-400'>
-                              <KeyRound className='h-4 w-4 mr-2' />
+                              <Key className='h-4 w-4 mr-2' />
                               Set Auto Auth
                             </div>
 
@@ -2177,7 +2177,7 @@ const Sidebar: React.FC = () => {
             <AlertDialogContent className='border-2 border-red-500'>
               <AlertDialogHeader>
                 <AlertDialogTitle className='flex items-center gap-2 text-red-600'>
-                  <KeyRound className='h-5 w-5' />
+                  <Key className='h-5 w-5' />
                   Delete Auto-Auth Request "{selectedRequest?.name}"?
                 </AlertDialogTitle>
                 <AlertDialogDescription className='space-y-3'>
@@ -2314,7 +2314,7 @@ const Sidebar: React.FC = () => {
                       setShowMarkAuthDialog(false);
                     }}
                   >
-                    <KeyRound className='h-4 w-4 mr-2' />
+                    <Key className='h-4 w-4 mr-2' />
                     Extract Token
                   </Button>
                 )}
@@ -2328,7 +2328,7 @@ const Sidebar: React.FC = () => {
                       selectedRequest && handleMarkAuth(selectedRequest)
                     }
                   >
-                    <KeyRound className='h-4 w-4 mr-2' />
+                    <Key className='h-4 w-4 mr-2' />
                     Enable Auto Auth
                   </Button>
                 )}

@@ -712,6 +712,7 @@ export function RequestEditor({
       if ((saved?.response || saved?.error) && isRecent) {
         setExecutionResult(saved);
         setShowResponse(true);
+        setCurrentRequestExtractedVars(saved.extractedVariables ?? {});
 
         if (saved.assertions && Array.isArray(saved.assertions)) {
           setAssertions(saved.assertions);
@@ -2126,9 +2127,29 @@ export function RequestEditor({
       (e) => (e.variableName || e.name) !== variableName,
     );
     onUpdate({ extractVariables: updatedExtractions });
+
     const newExtracted = { ...extractedVariables };
     delete newExtracted[variableName];
     setExtractedVariables(newExtracted);
+
+    // Your existing line:
+    setCurrentRequestExtractedVars((prev) => {
+      const updated = { ...prev };
+      delete updated[variableName];
+      return updated;
+    });
+
+    // ADD THIS - update localStorage too so it doesn't restore on re-render:
+    try {
+      const raw = localStorage.getItem('lastExecutionByRequest');
+      const map = raw ? JSON.parse(raw) : {};
+      if (map[initialRequest.id]?.extractedVariables) {
+        delete map[initialRequest.id].extractedVariables[variableName];
+        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      }
+    } catch (e) {
+      console.error('Failed to update localStorage on extraction remove:', e);
+    }
   };
 
   const buildVariablesPayload = (bodyVars: SelectedVariable[]) => {
@@ -2184,9 +2205,14 @@ export function RequestEditor({
     field: 'header' | 'param' | 'authorization';
     index?: number;
     key?: string;
-    subField?: 'key' | 'value'; // ADD THIS
+    subField?: 'key' | 'value';
   } | null>(null);
+  const [currentRequestExtractedVars, setCurrentRequestExtractedVars] =
+    useState<Record<string, any>>(executionResult?.extractedVariables ?? {});
 
+  useEffect(() => {
+    setCurrentRequestExtractedVars(executionResult?.extractedVariables ?? {});
+  }, [executionResult]);
   const inlinePickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -3337,7 +3363,11 @@ export function RequestEditor({
               showAssertions={true}
               staticVariables={usedRequestVariables.staticVars}
               dynamicVariables={usedRequestVariables.dynamicVars}
-              extractedVariables={extractedVariables}
+              extractedVariables={(() => {
+                // Only show variables extracted by THIS specific request's extraction rules
+                if (!executionResult?.extractedVariables) return {};
+                return executionResult.extractedVariables;
+              })()}
               onRemoveExtraction={handleRemoveExtraction}
               onAssertionsChange={(newAssertions) => {
                 setAssertions(newAssertions);
@@ -3993,7 +4023,7 @@ export function RequestEditor({
             showAssertions={true}
             staticVariables={usedRequestVariables.staticVars}
             dynamicVariables={usedRequestVariables.dynamicVars}
-            extractedVariables={extractedVariables}
+            extractedVariables={currentRequestExtractedVars}
             onRemoveExtraction={handleRemoveExtraction}
           />
         </TabsContent>

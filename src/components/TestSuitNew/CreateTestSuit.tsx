@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Play,
   Loader2,
-  KeyRound,
+  Key,
   Upload,
 } from 'lucide-react';
 
@@ -137,7 +137,7 @@ const CreateTestSuit: React.FC = () => {
   const [preRequestId, setPreRequestId] = useState<string | null>(null);
 
   const [extractVariables, setExtractVariables] = useState<ExtractedVariable[]>(
-    []
+    [],
   );
 
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
@@ -151,7 +151,7 @@ const CreateTestSuit: React.FC = () => {
 
   const mainRequests = useMemo(
     () => requests.filter((r) => r.id !== preRequestId),
-    [requests, preRequestId]
+    [requests, preRequestId],
   );
 
   const mainRequestsCount = mainRequests.length;
@@ -370,15 +370,15 @@ const CreateTestSuit: React.FC = () => {
       selectedTestCases: req.selectedTestCases || [],
       meta: req.meta
         ? {
-          totalTests: req.meta.totalTests,
-          selectedTests: req.meta.selectedTests,
-          positive: req.meta.positive,
-          negative: req.meta.negative,
-          semantic: req.meta.semantic,
-          edgeCase: req.meta.edgeCase,
-          security: req.meta.security,
-          advancedSecurity: req.meta.advancedSecurity,
-        }
+            totalTests: req.meta.totalTests,
+            selectedTests: req.meta.selectedTests,
+            positive: req.meta.positive,
+            negative: req.meta.negative,
+            semantic: req.meta.semantic,
+            edgeCase: req.meta.edgeCase,
+            security: req.meta.security,
+            advancedSecurity: req.meta.advancedSecurity,
+          }
         : undefined,
     };
   };
@@ -427,14 +427,14 @@ const CreateTestSuit: React.FC = () => {
                 : [],
             bodyRawContent: hasBody
               ? req.bodyRawContent
-              : imported.bodyRawContent ?? imported.body ?? '',
-            bodyType: hasBodyType ? req.bodyType : imported.bodyType ?? 'raw',
+              : (imported.bodyRawContent ?? imported.body ?? ''),
+            bodyType: hasBodyType ? req.bodyType : (imported.bodyType ?? 'raw'),
             authorizationType: hasAuthType
               ? req.authorizationType
-              : imported.authorizationType ?? 'none',
+              : (imported.authorizationType ?? 'none'),
             authorization: hasAuth
               ? req.authorization
-              : imported.authorization ?? null,
+              : (imported.authorization ?? null),
           };
         });
 
@@ -503,8 +503,8 @@ const CreateTestSuit: React.FC = () => {
   const handleUpdateTestCases = (requestId: string, testCaseIds: string[]) => {
     setRequests((prev) =>
       prev.map((req) =>
-        req.id === requestId ? { ...req, selectedTestCases: testCaseIds } : req
-      )
+        req.id === requestId ? { ...req, selectedTestCases: testCaseIds } : req,
+      ),
     );
     toast({
       title: 'Test cases updated',
@@ -515,7 +515,7 @@ const CreateTestSuit: React.FC = () => {
 
   const handleSaveExtractVariables = (
     request: { id: string; name: string; method: string; url: string },
-    variables: ExtractedVariable[]
+    variables: ExtractedVariable[],
   ) => {
     setPreRequestId(request.id);
     setPreRequestInfo(request);
@@ -530,10 +530,10 @@ const CreateTestSuit: React.FC = () => {
   const calculateRequestChanges = () => {
     const currentRequestIds = requests.map((req) => req.id);
     const addRequestIds = currentRequestIds.filter(
-      (rid) => !originalRequestIds.includes(rid)
+      (rid) => !originalRequestIds.includes(rid),
     );
     const removeRequestIds = originalRequestIds.filter(
-      (rid) => !currentRequestIds.includes(rid)
+      (rid) => !currentRequestIds.includes(rid),
     );
     return { addRequestIds, removeRequestIds };
   };
@@ -629,15 +629,15 @@ const CreateTestSuit: React.FC = () => {
 
         opts?.goToNextAfterSave
           ? {
-            onSuccess: (created: any) => {
-              if (created?.id) {
-                setLocation(`/test-suites/${created.id}?step=select-tests`);
-              } else {
-                moveToNextStep();
-              }
-            },
-          }
-          : undefined
+              onSuccess: (created: any) => {
+                if (created?.id) {
+                  setLocation(`/test-suites/${created.id}?step=select-tests`);
+                } else {
+                  moveToNextStep();
+                }
+              },
+            }
+          : undefined,
       );
     } else {
       const { addRequestIds, removeRequestIds } = calculateRequestChanges();
@@ -660,11 +660,11 @@ const CreateTestSuit: React.FC = () => {
         },
         opts?.goToNextAfterSave
           ? {
-            onSuccess: () => {
-              moveToNextStep();
-            },
-          }
-          : undefined
+              onSuccess: () => {
+                moveToNextStep();
+              },
+            }
+          : undefined,
       );
     }
   };
@@ -682,14 +682,14 @@ const CreateTestSuit: React.FC = () => {
     () =>
       isCreateMode
         ? requests.reduce(
-          (total, req) => total + (req.selectedTestCases?.length || 0),
-          0
-        )
+            (total, req) => total + (req.selectedTestCases?.length || 0),
+            0,
+          )
         : requests.reduce(
-          (total, req) => total + (req.meta?.selectedTests ?? 0),
-          0
-        ),
-    [requests, isCreateMode]
+            (total, req) => total + (req.meta?.selectedTests ?? 0),
+            0,
+          ),
+    [requests, isCreateMode],
   );
 
   const importableRequests = useMemo(() => {
@@ -698,7 +698,7 @@ const CreateTestSuit: React.FC = () => {
         collection.requests.map((request: any) => ({
           ...request,
           collectionName: collection.name,
-        }))
+        })),
       );
     }
     return [];
@@ -1179,7 +1179,6 @@ const CreateTestSuit: React.FC = () => {
                   <div className='space-y-2'>
                     <TagInput tags={tags} setTags={setTags} />
                   </div>
-
                 </div>
 
                 {testSuite?.name && testSuite?.environment && (
@@ -1228,7 +1227,7 @@ const CreateTestSuit: React.FC = () => {
               {!hasPrereqAuthCandidates ? (
                 <div className='bg-gray-50 p-3 rounded-lg border border-dashed flex flex-col items-center justify-center text-center'>
                   <div className='w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center'>
-                    <KeyRound className='w-8 h-8 text-muted-foreground' />
+                    <Key className='w-8 h-8 text-muted-foreground' />
                   </div>
                   <p className='text-muted-foreground mb-2'>
                     If your APIs require authentication, add a pre-request API
@@ -1473,7 +1472,8 @@ const CreateTestSuit: React.FC = () => {
                 className={[
                   'inline-flex items-center gap-2 px-6 py-2 text-white rounded-lg transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed',
                   isSelectApisStep
-                    ? selectApisCTA?.color ?? 'bg-[#136fb0] hover:bg-[#136fb0]'
+                    ? (selectApisCTA?.color ??
+                      'bg-[#136fb0] hover:bg-[#136fb0]')
                     : 'bg-[#136fb0] hover:bg-[#136fb0]',
                 ].join(' ')}
               >
