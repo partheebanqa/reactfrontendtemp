@@ -312,9 +312,7 @@ export function analyzeRequestChain(
           sameDomain;
 
         if (isCandidate) {
-          const reasonParts: string[] = [
-            'This request returned 401 Unauthorized.',
-          ];
+          const reasonParts: string[] = [''];
           if (tokenPath) {
             reasonParts.push(
               `Found potential auth token at path "${tokenPath}" in "${prevRequest.name}".`,

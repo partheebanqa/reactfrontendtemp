@@ -419,7 +419,7 @@ export function RequestAnalyzer({
                         <ShieldAlert className='w-4 h-4 text-orange-600 flex-shrink-0 mt-0.5' />
                         <div className='flex-1 min-w-0'>
                           <p className='font-medium text-orange-900 text-sm'>
-                            401 Unauthorized — No Auth Configured
+                            401 Unauthorized
                           </p>
                           <p className='text-xs text-orange-700 mt-1'>
                             This request returned 401 and has no authentication

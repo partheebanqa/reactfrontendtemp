@@ -13,6 +13,7 @@ import {
   Lock,
   Settings,
   Globe,
+  Key,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -671,7 +672,7 @@ export default function PerformanceTesting({
                 <div className='flex items-center gap-3'>
                   {preRequestId && (
                     <div className='mt-4 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
-                      <CheckCircle className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
+                      <Key className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
                       <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
                         Auto Auth Enabled -
                       </span>

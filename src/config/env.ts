@@ -14,39 +14,39 @@ export const ENV = {
   ENABLE_DEBUG_MODE: import.meta.env.VITE_ENABLE_DEBUG_MODE === 'true',
 
   // Application Info
-  APP_NAME: import.meta.env.VITE_APP_NAME || 'APIFlow',
+  APP_NAME: import.meta.env.VITE_APP_NAME || 'OPTRAFLOW',
   APP_VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
 
   // Limits and Quotas
   FREE_PLAN_LIMITS: {
     MAX_REQUESTS_PER_MONTH: parseInt(
-      import.meta.env.VITE_FREE_MAX_REQUESTS || '1000'
+      import.meta.env.VITE_FREE_MAX_REQUESTS || '1000',
     ),
     MAX_TEST_SUITES: parseInt(import.meta.env.VITE_FREE_MAX_SUITES || '5'),
     MAX_SCHEDULED_TESTS: parseInt(
-      import.meta.env.VITE_FREE_MAX_SCHEDULED || '0'
+      import.meta.env.VITE_FREE_MAX_SCHEDULED || '0',
     ),
   },
 
   PRO_PLAN_LIMITS: {
     MAX_REQUESTS_PER_MONTH: parseInt(
-      import.meta.env.VITE_PRO_MAX_REQUESTS || '50000'
+      import.meta.env.VITE_PRO_MAX_REQUESTS || '50000',
     ),
     MAX_TEST_SUITES: parseInt(import.meta.env.VITE_PRO_MAX_SUITES || '50'),
     MAX_SCHEDULED_TESTS: parseInt(
-      import.meta.env.VITE_PRO_MAX_SCHEDULED || '10'
+      import.meta.env.VITE_PRO_MAX_SCHEDULED || '10',
     ),
   },
 
   ENTERPRISE_PLAN_LIMITS: {
     MAX_REQUESTS_PER_MONTH: parseInt(
-      import.meta.env.VITE_ENTERPRISE_MAX_REQUESTS || '500000'
+      import.meta.env.VITE_ENTERPRISE_MAX_REQUESTS || '500000',
     ),
     MAX_TEST_SUITES: parseInt(
-      import.meta.env.VITE_ENTERPRISE_MAX_SUITES || '500'
+      import.meta.env.VITE_ENTERPRISE_MAX_SUITES || '500',
     ),
     MAX_SCHEDULED_TESTS: parseInt(
-      import.meta.env.VITE_ENTERPRISE_MAX_SCHEDULED || '100'
+      import.meta.env.VITE_ENTERPRISE_MAX_SCHEDULED || '100',
     ),
   },
 

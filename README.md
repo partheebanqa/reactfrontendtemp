@@ -1,10 +1,11 @@
-# APIFlow - No-Code API Testing Platform
+# OPTRAFLOW - No-Code API Testing Platform
 
 A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade features, multi-tenant workspace architecture, and advanced compliance capabilities.
 
 ## 🚀 Features
 
 ### Core Testing Features
+
 - **Visual Request Builder** - No-code API request construction
 - **Test Suites** - Organize and manage test collections
 - **Request Chains** - Sequential API workflow execution
@@ -12,6 +13,7 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 - **Real-time Monitoring** - Live test execution and results
 
 ### Enterprise Features
+
 - **Multi-tenant Workspaces** - Complete data isolation
 - **Role-based Access Control** - Granular permissions
 - **Subscription Management** - Free, Pro, and Enterprise tiers
@@ -19,6 +21,7 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 - **Comprehensive Reporting** - Analytics and insights
 
 ### Compliance & Security
+
 - **Audit Trails** - Complete activity logging
 - **GDPR Compliance** - Privacy and consent management
 - **Data Retention Policies** - Configurable data lifecycle
@@ -27,6 +30,7 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 ## 🏗️ Architecture
 
 ### Frontend
+
 - **React 18** with TypeScript
 - **Vite** for development and building
 - **Tailwind CSS** for styling
@@ -35,6 +39,7 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 - **Wouter** for routing
 
 ### Backend
+
 - **Node.js** with Express.js
 - **PostgreSQL** with Drizzle ORM
 - **Neon** serverless database
@@ -42,6 +47,7 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 - **Session-based auth** with PostgreSQL storage
 
 ### Database Schema
+
 ```
 - Users (authentication and profiles)
 - Workspaces (multi-tenant containers)
@@ -93,29 +99,35 @@ A comprehensive no-code/low-code SaaS API testing platform with enterprise-grade
 ## 🚦 Getting Started
 
 ### Prerequisites
+
 - Node.js 20+
 - PostgreSQL database (or Neon account)
 
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd apiflow
    ```
 
 2. **Install dependencies**
+
    ```bash
    npm install
    ```
 
 3. **Set up environment variables**
+
    ```bash
    # Database
    DATABASE_URL="your_postgresql_connection_string"
-  
+
+   ```
 
 4. **Set up the database**
+
    ```bash
    npm run db:push
    ```
@@ -130,26 +142,31 @@ The application will be available at `http://localhost:5000`
 ## 🔧 Development
 
 ### Available Scripts
+
 - `npm run dev` - Start development server
 - `npm run build` - Build for production
 - `npm run db:push` - Push schema changes to database
 - `npm run db:studio` - Open Drizzle Studio
 
 ### Database Management
+
 The project uses Drizzle ORM for type-safe database operations. Schema changes should be made in `shared/schema.ts` and pushed using `npm run db:push`.
 
 ### Feature Development
+
 New features should be developed as modules in `client/src/modules/`. Each module should be self-contained with its own components and logic.
 
 ## 🎯 Subscription Tiers
 
 ### Free Tier
+
 - 1,000 API requests/month
 - Basic test suites
 - Email support
 - Single workspace
 
 ### Pro Tier ($29/month)
+
 - 50,000 API requests/month
 - Advanced scheduling
 - CI/CD integrations
@@ -157,6 +174,7 @@ New features should be developed as modules in `client/src/modules/`. Each modul
 - 5 team members
 
 ### Enterprise Tier (Custom)
+
 - Unlimited API requests
 - Advanced compliance features
 - Custom integrations
@@ -166,12 +184,14 @@ New features should be developed as modules in `client/src/modules/`. Each modul
 ## 🛡️ Security & Compliance
 
 ### GDPR Compliance
+
 - User consent management
 - Data portability
 - Right to erasure
 - Privacy by design
 
 ### Security Features
+
 - Role-based access control
 - Audit logging
 - Session management
@@ -180,6 +200,7 @@ New features should be developed as modules in `client/src/modules/`. Each modul
 ## 📊 Monitoring & Analytics
 
 The platform includes comprehensive monitoring and analytics:
+
 - Real-time test execution monitoring
 - Performance metrics tracking
 - Success rate analysis
@@ -201,6 +222,7 @@ This project is proprietary software. All rights reserved.
 ## 🆘 Support
 
 For support and questions:
+
 - Documentation: [Internal Wiki]
 - Issues: [GitHub Issues]
 - Email: support@apiflow.com

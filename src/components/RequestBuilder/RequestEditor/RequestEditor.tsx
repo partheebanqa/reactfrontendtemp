@@ -2,7 +2,7 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, Info, Rocket } from 'lucide-react';
+import { Play, Save, FolderPlus, Info, Rocket, Key } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -1697,6 +1697,19 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 }
               })()
             : null,
+          authorizationType: effectiveAuthType,
+          authorization:
+            effectiveAuthType === 'bearer'
+              ? { token: resolvedToken }
+              : effectiveAuthType === 'basic'
+                ? { username: authData.username, password: authData.password }
+                : effectiveAuthType === 'apiKey'
+                  ? {
+                      key: authData.key,
+                      value: authData.value,
+                      addTo: authData.addTo,
+                    }
+                  : undefined,
         };
 
         const normalizedResponse = {
@@ -1850,6 +1863,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               })()
             : null,
         },
+
         body: backendBody,
         rawBody: backendBody,
         metrics: {},
@@ -2789,6 +2803,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                             : ''
                         }`}
                       >
+                        <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
                         Auto Auth Sync
                       </span>
                     </TooltipTrigger>
