@@ -3275,6 +3275,7 @@ export function RequestChainEditor({
             <CardContent>
               <RequestExecutor
                 requests={formData.chainRequests || []}
+                isSaveDisabled={isSaveDisabled}
                 variables={(formData.variables || []).map((v) => ({
                   ...v,
                   id: v.id ?? crypto.randomUUID(),
