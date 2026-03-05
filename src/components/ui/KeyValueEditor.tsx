@@ -36,9 +36,9 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
     // Check if onUpdate expects the new signature (id-based with Partial)
     const item =
       items[
-        typeof idOrIndex === 'number'
-          ? idOrIndex
-          : items.findIndex((i) => i.id === idOrIndex)
+      typeof idOrIndex === 'number'
+        ? idOrIndex
+        : items.findIndex((i) => i.id === idOrIndex)
       ];
 
     if (typeof idOrIndex === 'string' && item?.id) {
@@ -57,16 +57,16 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
-        <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+        <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
           {title}
         </h4>
         <button
           onClick={onAdd}
           className='flex items-center space-x-2 px-3 py-1 text-sm text-[#136fb0] hover:bg-blue-50 rounded-lg transition-colors'
         >
-          <Plus className='w-4 h-4' color='#136fb0' />
+          <Plus className='w-3 h-3' color='#136fb0' />
           <span className='hidden sm:inline'>{addButtonLabel}</span>
-          <span className='sm:hidden'>Add</span>
+          <span className='text-xs sm:hidden'>Add</span>
         </button>
       </div>
 
@@ -88,7 +88,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
                       e.target.checked
                     )
                   }
-                  className='h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded sm:flex-shrink-0'
+                  className='text-xs md:text-sm h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded sm:flex-shrink-0'
                 />
               )}
               <div className='flex flex-1 space-x-2'>
@@ -99,7 +99,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
                     handleFieldUpdate(item.id || index, 'key', e.target.value)
                   }
                   placeholder='Key'
-                  className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                  className='text-xs md:text-sm flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                 />
                 <input
                   type='text'
@@ -108,7 +108,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
                     handleFieldUpdate(item.id || index, 'value', e.target.value)
                   }
                   placeholder='Value'
-                  className='flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                  className='text-xs md:text-sm flex-1 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-800 dark:text-white hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/50 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                 />
                 <TooltipContainer
                   text='Remove'
@@ -127,7 +127,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
           ))}
         </div>
       ) : (
-        <div className='text-gray-500 dark:text-gray-400 text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
+        <div className='text-xs md:text-sm text-gray-500 dark:text-gray-400 text-center p-4 border border-dashed border-gray-300 dark:border-gray-700 rounded-md'>
           {emptyMessage}
         </div>
       )}

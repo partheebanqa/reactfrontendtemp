@@ -5,7 +5,7 @@ interface EditableTextProps {
   onSave: (value: string) => void;
   className?: string;
   placeholder?: string;
-  fontSize?: 'sm' | 'base' | 'lg' | 'xl' | '2xl';
+  fontSize?: 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl';
   fontWeight?: 'normal' | 'medium' | 'semibold' | 'bold';
 }
 
@@ -43,6 +43,7 @@ const EditableTextWithoutIcon: React.FC<EditableTextProps> = ({
   };
 
   const fontSizeClass = {
+    xs: 'text-xs',
     sm: 'text-sm',
     base: 'text-base',
     lg: 'text-lg',

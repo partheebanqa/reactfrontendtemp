@@ -2750,20 +2750,20 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center text-sm space-x-1'>
-                <span className='text-gray-500 dark:text-gray-400'>
+                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
                   {activeCollectionFull?.name}
                 </span>
-                <span className='text-gray-500 dark:text-gray-400'>/</span>
+                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>/</span>
 
                 {activeRequest?.folderId && (
                   <>
-                    <span className='text-gray-500 dark:text-gray-400'>
+                    <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
                       {findFolderName(
                         activeRequest.folderId,
                         (activeCollectionFull as any)?.folders || [],
                       )}
                     </span>
-                    <span className='text-gray-500 dark:text-gray-400'>/</span>
+                    <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>/</span>
                   </>
                 )}
 
@@ -2772,7 +2772,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                     value={activeRequest.name || ''}
                     onSave={handleSaveName}
                     placeholder='Request Name'
-                    fontSize='sm'
+                    fontSize='xs'
                     fontWeight='medium'
                   />
 
@@ -2797,7 +2797,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span
-                        className={`text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${!hasPreRequestConfigured || isCurrentRequestPreRequest
+                        className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${!hasPreRequestConfigured || isCurrentRequestPreRequest
                           ? 'opacity-50'
                           : ''
                           }`}
@@ -2959,9 +2959,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 }, 0);
               }}
               placeholder='Enter request URL'
+              className='text-xs md:text-md'
             />
 
-            <div className='flex space-x-2'>
+            <div className='justify-end flex space-x-2'>
               <Button
                 variant='active'
                 onClick={handleSendRequest}
@@ -3066,7 +3067,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                       }
                     }}
                     className={`
-              pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-sm transition-colors whitespace-nowrap
+              pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-xs md:text-sm transition-colors whitespace-nowrap
               ${activeTab === tab.id
                         ? 'border-[#136fb0] text-[#136fb0]'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -3208,7 +3209,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+                <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
                   Authorization
                 </h4>
                 <select
@@ -3310,7 +3311,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
           {activeTab === 'settings' && (
             <div className='space-y-5'>
-              <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+              <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
                 Request Settings
               </h4>
 
