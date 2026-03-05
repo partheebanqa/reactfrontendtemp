@@ -324,7 +324,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
             {/* MOBILE-FIRST LAYOUT */}
             <div className='flex flex-col sm:flex-row sm:items-center gap-3'>
               {/* TOP ROW */}
-              <div className='flex items-start sm:items-center gap-3 flex-1 min-w-0'>
+              <div className='flex items-center sm:items-center gap-3 flex-1 min-w-0'>
                 {/* Drag */}
                 <button
                   className='cursor-grab active:cursor-grabbing p-1 rounded hover:bg-muted'
@@ -371,7 +371,7 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                       {request.method}
                     </span>
 
-                    <p className='text-sm sm:text-base font-medium truncate'>
+                    <p className='text-xs sm:text-md font-medium truncate'>
                       {request.name || request.url || 'New Request'}
                     </p>
                   </div>

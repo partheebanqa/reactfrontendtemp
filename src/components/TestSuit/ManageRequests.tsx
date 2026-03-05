@@ -447,7 +447,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           {shouldHidePreRequest ? (
             <CardTitle>
               <div className='flex items-center gap-4'>
-                Requests ({headerRequestsCount})
+                <p className='text-sm md:text-md'>Requests ({headerRequestsCount})</p>
                 {showTestcaseHint && (
                   <p className='text-xs text-amber-600 flex items-center gap-1'>
                     <span>
@@ -462,7 +462,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           ) : (
             <CardTitle>
               <div className='flex items-center gap-4'>
-                <span>Requests ({headerRequestsCount})</span>
+                <p className='text-sm md:text-md'>Requests ({headerRequestsCount})</p>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className='w-4 h-4 text-gray-500 cursor-pointer' />
@@ -550,36 +550,36 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                 key={request.id}
                 className='p-4 border rounded-lg hover:bg-muted/50 transition-colors'
               >
-                <div className='flex items-center justify-between'>
+                <div className='block md:flex items-center justify-between'>
                   <div className='flex items-center space-x-3 flex-1'>
                     <Badge className={getMethodBadgeColor(request.method)}>
                       {request.method}
                     </Badge>
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2'>
-                        <h4 className='font-medium text-base'>
+                        <h4 className='text-[12px] md:text-md font-medium'>
                           {request.name}
                         </h4>
                         {preRequestId === request.id && (
                           <>
                             <Badge
                               variant='secondary'
-                              className='text-xs bg-green-100 text-green-800'
+                              className='text-[10px] md:text-md bg-green-100 text-green-800'
                             >
                               Pre-request
                             </Badge>
-                            <CircleCheckBig color='#16a34a' size={20} />
-                            <p>Auth : {extractVariables[0]?.path}</p>
+                            <CircleCheckBig color='#16a34a' className='w-3 h-3 md:w-4 md:h-4' />
+                            <p className='text-[10px] md:text-md'>Auth : {extractVariables[0]?.path}</p>
                           </>
                         )}
                       </div>
-                      <p className='text-[13px] text-muted-foreground mt-1 break-all'>
+                      <p className='mb-1 text-xs md:text-md text-muted-foreground mt-1 break-all'>
                         {displayUrl}
                       </p>
                     </div>
                   </div>
 
-                  <div className='flex items-center justify-center space-x-2'>
+                  <div className='flex items-center justify-end space-x-2'>
                     {showAuthCapture && request.method === 'POST' && (
                       <Button
                         onClick={() => handleTestRequest(request)}
@@ -599,6 +599,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                           Select testcases
                         </Button>
                       )}
+
+
+
                     <AlertDialog>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -676,11 +679,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
                           {/* collapsible category list */}
                           <div
-                            className={`overflow-hidden transition-all duration-300 ${
-                              showCategories
-                                ? 'max-h-[1000px] opacity-100'
-                                : 'max-h-0 opacity-0'
-                            }`}
+                            className={`overflow-hidden transition-all duration-300 ${showCategories
+                              ? 'max-h-[1000px] opacity-100'
+                              : 'max-h-0 opacity-0'
+                              }`}
                           >
                             <div className='space-y-2'>
                               {selectedByCategory.map((categoryData) => (

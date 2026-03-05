@@ -1774,6 +1774,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                         }
                         setShowMenu(null);
                         setMenuPosition(null);
+                        toggleSidebar();
                       }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1871,7 +1872,10 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                       </>
                     )}
                     <button
-                      onClick={() => handleOpenSecurityScan(selectedRequest)}
+                      onClick={() => {
+                        handleOpenSecurityScan(selectedRequest)
+                        toggleSidebar();
+                      }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Shield className='h-4 w-4 mr-2' />
@@ -1884,8 +1888,10 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     </button>
 
                     <button
-                      onClick={() =>
+                      onClick={() => {
                         handleOpenPerformanceScanning(selectedRequest)
+                        toggleSidebar();
+                      }
                       }
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1899,9 +1905,10 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     </button>
 
                     <button
-                      onClick={() =>
-                        handleOpenPerformanceTesting(selectedRequest)
-                      }
+                      onClick={() => {
+                        handleOpenPerformanceTesting(selectedRequest);
+                        toggleSidebar();
+                      }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Rocket className='h-4 w-4 mr-2' />

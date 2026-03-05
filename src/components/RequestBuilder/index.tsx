@@ -291,6 +291,7 @@ const RequestBuilder = () => {
     }
   }, []);
 
+
   return (
     <>
       <div className='flex h-full relative border border-gray-200 bg-background rounded-lg mt-2'>
@@ -426,7 +427,7 @@ const RequestBuilder = () => {
                       } ${isBottomLayout
                         ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
                         : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                      } ${isMobile ? 'touch-manipulation' : ''}`}
+                      } ${isMobile ? 'touch-none' : ''}`}
                     onMouseDown={handleResizeStart}
                     onTouchStart={(e) => {
                       e.preventDefault();
@@ -445,6 +446,8 @@ const RequestBuilder = () => {
                     )}
                   </div>
                 ) : null}
+
+
 
                 {/* Response Viewer */}
                 <div

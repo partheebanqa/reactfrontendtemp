@@ -759,99 +759,109 @@ const ResponseViewer = ({
         onMouseEnter={() => setHoveredField(node.path)}
         onMouseLeave={() => !showAssertionModal && setHoveredField(null)}
       >
-        <div className='flex items-center py-1 pr-2 font-mono text-sm border-l-2 border-transparent hover:border-blue-500'>
-          <span className='text-gray-400 dark:text-gray-600 select-none text-xs w-12 text-center flex-shrink-0 absolute left-0'>
+
+        <div
+          tabIndex={0}
+          className="group flex items-start py-2 pr-2 text-sm border-l-2 border-transparent hover:border-blue-500 focus:border-blue-500"
+        >
+          {/* Line number */}
+          <span className="text-gray-400 dark:text-gray-600 select-none text-xs w-8 sm:w-10 text-right mr-2 flex-shrink-0">
             {index + 1}
           </span>
-          <div
-            className='flex items-center flex-1 min-w-0'
-            style={{ marginLeft: `${48 + node.level * 20}px` }}
-          >
-            {hasChildren && (
-              <button
-                onClick={() => toggleNode(node.path)}
-                className='p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded mr-1 flex-shrink-0'
-                aria-label={isExpanded ? 'Collapse' : 'Expand'}
-              >
-                {isExpanded ? (
-                  <ChevronDown className='w-3 h-3 text-gray-600 dark:text-gray-400' />
-                ) : (
-                  <ChevronRight className='w-3 h-3 text-gray-600 dark:text-gray-400' />
-                )}
-              </button>
-            )}
-            {!hasChildren && <div className='w-5' />}
-            <span className='text-blue-600 dark:text-blue-400 font-medium mr-2 text-sm flex-shrink-0'>
-              {node.key}:
-            </span>
 
-            {hasChildren ? (
-              <span className='text-gray-600 dark:text-gray-400 text-sm'>
-                {node.type === 'array'
-                  ? `[${Array.isArray(node.value) ? node.value.length : 0}]`
-                  : `{${Object.keys(node.value || {}).length}}`}
+          <div
+            className="flex flex-col sm:flex-row sm:items-center flex-1 min-w-0 gap-1"
+            style={{ paddingLeft: `${node.level * 16}px` }}
+          >
+            {/* Key + value */}
+            <div className="flex items-center flex-wrap min-w-0">
+              {hasChildren && (
+                <button
+                  onClick={() => toggleNode(node.path)}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded mr-1"
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <ChevronRight className="w-3 h-3 text-gray-600 dark:text-gray-400" />
+                  )}
+                </button>
+              )}
+
+              {!hasChildren && <div className="w-4" />}
+
+              <span className="text-blue-600 dark:text-blue-400 font-medium mr-1 text-xs">
+                {node.key}:
               </span>
-            ) : (
-              <span
-                className={`text-sm font-mono truncate ${node.type === 'string'
-                  ? 'text-green-600 dark:text-green-400'
-                  : node.type === 'number'
-                    ? 'text-purple-600 dark:text-purple-400'
-                    : node.type === 'boolean'
-                      ? 'text-orange-600 dark:text-orange-400'
-                      : 'text-gray-600 dark:text-gray-400'
-                  }`}
-              >
-                {node.type === 'string'
-                  ? `"${node.value}"`
-                  : String(node.value)}
-              </span>
-            )}
-            <div className='flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+
+              {hasChildren ? (
+                <span className="text-gray-600 dark:text-gray-400 text-xs">
+                  {node.type === "array"
+                    ? `[${Array.isArray(node.value) ? node.value.length : 0}]`
+                    : `{${Object.keys(node.value || {}).length}}`}
+                </span>
+              ) : (
+                <span
+                  className={`text-xs font-mono break-all ${node.type === "string"
+                    ? "text-green-600 dark:text-green-400"
+                    : node.type === "number"
+                      ? "text-purple-600 dark:text-purple-400"
+                      : node.type === "boolean"
+                        ? "text-orange-600 dark:text-orange-400"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`}
+                >
+                  {node.type === "string" ? `"${node.value}"` : String(node.value)}
+                </span>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0 sm:ml-2 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
               {!hasChildren && (
                 <>
                   <button
                     onClick={() =>
                       handleCopy(String(node.value), `copy-${node.path}`)
                     }
-                    className='p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors'
-                    title='Copy value'
+                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
                   >
                     {copiedItem === `copy-${node.path}` ? (
-                      <CheckCircle className='w-3.5 h-3.5 text-green-500' />
+                      <CheckCircle className="w-3.5 h-3.5 text-green-500" />
                     ) : (
-                      <Copy className='w-3.5 h-3.5' />
+                      <Copy className="w-3.5 h-3.5" />
                     )}
                   </button>
+
                   {existingExtractions.some((e) => e.path === node.path) ? (
-                    <div className='flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs'>
-                      <CheckCircle className='w-3 h-3' />
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                      <CheckCircle className="w-3 h-3" />
                       <span>Extracted</span>
                     </div>
                   ) : (
                     <button
                       onClick={(e) =>
                         handleExtractClick(
-                          'response_body',
+                          "response_body",
                           node.path,
                           node.value,
-                          e,
+                          e
                         )
                       }
-                      className='px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700 transition-colors'
-                      title='Extract as variable'
+                      className="px-2 py-1 bg-[#136fb0] text-white rounded text-xs hover:bg-blue-700"
                     >
-                      <Plus className='w-3 h-3 mr-1 inline' />
+                      <Plus className="w-3 h-3 mr-1 inline" />
                       Extract
                     </button>
                   )}
                 </>
               )}
+
               <button
                 onClick={(e) =>
                   handleAddAssertionClick(node.path, node.value, e)
                 }
-                className='px-1.5 py-0.5 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors'
+                className="px-2 py-1 text-xs font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
               >
                 + Assert
               </button>

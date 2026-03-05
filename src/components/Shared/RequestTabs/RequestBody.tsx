@@ -68,7 +68,7 @@ export default function RequestBody({
       <div className='flex items-center justify-between'>
         <TooltipProvider>
           <div className='flex items-center gap-2'>
-            <h4 className='text-sm text-base sm:text-lg font-medium text-gray-900 dark:text-white'>
+            <h4 className='text-xs md:text-lg font-medium text-gray-900 dark:text-white'>
               Request Body
             </h4>
             <Tooltip>
@@ -97,7 +97,7 @@ export default function RequestBody({
                 Beautify
               </button>
             )}
-          <select
+          {/* <select
             value={bodyType}
             onChange={(e) => onBodyTypeChange(e.target.value as BodyType)}
             className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150'
@@ -108,7 +108,7 @@ export default function RequestBody({
             <option value='urlencoded'>URL Encoded</option>{' '}
             <option value='raw'>Raw</option>
             <option value='binary'>Binary</option>
-          </select>
+          </select> */}
         </div>
       </div>
 
