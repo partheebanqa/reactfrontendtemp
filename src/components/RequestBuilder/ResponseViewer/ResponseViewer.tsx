@@ -237,9 +237,8 @@ const ResponseViewer = ({
       },
       item: [
         {
-          name: `API Test - ${
-            responseData.actualRequest?.url || 'Unknown URL'
-          }`,
+          name: `API Test - ${responseData.actualRequest?.url || 'Unknown URL'
+            }`,
           request: {
             method: responseData.actualRequest?.method || 'GET',
             header: convertHeaders(responseData.actualRequest?.headers || {}),
@@ -279,29 +278,28 @@ const ResponseViewer = ({
           event:
             assertionLogs.length > 0
               ? [
-                  {
-                    listen: 'test',
-                    script: {
-                      exec: [
-                        '// Generated API Test Results',
-                        `// Total Assertions: ${assertionLogs.length}`,
-                        `// Passed: ${passedCount}`,
-                        `// Failed: ${failedCount}`,
-                        `// Success Rate: ${successRate}%`,
-                        '',
-                        '// Assertion Results:',
-                        ...assertionLogs.map((log: any, index: number) => {
-                          const status =
-                            log.status === 'passed' ? '✅ PASS' : '❌ FAIL';
-                          return `// ${index + 1}. ${status}: ${
-                            log.description || 'Unknown assertion'
+                {
+                  listen: 'test',
+                  script: {
+                    exec: [
+                      '// Generated API Test Results',
+                      `// Total Assertions: ${assertionLogs.length}`,
+                      `// Passed: ${passedCount}`,
+                      `// Failed: ${failedCount}`,
+                      `// Success Rate: ${successRate}%`,
+                      '',
+                      '// Assertion Results:',
+                      ...assertionLogs.map((log: any, index: number) => {
+                        const status =
+                          log.status === 'passed' ? '✅ PASS' : '❌ FAIL';
+                        return `// ${index + 1}. ${status}: ${log.description || 'Unknown assertion'
                           } - ${log.errorMessage || 'Success'}`;
-                        }),
-                      ],
-                      type: 'text/javascript',
-                    },
+                      }),
+                    ],
+                    type: 'text/javascript',
                   },
-                ]
+                },
+              ]
               : [],
         },
       ],
@@ -368,9 +366,8 @@ const ResponseViewer = ({
         },
       },
       response: {
-        status: `${responseData.status || responseData.statusCode} ${
-          responseData.statusText || ''
-        }`.trim(),
+        status: `${responseData.status || responseData.statusCode} ${responseData.statusText || ''
+          }`.trim(),
         headers: responseData.headers || {},
         body: responseData.body || null,
         performance: {
@@ -552,14 +549,12 @@ const ResponseViewer = ({
       if (config?.isGeneral) {
         switch (assertionType) {
           case 'response_time':
-            description = `Response time should be ${
-              config.comparison === 'less' ? 'less than' : 'more than'
-            } ${config.value}ms`;
+            description = `Response time should be ${config.comparison === 'less' ? 'less than' : 'more than'
+              } ${config.value}ms`;
             break;
           case 'payload_size':
-            description = `Payload size should be ${
-              config.comparison === 'less' ? 'less than' : 'more than'
-            } ${config.value}KB`;
+            description = `Payload size should be ${config.comparison === 'less' ? 'less than' : 'more than'
+              } ${config.value}KB`;
             break;
           case 'status_equals':
             description = `Response status should be ${config.value}`;
@@ -569,15 +564,13 @@ const ResponseViewer = ({
             finalType = 'contains';
             break;
           case 'contains_static':
-            description = `Response should contain static value: "${
-              config.value
-            }"${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            description = `Response should contain static value: "${config.value
+              }"${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
             finalType = 'contains';
             break;
           case 'contains_dynamic':
-            description = `Response should contain dynamic variable: ${
-              config.value
-            }${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            description = `Response should contain dynamic variable: ${config.value
+              }${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
             finalType = 'contains';
             break;
           case 'contains_extracted':
@@ -612,9 +605,8 @@ const ResponseViewer = ({
             config.description ||
             `${activeFieldPath} array ${operatorText} ${config.expectedValue} elements`;
         } else {
-          description = `${activeFieldPath} ${operatorText} "${
-            config.expectedValue || config.value
-          }"`;
+          description = `${activeFieldPath} ${operatorText} "${config.expectedValue || config.value
+            }"`;
         }
       }
 
@@ -642,9 +634,9 @@ const ResponseViewer = ({
         config?.isGeneral && config.scope !== 'field'
           ? baseAssertion
           : {
-              ...baseAssertion,
-              field: normalizeFieldPath(activeFieldPath),
-            };
+            ...baseAssertion,
+            field: normalizeFieldPath(activeFieldPath),
+          };
 
       const updatedAssertions = [...assertions, newAssertion];
       setAssertions(removeDuplicateAssertions(updatedAssertions));
@@ -801,15 +793,14 @@ const ResponseViewer = ({
               </span>
             ) : (
               <span
-                className={`text-sm font-mono truncate ${
-                  node.type === 'string'
-                    ? 'text-green-600 dark:text-green-400'
-                    : node.type === 'number'
-                      ? 'text-purple-600 dark:text-purple-400'
-                      : node.type === 'boolean'
-                        ? 'text-orange-600 dark:text-orange-400'
-                        : 'text-gray-600 dark:text-gray-400'
-                }`}
+                className={`text-sm font-mono truncate ${node.type === 'string'
+                  ? 'text-green-600 dark:text-green-400'
+                  : node.type === 'number'
+                    ? 'text-purple-600 dark:text-purple-400'
+                    : node.type === 'boolean'
+                      ? 'text-orange-600 dark:text-orange-400'
+                      : 'text-gray-600 dark:text-gray-400'
+                  }`}
               >
                 {node.type === 'string'
                   ? `"${node.value}"`
@@ -1054,23 +1045,23 @@ const ResponseViewer = ({
       <div className='flex items-center space-x-4 text-sm'>
         <div className='flex items-center space-x-1'>
           <CheckCircle
-            className={`h-4 w-4 ${getStatusColor(responseData.status)}`}
+            className={`h-3 md:h-4 w-3 md:w-4 ${getStatusColor(responseData.status)}`}
           />
           <span
-            className={`font-medium ${getStatusColor(responseData.status)}`}
+            className={`text-xs md:text-md font-medium ${getStatusColor(responseData.status)}`}
           >
             {responseData.status} {responseData.statusText || ''}
           </span>
         </div>
         <div className='flex items-center space-x-1'>
-          <Clock className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-          <span className='font-medium text-gray-900 dark:text-gray-100'>
-            {responseData.metrics?.responseTime || 0}ms
+          <Clock className='h-3 md:h-4 w-3 md:w-4 text-gray-600 dark:text-gray-400' />
+          <span className='text-xs md:text-md font-medium text-gray-900 dark:text-gray-100'>
+            {responseData?.metrics?.responseTime || 0}ms
           </span>
         </div>
         <div className='flex items-center space-x-1'>
-          <HardDrive className='h-4 w-4 text-gray-600 dark:text-gray-400' />
-          <span className='font-medium text-gray-900 dark:text-gray-100'>
+          <HardDrive className='h-3 md:h-4 w-3 md:w-4 text-gray-600 dark:text-gray-400' />
+          <span className='text-xs md:text-md font-medium text-gray-900 dark:text-gray-100'>
             {calculateResponseSize(responseData.body)}
           </span>
         </div>
@@ -1102,7 +1093,7 @@ const ResponseViewer = ({
 
   const requestDetails = parseRequestFromCurl();
 
-  console.log('requestDetails123:', requestDetails);
+  // console.log('requestDetails123:', requestDetails);
 
   if (!responseData) {
     return (
@@ -1140,13 +1131,12 @@ const ResponseViewer = ({
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as any)}
-                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                      activeTab === tab.id
-                        ? 'border-blue-600 text-blue-600'
-                        : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    }`}
+                    className={`py-2 px-1 border-b-2 font-medium text-xs md:text-sm transition-colors flex items-center space-x-2 ${activeTab === tab.id
+                      ? 'border-blue-600 text-blue-600'
+                      : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                      }`}
                   >
-                    <span>{tab.label}</span>
+                    <span className='text-xs md:text-sm'>{tab.label}</span>
                     {tab.hasIndicator && (
                       <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
                     )}
@@ -1173,18 +1163,19 @@ const ResponseViewer = ({
           <div className='flex items-center space-x-4'>
             <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
               <Stars className='w-4 h-4' />
-              <span>Pretty</span>
+              <span className='text-xs md:text-sm'>Pretty</span>
             </button>
             <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
               <Code className='w-4 h-4' />
-              <span>Raw</span>
+              <span className='text-xs md:text-sm'>Raw</span>
             </button>
             <button
               onClick={() => setShowAssertionUI(true)}
               className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200'
             >
               <FlaskConical className='w-4 h-4' />
-              <span>Manage Assertions</span>
+              <span className='text-xs md:text-sm hidden md:block'>Manage Assertions</span>
+              <span className='text-xs md:text-sm md:hidden block'>Assertions</span>
             </button>
           </div>
 
@@ -1289,11 +1280,10 @@ const ResponseViewer = ({
                   (assertion: any, idx: number) => (
                     <div
                       key={idx}
-                      className={`border rounded-lg p-3 ${
-                        assertion.status === 'passed'
-                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                      }`}
+                      className={`border rounded-lg p-3 ${assertion.status === 'passed'
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                        }`}
                     >
                       <div className='flex items-center space-x-2'>
                         {assertion.status === 'passed' ? (
@@ -1322,11 +1312,10 @@ const ResponseViewer = ({
             {responseData.schemaValidation ? (
               <div className='space-y-4'>
                 <div
-                  className={`border rounded-lg p-4 ${
-                    responseData.schemaValidation.passed
-                      ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                      : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                  }`}
+                  className={`border rounded-lg p-4 ${responseData.schemaValidation.passed
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    }`}
                 >
                   <div className='flex items-center space-x-2'>
                     {responseData.schemaValidation.passed ? (
@@ -1336,11 +1325,10 @@ const ResponseViewer = ({
                     )}
                     <div>
                       <h3
-                        className={`font-medium ${
-                          responseData.schemaValidation.passed
-                            ? 'text-green-800 dark:text-green-300'
-                            : 'text-red-800 dark:text-red-300'
-                        }`}
+                        className={`font-medium ${responseData.schemaValidation.passed
+                          ? 'text-green-800 dark:text-green-300'
+                          : 'text-red-800 dark:text-red-300'
+                          }`}
                       >
                         Schema Validation{' '}
                         {responseData.schemaValidation.passed
@@ -1749,7 +1737,7 @@ const ResponseViewer = ({
             <span className='text-gray-600 dark:text-gray-400'>
               Extracted token from:
             </span>
-            <span className='font-medium text-blue-600 dark:text-blue-400'>
+            <span className='text-xs md:text-sm font-medium text-blue-600 dark:text-blue-400'>
               {activeRequest?.name || 'Request'}
             </span>
             <span className='ml-auto text-gray-500'>

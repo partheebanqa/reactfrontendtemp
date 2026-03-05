@@ -1242,7 +1242,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                              <span className='text-xs md:text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
                                 {request.name}
                               </span>
                             </TooltipTrigger>
@@ -1440,7 +1440,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span
-                                        className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
+                                        className='text-xs md:text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
                                         style={{
                                           textOverflow: 'ellipsis',
                                           overflow: 'hidden',
@@ -1531,9 +1531,11 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                         >
                                           <div
                                             className='flex items-center space-x-2 flex-1 min-w-0'
-                                            onClick={() =>
-                                              selectRequest(request, collection)
-                                            }
+                                            onClick={() => {
+                                              selectRequest(request, collection);
+
+                                              toggleSidebar();
+                                            }}
                                           >
                                             {isAuthRequest(
                                               request.id,
@@ -1560,7 +1562,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                             <TooltipProvider>
                                               <Tooltip>
                                                 <TooltipTrigger asChild>
-                                                  <span className='text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                                  <span className='text-xs md:text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
                                                     {request.name}
                                                   </span>
                                                 </TooltipTrigger>

@@ -110,7 +110,7 @@ const SchemaPage: React.FC = () => {
       <Card>
         <CardHeader className='flex flex-row items-center justify-between space-y-0'>
           <div>
-            <h4 className='text-base sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
+            <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
               API Schemas
               {/* Show Dot if schemaCount > 0 */}
               {schemaCount > 0 && (
@@ -149,7 +149,8 @@ const SchemaPage: React.FC = () => {
               disabled={schemas.length >= 2}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload className='w-4 h-4 mr-2' /> Upload Schema
+              <Upload className='w-4 h-4 mr-2' />
+              <span className='hidden md:block'> Upload Schema</span>
             </Button>
 
             <Button
@@ -158,11 +159,12 @@ const SchemaPage: React.FC = () => {
             >
               {compareMode ? (
                 <>
-                  <X className='w-4 h-4 mr-2' /> Cancel Compare
+                  <X className='w-4 h-4 mr-2' /> <span className='hidden md:block'>Cancel Compare</span>
                 </>
               ) : (
                 <>
-                  <GitCompare className='w-4 h-4 mr-2' /> Compare Schemas
+                  <GitCompare className='w-4 h-4 mr-2' />
+                  <span className='hidden md:block'> Compare Schemas</span>
                 </>
               )}
             </Button>

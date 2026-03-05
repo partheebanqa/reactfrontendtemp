@@ -303,7 +303,7 @@ const RequestBuilder = () => {
           </div>
         )}
 
-        <div className='flex-1 flex flex-col overflow-hidden'>
+        <div className='flex-1 flex flex-col overflow-hidden' >
           {isMobile && (
             <div className='flex justify-between items-center p-2 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700'>
               <button
@@ -318,27 +318,15 @@ const RequestBuilder = () => {
                 )}
               </button>
 
-              <button
+              {/* <button
                 onClick={toggleLayout}
-                className='p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                aria-label='Toggle view'
+                className="flex items-center gap-2 p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                aria-label="Toggle view"
               >
                 <Layers size={15} />
-                <span className='ml-2 text-xs md:text-sm'>
+                <span className="text-xs md:text-sm whitespace-nowrap">
                   {activePanel === 'editor' ? 'View Response' : 'Edit Request'}
                 </span>
-              </button>
-
-              {/* <button
-                onClick={toggleSidebar}
-                className='p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                aria-label='Toggle sidebar'
-              >
-                {showSidebar ? (
-                  <PanelRight size={18} />
-                ) : (
-                  <PanelLeft size={18} />
-                )}
               </button> */}
             </div>
           )}
@@ -427,6 +415,7 @@ const RequestBuilder = () => {
                     existingExtractions={existingExtractions}
                     onRemoveExtraction={handleRemoveExtraction}
                   />
+
                 </div>
 
                 {/* Resizer Handle */}
@@ -459,8 +448,7 @@ const RequestBuilder = () => {
 
                 {/* Response Viewer */}
                 <div
-                  className={`flex flex-col min-h-0 overflow-hidden ${isMobile && activePanel === 'editor' ? 'hidden' : ''
-                    }`}
+                  className={`flex flex-col min-h-0 overflow-hidden`}
                   style={{
                     height: isBottomLayout
                       ? `${100 - resizePosition}%`

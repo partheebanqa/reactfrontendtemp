@@ -78,9 +78,8 @@ const MoveToModal: React.FC<MoveToModalProps> = ({
       return (
         <div key={folder.id} style={{ marginLeft: `${level * 16}px` }}>
           <div
-            className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
-              isSelected ? 'bg-blue-100 dark:bg-blue-900/30' : ''
-            } ${isCurrent ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${isSelected ? 'bg-blue-100 dark:bg-blue-900/30' : ''
+              } ${isCurrent ? 'opacity-50 cursor-not-allowed' : ''}`}
             onClick={() => {
               if (!isCurrent) {
                 setSelectedTarget({
@@ -154,9 +153,8 @@ const MoveToModal: React.FC<MoveToModalProps> = ({
             return (
               <div key={collection.id} className='space-y-1'>
                 <div
-                  className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${
-                    isSelectedRoot ? 'bg-blue-100 dark:bg-blue-900/30' : ''
-                  } ${isCurrentRoot ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 ${isSelectedRoot ? 'bg-blue-100 dark:bg-blue-900/30' : ''
+                    } ${isCurrentRoot ? 'opacity-50 cursor-not-allowed' : ''}`}
                   onClick={() => {
                     if (!isCurrentRoot) {
                       setSelectedTarget({
@@ -167,7 +165,7 @@ const MoveToModal: React.FC<MoveToModalProps> = ({
                   }}
                 >
                   <Folder className='h-4 w-4 text-orange-500' />
-                  <span className='text-sm font-medium text-gray-900 dark:text-white'>
+                  <span className='text-xs md:text-sm font-medium text-gray-900 dark:text-white'>
                     {collection.name}
                   </span>
                   {isCurrentRoot && (
