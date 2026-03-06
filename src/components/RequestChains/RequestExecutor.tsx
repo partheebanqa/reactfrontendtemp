@@ -59,6 +59,7 @@ interface RequestExecutorProps {
   request?: APIRequest;
   onResponse?: (response: any) => void;
   isRunAllExecuting?: boolean;
+  isSaveDisabled?: boolean;
 }
 
 export function RequestExecutor({
@@ -74,9 +75,10 @@ export function RequestExecutor({
   request,
   onResponse,
   isRunAllExecuting,
+  isSaveDisabled,
 }: RequestExecutorProps) {
   const { activeEnvironment } = useDataManagement();
-  console.log('activeEnvironment:', activeEnvironment);
+  console.log('requests123:', requests);
 
   const [location, setLocation] = useLocation();
   const [isExecuting, setIsExecuting] = useState(false);
@@ -698,9 +700,7 @@ export function RequestExecutor({
                   {!chainId && (
                     <Button
                       onClick={handleSaveChain}
-                      disabled={
-                        !chainName?.trim() || (!!savedChainId && !chainId)
-                      }
+                      disabled={isSaveDisabled || (!!savedChainId && !chainId)}
                       className={`hover-scale ${
                         !chainName?.trim() || (!!savedChainId && !chainId)
                           ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
