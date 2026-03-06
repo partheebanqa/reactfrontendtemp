@@ -41,7 +41,7 @@ export function useCollection() {
 
   // Setup queries and mutations
   const { refetch, isLoading: isRefetching } = useCollectionQuery(
-    shouldFetchCollections
+    shouldFetchCollections,
   );
 
   const setActiveCollection = collectionActions.setActiveCollection;
@@ -62,7 +62,7 @@ export function useCollection() {
     collectionActions.toggleExpandedCollection(collectionId);
 
     const targetCollection = collections?.find(
-      (col) => col.id === collectionId
+      (col) => col.id === collectionId,
     );
     if (targetCollection?.hasFetchedRequests) {
       return; // already loaded
@@ -90,7 +90,7 @@ export function useCollection() {
 
   const handleCreateRequest = async (
     collection?: Collection,
-    folderId?: string
+    folderId?: string,
   ) => {
     if (activeRequest && activeRequest.id) {
       collectionActions.updateOpenedRequest(activeRequest);
@@ -104,6 +104,7 @@ export function useCollection() {
       id: generateUniqueRequestId(),
       name: 'New Request',
       method: 'GET',
+      // bodyRawContent: '{}',
       url: '',
       bodyType: 'raw',
       bodyFormData: null,
@@ -130,7 +131,7 @@ export function useCollection() {
       // Helpers to work with folder tree
       const findFolderById = (
         folders: any[] | undefined,
-        id: string
+        id: string,
       ): any | null => {
         if (!folders) return null;
         for (const f of folders) {
@@ -144,7 +145,7 @@ export function useCollection() {
       const insertIntoFolders = (
         folders: any[] | undefined,
         id: string,
-        req: CollectionRequest
+        req: CollectionRequest,
       ): any[] | undefined => {
         if (!folders) return folders;
         return folders.map((f) => {
@@ -175,7 +176,7 @@ export function useCollection() {
               folders: insertIntoFolders(
                 (col as any).folders,
                 folderId,
-                newRequest
+                newRequest,
               ),
             } as any;
           } else {
@@ -188,11 +189,11 @@ export function useCollection() {
               requests: [...(col.requests || []), newRequest],
             };
           }
-        })
+        }),
       );
 
       setActiveCollection(
-        collections.find((col) => col.id === collection.id) || null
+        collections.find((col) => col.id === collection.id) || null,
       );
     }
 
