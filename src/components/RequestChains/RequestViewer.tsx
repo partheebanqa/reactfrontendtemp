@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { GitBranch, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { GitBranch, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
@@ -98,7 +98,7 @@ interface EdgeData {
   y2: number;
 }
 
-// ─── METHOD COLORS — matches RequestEditor getMethodColor ─────────────────────
+// ─── METHOD COLORS ────────────────────────────────────────────────────────────
 
 function getMethodStyle(method: string) {
   switch (method) {
@@ -117,7 +117,7 @@ function getMethodStyle(method: string) {
   }
 }
 
-// ─── VARIABLE COLORS — matches RequestEditor TYPE_COLORS ──────────────────────
+// ─── VARIABLE COLORS ──────────────────────────────────────────────────────────
 
 interface VarColor {
   stroke: string;
@@ -408,7 +408,6 @@ function PipelineEdges({
           );
         })}
       </defs>
-
       {varNames.map((name) => {
         const c = getVarColor(name);
         const x = varTrack[name];
@@ -428,7 +427,6 @@ function PipelineEdges({
           />
         );
       })}
-
       {varNames.map((name) => {
         const c = getVarColor(name);
         const x = varTrack[name];
@@ -449,7 +447,6 @@ function PipelineEdges({
           </text>
         );
       })}
-
       {edges.map((edge) => {
         const c = getVarColor(edge.varName);
         const isActive = activeVar === edge.varName;
@@ -471,7 +468,6 @@ function PipelineEdges({
                 `Q ${tx} ${y2} ${tx - hDir * r} ${y2}`,
                 `L ${x2} ${y2}`,
               ].join(' ');
-
         return (
           <g key={edge.id}>
             <path
@@ -541,7 +537,6 @@ function ExpandedDetail({
 }) {
   return (
     <div className='p-3 sm:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 bg-gray-50 border-t border-gray-200 cv-fadein'>
-      {/* Extracts */}
       {(req.extractVariables ?? []).length > 0 && (
         <div>
           <FieldLabel color='#f59e0b'>Extracts from Response</FieldLabel>
@@ -570,8 +565,6 @@ function ExpandedDetail({
           </div>
         </div>
       )}
-
-      {/* Consumes */}
       {Object.keys(usedVars).length > 0 && (
         <div>
           <FieldLabel color='#2563eb'>Consumes Variables</FieldLabel>
@@ -618,8 +611,6 @@ function ExpandedDetail({
           </div>
         </div>
       )}
-
-      {/* URL */}
       <div className='col-span-1 sm:col-span-2'>
         <FieldLabel>URL</FieldLabel>
         <div className='w-full px-3 py-2 border border-gray-300 rounded-lg bg-white font-mono text-xs sm:text-sm text-gray-500 break-all leading-relaxed'>
@@ -677,7 +668,6 @@ function RequestNode({
 }) {
   const ms = getMethodStyle(req.method);
   const extracted = req.extractVariables ?? [];
-
   const usedVars = useMemo(() => {
     const map: Record<string, VariableSubstitution[]> = {};
     (req.variables ?? []).forEach((v) => {
@@ -697,7 +687,6 @@ function RequestNode({
     !!activeVar &&
     (extracted.some((e) => e.name === activeVar) ||
       Object.keys(usedVars).includes(activeVar));
-
   const statusBadge =
     req.runStatus === 'success'
       ? {
@@ -717,7 +706,6 @@ function RequestNode({
 
   return (
     <div className='relative flex items-stretch'>
-      {/* Spine */}
       <div
         className='flex flex-col items-center'
         style={{ width: 36, flexShrink: 0 }}
@@ -747,7 +735,6 @@ function RequestNode({
         )}
       </div>
 
-      {/* Card */}
       <div
         className='flex-1 mb-3 rounded-xl border overflow-hidden transition-all duration-200 min-w-0'
         style={{
@@ -758,12 +745,10 @@ function RequestNode({
             : '0 1px 3px rgba(0,0,0,0.05)',
         }}
       >
-        {/* Header */}
         <div
           className='flex items-start sm:items-center gap-2 sm:gap-3 px-3 sm:px-4 py-3 cursor-pointer select-none hover:bg-gray-50 transition-colors'
           onClick={onToggle}
         >
-          {/* Method */}
           <span
             className='text-xs font-bold px-2 py-0.5 rounded-md shrink-0 border mt-0.5 sm:mt-0'
             style={{
@@ -774,8 +759,6 @@ function RequestNode({
           >
             {req.method}
           </span>
-
-          {/* Name + URL */}
           <div className='flex-1 min-w-0'>
             <div className='text-sm font-semibold text-gray-900 leading-tight truncate'>
               {req.name}
@@ -783,14 +766,11 @@ function RequestNode({
             <div className='text-xs mt-0.5 text-gray-400 font-mono break-all line-clamp-1 hidden sm:block'>
               {req.url.replace(/^https?:\/\/[^/]+/, '') || req.url}
             </div>
-            {/* Mobile URL — shorter */}
             <div className='text-xs mt-0.5 text-gray-400 font-mono truncate sm:hidden'>
               {req.url.replace(/^https?:\/\/[^/]+/, '').substring(0, 40) ||
                 req.url.substring(0, 40)}
             </div>
           </div>
-
-          {/* Status badge */}
           {statusBadge && (
             <span
               className='text-xs font-bold px-2 py-0.5 rounded-md shrink-0 border hidden sm:inline-flex'
@@ -804,8 +784,6 @@ function RequestNode({
               {req.duration ? ` · ${req.duration}ms` : ''}
             </span>
           )}
-
-          {/* Pills — hidden on mobile, shown on sm+ */}
           <div
             className='hidden sm:flex flex-wrap gap-1 justify-end'
             style={{ maxWidth: 240 }}
@@ -861,8 +839,6 @@ function RequestNode({
               );
             })}
           </div>
-
-          {/* Chevron */}
           <span className='text-gray-400 shrink-0'>
             {expanded ? (
               <ChevronUp className='w-4 h-4' />
@@ -872,7 +848,6 @@ function RequestNode({
           </span>
         </div>
 
-        {/* Mobile: pills row */}
         {(extracted.length > 0 || Object.keys(usedVars).length > 0) && (
           <div className='flex sm:hidden flex-wrap gap-1 px-3 pb-2'>
             {extracted.map((ev) => {
@@ -975,7 +950,6 @@ function VariableCard({
         <VarCode name={varData.name} />
         <VarBadge name={varData.name} />
       </div>
-
       {varData.extractedIn.length > 0 && (
         <div className='mb-2'>
           <p className='text-xs font-medium text-gray-500 mb-1'>
@@ -998,7 +972,6 @@ function VariableCard({
           ))}
         </div>
       )}
-
       {varData.usedIn.length > 0 && (
         <div>
           <p className='text-xs font-medium text-gray-500 mb-1'>Used in:</p>
@@ -1118,9 +1091,7 @@ function FlowView({
 
   return (
     <div className='flex flex-col xl:grid xl:grid-cols-[1fr_272px] gap-4 xl:gap-6 items-start'>
-      {/* Pipeline column */}
       <div className='w-full min-w-0'>
-        {/* Legend bar */}
         <div className='flex flex-wrap gap-2 mb-4 items-center p-3 bg-white border border-gray-200 rounded-lg'>
           <span className='text-sm font-semibold text-gray-900 shrink-0'>
             Variable Types:
@@ -1148,7 +1119,6 @@ function FlowView({
           </span>
         </div>
 
-        {/* Mobile: Variable Registry toggle */}
         {sortedVars.length > 0 && (
           <div className='xl:hidden mb-3'>
             <button
@@ -1182,7 +1152,6 @@ function FlowView({
           </div>
         )}
 
-        {/* Pipeline */}
         <div ref={wrapRef} className='relative'>
           <PipelineEdges
             edges={edges}
@@ -1190,7 +1159,6 @@ function FlowView({
             removed={removed}
             wrapSize={wrapSize}
           />
-          {/* On mobile no right padding (no SVG tracks), on sm+ add padding for tracks */}
           <div className='flex flex-col sm:pr-[200px]'>
             {requests.map((req, idx) => (
               <RequestNode
@@ -1216,7 +1184,6 @@ function FlowView({
         </div>
       </div>
 
-      {/* Variable Registry sidebar — desktop only */}
       <aside className='hidden xl:flex xl:sticky xl:top-4 max-h-[calc(100vh-120px)] flex-col gap-3 w-full'>
         <h3 className='text-base font-medium text-gray-900'>
           Variable Registry
@@ -1311,68 +1278,60 @@ function TableView({
 
   return (
     <div className='space-y-6 sm:space-y-8'>
-      {/* Variable Overview */}
       <div>
         <SectionHeading>Variable Overview</SectionHeading>
-
-        {/* Mobile cards */}
         <div className='sm:hidden space-y-2'>
           {sortedVars.length === 0 && (
             <p className='text-center py-8 text-sm text-gray-400'>
               No variables found
             </p>
           )}
-          {sortedVars.map((v) => {
-            const c = getVarColor(v.name);
-            return (
-              <div
-                key={v.name}
-                className='bg-white border border-gray-200 rounded-xl p-3 space-y-2'
-              >
-                <div className='flex items-center justify-between gap-2'>
-                  <VarCode name={v.name} />
-                  <VarBadge name={v.name} />
-                </div>
-                {v.extractedIn.length > 0 && (
-                  <div className='text-xs text-gray-500'>
-                    <span className='font-medium'>Extracted in: </span>
-                    {v.extractedIn
-                      .map((e) => `#${e.order} ${e.requestName}`)
-                      .join(', ')}
-                  </div>
-                )}
-                <div className='flex items-center justify-between'>
-                  <span className='text-xs text-gray-400'>
-                    {v.usedIn.length} usages
-                  </span>
-                  <button
-                    onClick={() =>
-                      setFilterVar(filterVar === v.name ? null : v.name)
-                    }
-                    className='text-xs font-medium px-2.5 py-1 rounded-lg transition-colors border'
-                    style={
-                      filterVar === v.name
-                        ? {
-                            background: '#136fb0',
-                            color: 'white',
-                            borderColor: '#136fb0',
-                          }
-                        : {
-                            background: 'white',
-                            color: '#136fb0',
-                            borderColor: '#bfdbfe',
-                          }
-                    }
-                  >
-                    {filterVar === v.name ? 'Clear' : 'Filter'}
-                  </button>
-                </div>
+          {sortedVars.map((v) => (
+            <div
+              key={v.name}
+              className='bg-white border border-gray-200 rounded-xl p-3 space-y-2'
+            >
+              <div className='flex items-center justify-between gap-2'>
+                <VarCode name={v.name} />
+                <VarBadge name={v.name} />
               </div>
-            );
-          })}
+              {v.extractedIn.length > 0 && (
+                <div className='text-xs text-gray-500'>
+                  <span className='font-medium'>Extracted in: </span>
+                  {v.extractedIn
+                    .map((e) => `#${e.order} ${e.requestName}`)
+                    .join(', ')}
+                </div>
+              )}
+              <div className='flex items-center justify-between'>
+                <span className='text-xs text-gray-400'>
+                  {v.usedIn.length} usages
+                </span>
+                <button
+                  onClick={() =>
+                    setFilterVar(filterVar === v.name ? null : v.name)
+                  }
+                  className='text-xs font-medium px-2.5 py-1 rounded-lg transition-colors border'
+                  style={
+                    filterVar === v.name
+                      ? {
+                          background: '#136fb0',
+                          color: 'white',
+                          borderColor: '#136fb0',
+                        }
+                      : {
+                          background: 'white',
+                          color: '#136fb0',
+                          borderColor: '#bfdbfe',
+                        }
+                  }
+                >
+                  {filterVar === v.name ? 'Clear' : 'Filter'}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
-
-        {/* Desktop table */}
         <div className='hidden sm:block overflow-x-auto cv-scrollbar rounded-xl border border-gray-200'>
           <table className='w-full bg-white'>
             <thead className='bg-gray-50'>
@@ -1457,7 +1416,6 @@ function TableView({
         </div>
       </div>
 
-      {/* All Substitutions */}
       <div>
         <div className='flex flex-wrap items-center gap-2 mb-3'>
           <SectionHeading>All Substitutions</SectionHeading>
@@ -1467,8 +1425,6 @@ function TableView({
             </span>
           )}
         </div>
-
-        {/* Mobile cards */}
         <div className='sm:hidden space-y-2'>
           {filteredRows.length === 0 && (
             <p className='text-center py-8 text-sm text-gray-400'>
@@ -1520,8 +1476,6 @@ function TableView({
             );
           })}
         </div>
-
-        {/* Desktop table */}
         <div className='hidden sm:block overflow-x-auto cv-scrollbar rounded-xl border border-gray-200'>
           <table className='w-full bg-white'>
             <thead className='bg-gray-50'>
@@ -1608,8 +1562,6 @@ function TableView({
   );
 }
 
-// ─── MODAL ────────────────────────────────────────────────────────────────────
-
 export interface ChainViewerModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -1661,7 +1613,6 @@ export function ChainViewerModal({
       }),
     [],
   );
-
   const stats = useMemo(
     () => ({
       success: executionLogs.filter((l) => l.status === 'success').length,
@@ -1691,32 +1642,22 @@ export function ChainViewerModal({
         }}
       >
         <style>{`
-          .cv-vpill {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            padding: 2px 8px;
-            border-radius: 99px;
-            font-size: 11px;
-            font-weight: 600;
-            border: 1px solid;
-            cursor: pointer;
-            transition: all .15s;
-            white-space: nowrap;
-          }
-          .cv-vpill:hover { filter: brightness(0.93); transform: scale(1.02); }
-          @keyframes cv-flowAnim { to { stroke-dashoffset: -24; } }
-          .cv-flow-animated { animation: cv-flowAnim 1s linear infinite; }
+          /* ── FIX: hide shadcn's auto-injected close button ── */
+         [role="dialog"] > button[aria-label="Close"],
+         [role="dialog"] > button.absolute { display: none !important; }
+          .cv-vpill { display:inline-flex; align-items:center; gap:3px; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600; border:1px solid; cursor:pointer; transition:all .15s; white-space:nowrap; }
+          .cv-vpill:hover { filter:brightness(0.93); transform:scale(1.02); }
+          @keyframes cv-flowAnim { to { stroke-dashoffset:-24; } }
+          .cv-flow-animated { animation:cv-flowAnim 1s linear infinite; }
           @keyframes cv-fadeUp { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
-          .cv-fadein { animation: cv-fadeUp .2s ease; }
-          .cv-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
-          .cv-scrollbar::-webkit-scrollbar-track { background: transparent; }
-          .cv-scrollbar::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 2px; }
+          .cv-fadein { animation:cv-fadeUp .2s ease; }
+          .cv-scrollbar::-webkit-scrollbar { width:4px; height:4px; }
+          .cv-scrollbar::-webkit-scrollbar-track { background:transparent; }
+          .cv-scrollbar::-webkit-scrollbar-thumb { background:#e5e7eb; border-radius:2px; }
         `}</style>
 
-        {/* Topbar */}
-        <div className='flex items-center justify-between gap-3 px-3 sm:px-5 py-3 border-b border-gray-200 bg-white shrink-0 flex-wrap sm:flex-nowrap'>
-          <div className='flex items-center gap-2 sm:gap-3 min-w-0'>
+        <div className='flex items-center gap-3 px-3 sm:px-5 py-3 border-b border-gray-200 bg-white shrink-0'>
+          <div className='flex items-center gap-2 sm:gap-3 min-w-0 flex-1'>
             <div
               className='w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white shrink-0'
               style={{ background: 'linear-gradient(135deg,#136fb0,#0ea5e9)' }}
@@ -1734,40 +1675,47 @@ export function ChainViewerModal({
             </div>
           </div>
 
-          {/* Mobile meta */}
-          <div className='flex items-center gap-2 sm:hidden text-xs text-gray-400 w-full order-last'>
-            {requests.length} req · {sortedVars.length} vars
-            {stats.total > 0 && ` · ${stats.success}/${stats.total} passed`}
-          </div>
+          <div className='flex items-center gap-2 shrink-0'>
+            <div className='flex gap-1'>
+              {(['flow', 'table'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setViewMode(v)}
+                  className='text-xs sm:text-sm px-3 sm:px-4 py-1.5 rounded-lg font-medium transition-all border'
+                  style={
+                    viewMode === v
+                      ? {
+                          background: '#136fb0',
+                          color: 'white',
+                          borderColor: '#136fb0',
+                        }
+                      : {
+                          background: 'white',
+                          color: '#6b7280',
+                          borderColor: '#e5e7eb',
+                        }
+                  }
+                >
+                  {v === 'flow' ? '⬡ Flow' : '≡ Table'}
+                </button>
+              ))}
+            </div>
 
-          {/* View toggle */}
-          <div className='flex gap-1 shrink-0'>
-            {(['flow', 'table'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setViewMode(v)}
-                className='text-xs sm:text-sm px-3 sm:px-4 py-1.5 rounded-lg font-medium transition-all border'
-                style={
-                  viewMode === v
-                    ? {
-                        background: '#136fb0',
-                        color: 'white',
-                        borderColor: '#136fb0',
-                      }
-                    : {
-                        background: 'white',
-                        color: '#6b7280',
-                        borderColor: '#e5e7eb',
-                      }
-                }
-              >
-                {v === 'flow' ? '⬡ Flow' : '≡ Table'}
-              </button>
-            ))}
+            <button
+              onClick={() => onOpenChange(false)}
+              aria-label='Close dialog'
+              className='w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors shrink-0'
+            >
+              <X className='w-4 h-4' />
+            </button>
           </div>
         </div>
 
-        {/* Body */}
+        <div className='flex sm:hidden items-center gap-2 px-3 py-1.5 text-xs text-gray-400 bg-white border-b border-gray-100'>
+          {requests.length} req · {sortedVars.length} vars
+          {stats.total > 0 && ` · ${stats.success}/${stats.total} passed`}
+        </div>
+
         <div
           className='flex-1 overflow-auto px-3 sm:px-5 py-3 sm:py-4 cv-scrollbar bg-gray-50'
           style={{ minHeight: 0 }}
@@ -1799,8 +1747,6 @@ export function ChainViewerModal({
     </Dialog>
   );
 }
-
-// ─── TRIGGER BUTTON ───────────────────────────────────────────────────────────
 
 export interface ChainViewerButtonProps {
   onClick: () => void;

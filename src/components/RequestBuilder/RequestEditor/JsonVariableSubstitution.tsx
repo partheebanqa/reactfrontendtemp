@@ -180,528 +180,528 @@ export const JsonVariableSubstitution: React.FC<
   readOnly = false,
   showSubstituteButton = true,
 }) => {
-    const [hoveredLine, setHoveredLine] = useState<number | null>(null);
-    const [dropdownLine, setDropdownLine] = useState<number | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedVariables, setSelectedVariables] =
-      useState<SelectedVariable[]>(initialVariable);
-    const [pendingSubstitutions, setPendingSubstitutions] = useState<
-      PendingSubstitution[]
-    >([]);
-    const [editorFocused, setEditorFocused] = useState(false);
-    const [dropdownPosition, setDropdownPosition] = useState<{
-      top: number;
-      left: number;
-    } | null>(null);
-    const [confirmState, setConfirmState] = useState<
-      | {
+  const [hoveredLine, setHoveredLine] = useState<number | null>(null);
+  const [dropdownLine, setDropdownLine] = useState<number | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVariables, setSelectedVariables] =
+    useState<SelectedVariable[]>(initialVariable);
+  const [pendingSubstitutions, setPendingSubstitutions] = useState<
+    PendingSubstitution[]
+  >([]);
+  const [editorFocused, setEditorFocused] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const [confirmState, setConfirmState] = useState<
+    | {
         open: true;
         kind: 'saved' | 'line';
         path?: string;
         lineIndex?: number;
       }
-      | { open: false }
-    >({ open: false });
+    | { open: false }
+  >({ open: false });
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const overlayRef = useRef<HTMLDivElement>(null);
-    const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const buttonRefs = useRef<Map<number, HTMLButtonElement>>(new Map());
 
-    useEffect(() => {
-      setSelectedVariables(initialVariable || []);
-    }, [initialVariable]);
+  useEffect(() => {
+    setSelectedVariables(initialVariable || []);
+  }, [initialVariable]);
 
-    useEffect(() => {
-      const handler = (e: MouseEvent) => {
-        if (
-          containerRef.current &&
-          !containerRef.current.contains(e.target as Node)
-        ) {
-          setDropdownLine(null);
-          setDropdownPosition(null);
-        }
-      };
-      document.addEventListener('mousedown', handler);
-      return () => document.removeEventListener('mousedown', handler);
-    }, []);
-
-    const syncScroll = () => {
-      if (overlayRef.current && textareaRef.current) {
-        overlayRef.current.scrollTop = textareaRef.current.scrollTop;
-        overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
-      }
-    };
-
-    const lines = value.split('\n');
-
-    const {
-      valid: isValidJson,
-      errorLine,
-      errorMsg,
-    } = useMemo(() => validateJson(value), [value]);
-
-    const allVariables = useMemo(
-      () => [
-        ...staticVariables.map((v) => ({ ...v, type: 'static' as const })),
-        ...dynamicVariables.map((v) => ({ ...v, type: 'dynamic' as const })),
-      ],
-      [staticVariables, dynamicVariables],
-    );
-
-    const filteredVariables = useMemo(() => {
-      if (!searchTerm.trim()) return allVariables;
-      const lower = searchTerm.toLowerCase();
-      return allVariables.filter(
-        (v) =>
-          v.name.toLowerCase().includes(lower) ||
-          v.value.toLowerCase().includes(lower),
-      );
-    }, [searchTerm, allVariables]);
-
-    // ── Helpers ─────────────────────────────────────────────────────
-    const extractPathFromLine = (lineIndex: number): string => {
-      const m = lines[lineIndex]?.match(/"([^"]+)"\s*:/);
-      return m?.[1] ?? '';
-    };
-
-    const getAlreadySubstitutedVariable = (lineIndex: number): string | null => {
-      const m = lines[lineIndex]?.match(
-        /\/\/\s*substituted with\s*{{\s*(\w+)\s*}}/,
-      );
-      return m?.[1] ?? null;
-    };
-
-    const getSelectedVariableForLine = (lineIndex: number): string | null => {
-      const path = extractPathFromLine(lineIndex);
-      return selectedVariables?.find((v) => v.path === path)?.name ?? null;
-    };
-
-    const hasKey = (line: string) => /"[^"]+"\s*:/.test(line);
-
-    // ── Variable actions ─────────────────────────────────────────────
-    const handleSubstituteClick = (lineIndex: number) => {
-      if (dropdownLine === lineIndex) {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setDropdownLine(null);
         setDropdownPosition(null);
-        return;
       }
-      const button = buttonRefs.current.get(lineIndex);
-      if (button) {
-        const rect = button.getBoundingClientRect();
-        const dropdownHeight = 260;
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const shouldShowAbove =
-          spaceBelow < dropdownHeight && rect.top > spaceBelow;
-        const top = shouldShowAbove ? rect.top - dropdownHeight : rect.bottom + 4;
-        setDropdownPosition({ top, left: rect.right - 288 });
-      }
-      setDropdownLine(lineIndex);
-      setSearchTerm('');
     };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
-    const handleVariableSelect = (variable: string, lineIndex: number) => {
-      const path = extractPathFromLine(lineIndex);
-      setSelectedVariables((prev) => {
-        const updated = [
-          ...prev.filter((v) => v.path !== path),
-          { name: variable, path },
-        ];
-        onVariableSelect?.(updated);
-        return updated;
-      });
+  const syncScroll = () => {
+    if (overlayRef.current && textareaRef.current) {
+      overlayRef.current.scrollTop = textareaRef.current.scrollTop;
+      overlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    }
+  };
+
+  const lines = value.split('\n');
+
+  const {
+    valid: isValidJson,
+    errorLine,
+    errorMsg,
+  } = useMemo(() => validateJson(value), [value]);
+
+  const allVariables = useMemo(
+    () => [
+      ...staticVariables.map((v) => ({ ...v, type: 'static' as const })),
+      ...dynamicVariables.map((v) => ({ ...v, type: 'dynamic' as const })),
+    ],
+    [staticVariables, dynamicVariables],
+  );
+
+  const filteredVariables = useMemo(() => {
+    if (!searchTerm.trim()) return allVariables;
+    const lower = searchTerm.toLowerCase();
+    return allVariables.filter(
+      (v) =>
+        v.name.toLowerCase().includes(lower) ||
+        v.value.toLowerCase().includes(lower),
+    );
+  }, [searchTerm, allVariables]);
+
+  // ── Helpers ─────────────────────────────────────────────────────
+  const extractPathFromLine = (lineIndex: number): string => {
+    const m = lines[lineIndex]?.match(/"([^"]+)"\s*:/);
+    return m?.[1] ?? '';
+  };
+
+  const getAlreadySubstitutedVariable = (lineIndex: number): string | null => {
+    const m = lines[lineIndex]?.match(
+      /\/\/\s*substituted with\s*{{\s*(\w+)\s*}}/,
+    );
+    return m?.[1] ?? null;
+  };
+
+  const getSelectedVariableForLine = (lineIndex: number): string | null => {
+    const path = extractPathFromLine(lineIndex);
+    return selectedVariables?.find((v) => v.path === path)?.name ?? null;
+  };
+
+  const hasKey = (line: string) => /"[^"]+"\s*:/.test(line);
+
+  // ── Variable actions ─────────────────────────────────────────────
+  const handleSubstituteClick = (lineIndex: number) => {
+    if (dropdownLine === lineIndex) {
       setDropdownLine(null);
       setDropdownPosition(null);
-    };
+      return;
+    }
+    const button = buttonRefs.current.get(lineIndex);
+    if (button) {
+      const rect = button.getBoundingClientRect();
+      const dropdownHeight = 260;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const shouldShowAbove =
+        spaceBelow < dropdownHeight && rect.top > spaceBelow;
+      const top = shouldShowAbove ? rect.top - dropdownHeight : rect.bottom + 4;
+      setDropdownPosition({ top, left: rect.right - 288 });
+    }
+    setDropdownLine(lineIndex);
+    setSearchTerm('');
+  };
 
-    const handleClearSavedVariable = (path: string) => {
-      setSelectedVariables((prev) => {
-        const updated = prev.filter((v) => v.path !== path);
-        onVariableSelect?.(updated);
-        return updated;
-      });
-    };
+  const handleVariableSelect = (variable: string, lineIndex: number) => {
+    const path = extractPathFromLine(lineIndex);
+    setSelectedVariables((prev) => {
+      const updated = [
+        ...prev.filter((v) => v.path !== path),
+        { name: variable, path },
+      ];
+      onVariableSelect?.(updated);
+      return updated;
+    });
+    setDropdownLine(null);
+    setDropdownPosition(null);
+  };
 
-    const handleRemoveSubstitution = (lineIndex: number) => {
-      const updatedLines = [...lines];
-      updatedLines[lineIndex] = lines[lineIndex].replace(
-        /\s*\/\/\s*substituted with\s*{{\s*\w+\s*}}/,
-        '',
-      );
-      onChange?.(updatedLines.join('\n'));
-    };
+  const handleClearSavedVariable = (path: string) => {
+    setSelectedVariables((prev) => {
+      const updated = prev.filter((v) => v.path !== path);
+      onVariableSelect?.(updated);
+      return updated;
+    });
+  };
 
-    const confirmDeleteSaved = (path: string) =>
-      setConfirmState({ open: true, kind: 'saved', path });
-    const confirmDeleteLine = (lineIndex: number) =>
-      setConfirmState({ open: true, kind: 'line', lineIndex });
+  const handleRemoveSubstitution = (lineIndex: number) => {
+    const updatedLines = [...lines];
+    updatedLines[lineIndex] = lines[lineIndex].replace(
+      /\s*\/\/\s*substituted with\s*{{\s*\w+\s*}}/,
+      '',
+    );
+    onChange?.(updatedLines.join('\n'));
+  };
 
-    const performConfirmedDelete = () => {
-      if (!confirmState.open) return;
-      if (confirmState.kind === 'saved' && confirmState.path)
-        handleClearSavedVariable(confirmState.path);
-      if (confirmState.kind === 'line' && confirmState.lineIndex != null)
-        handleRemoveSubstitution(confirmState.lineIndex);
-      setConfirmState({ open: false });
-    };
+  const confirmDeleteSaved = (path: string) =>
+    setConfirmState({ open: true, kind: 'saved', path });
+  const confirmDeleteLine = (lineIndex: number) =>
+    setConfirmState({ open: true, kind: 'line', lineIndex });
 
-    const syncCursorLine = () => {
-      const ta = textareaRef.current;
-      if (!ta) return;
-      const n = ta.value.substring(0, ta.selectionStart).split('\n').length - 1;
-      setHoveredLine(n);
-    };
+  const performConfirmedDelete = () => {
+    if (!confirmState.open) return;
+    if (confirmState.kind === 'saved' && confirmState.path)
+      handleClearSavedVariable(confirmState.path);
+    if (confirmState.kind === 'line' && confirmState.lineIndex != null)
+      handleRemoveSubstitution(confirmState.lineIndex);
+    setConfirmState({ open: false });
+  };
 
-    // ── Render ───────────────────────────────────────────────────────
-    return (
-      <div ref={containerRef} className='relative w-full'>
-        {/* ── Column headers ── */}
+  const syncCursorLine = () => {
+    const ta = textareaRef.current;
+    if (!ta) return;
+    const n = ta.value.substring(0, ta.selectionStart).split('\n').length - 1;
+    setHoveredLine(n);
+  };
+
+  // ── Render ───────────────────────────────────────────────────────
+  return (
+    <div ref={containerRef} className='relative w-full'>
+      {/* ── Column headers ── */}
+      <div
+        className={[
+          'grid bg-[#252526] border-b border-[#3c3c3c]',
+          showSubstituteButton ? 'grid-cols-[70%_30%]' : 'grid-cols-1',
+        ].join(' ')}
+      >
         <div
           className={[
-            'grid bg-[#252526] border-b border-[#3c3c3c]',
-            showSubstituteButton ? 'grid-cols-[70%_30%]' : 'grid-cols-1',
+            'flex items-center gap-2 px-3 py-[3px]',
+            showSubstituteButton ? 'border-r border-[#3c3c3c]' : '',
           ].join(' ')}
         >
-          <div
-            className={[
-              'flex items-center gap-2 px-3 py-[3px]',
-              showSubstituteButton ? 'border-r border-[#3c3c3c]' : '',
-            ].join(' ')}
-          >
-            <span className='text-[10px] text-cyan-400 uppercase tracking-[0.08em]'>
-              Editor
-            </span>
+          <span className='text-[10px] text-cyan-400 uppercase tracking-[0.08em]'>
+            Editor
+          </span>
 
-            {mode === 'json' ||
-              (mode === 'raw' && (
-                <div
+          {mode === 'json' ||
+            (mode === 'raw' && (
+              <div
+                className={[
+                  'flex items-center gap-[5px] px-2 py-0.5 rounded border transition-all duration-200',
+                  isValidJson
+                    ? 'bg-green-500/[0.08] border-green-500/25'
+                    : 'bg-red-500/[0.08] border-red-500/25',
+                ].join(' ')}
+              >
+                <span
                   className={[
-                    'flex items-center gap-[5px] px-2 py-0.5 rounded border transition-all duration-200',
+                    'w-[7px] h-[7px] rounded-full shrink-0 transition-all duration-200',
                     isValidJson
-                      ? 'bg-green-500/[0.08] border-green-500/25'
-                      : 'bg-red-500/[0.08] border-red-500/25',
+                      ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]'
+                      : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]',
+                  ].join(' ')}
+                />
+                <span
+                  className={[
+                    'text-[10px] font-semibold tracking-wide',
+                    isValidJson ? 'text-green-400' : 'text-red-400',
                   ].join(' ')}
                 >
-                  <span
-                    className={[
-                      'w-[7px] h-[7px] rounded-full shrink-0 transition-all duration-200',
-                      isValidJson
-                        ? 'bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.6)]'
-                        : 'bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)]',
-                    ].join(' ')}
-                  />
-                  <span
-                    className={[
-                      'text-[10px] font-semibold tracking-wide',
-                      isValidJson ? 'text-green-400' : 'text-red-400',
-                    ].join(' ')}
-                  >
-                    {isValidJson ? 'Valid JSON' : 'Invalid JSON'}
-                  </span>
-                </div>
-              ))}
-          </div>
-
-          {showSubstituteButton && (
-            <div className='px-[10px] py-[3px] text-[10px] text-cyan-400 uppercase tracking-[0.08em]'>
-              Substitute
-            </div>
-          )}
+                  {isValidJson ? 'Valid JSON' : 'Invalid JSON'}
+                </span>
+              </div>
+            ))}
         </div>
 
-        {/* ── Column headers ── */}
+        {showSubstituteButton && (
+          <div className='px-[10px] py-[3px] text-[10px] text-cyan-400 uppercase tracking-[0.08em]'>
+            Substitute
+          </div>
+        )}
+      </div>
 
-        {/* ── Split panes ── */}
-        <div className='flex relative'>
-          {/* ══ LEFT — editor ════════════════════════════════════════ */}
+      {/* ── Column headers ── */}
+
+      {/* ── Split panes ── */}
+      <div className='flex relative'>
+        {/* ══ LEFT — editor ════════════════════════════════════════ */}
+        <div
+          className={[
+            'flex relative bg-[#1e1e1e]',
+            showSubstituteButton
+              ? 'w-[70%] border-r border-[#3c3c3c]'
+              : 'w-full',
+          ].join(' ')}
+          style={{ minHeight: `${lines.length * LINE_H + 20}px` }}
+        >
+          {/* Line number gutter */}
+          <div className='w-[42px] shrink-0 bg-[#1e1e1e] border-r border-[#2b2b2b] pt-[10px] select-none relative z-[2]'>
+            {lines.map((_, i) => {
+              const isErr = !isValidJson && errorLine === i;
+              const isHov = hoveredLine === i;
+              return (
+                <div
+                  key={i}
+                  className={[
+                    'relative text-right pr-2 text-[11px] transition-colors duration-100',
+                    isErr
+                      ? 'text-red-400 bg-red-500/[0.12]'
+                      : isHov
+                        ? 'text-[#c6c6c6]'
+                        : 'text-[#858585]',
+                  ].join(' ')}
+                  style={{ height: `${LINE_H}px`, lineHeight: `${LINE_H}px` }}
+                >
+                  {isErr && (
+                    <span className='absolute left-1 top-1/2 -translate-y-1/2 text-[10px]'>
+                      ⚠
+                    </span>
+                  )}
+                  {i + 1}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Row highlight layer — sits behind textarea */}
+          <div className='absolute left-[42px] right-0 top-[10px] pointer-events-none z-0'>
+            {lines.map((_, i) => {
+              const isErr = !isValidJson && errorLine === i;
+              const isHov = hoveredLine === i;
+              return (
+                <div
+                  key={i}
+                  className={[
+                    'transition-all duration-100 border-l-2',
+                    isErr
+                      ? 'bg-red-500/10 border-l-red-500'
+                      : isHov
+                        ? 'bg-white/[0.04] border-l-[#3794ff]'
+                        : 'border-l-transparent',
+                  ].join(' ')}
+                  style={{ height: `${LINE_H}px` }}
+                />
+              );
+            })}
+          </div>
+
+          {/* Syntax-coloured overlay — visible when editor NOT focused */}
           <div
+            ref={overlayRef}
+            onClick={() => {
+              textareaRef.current?.focus();
+              setEditorFocused(true);
+            }}
             className={[
-              'flex relative bg-[#1e1e1e]',
-              showSubstituteButton
-                ? 'w-[70%] border-r border-[#3c3c3c]'
-                : 'w-full',
+              'absolute left-[42px] right-0 top-0 bottom-0 pt-[10px] pl-3 pr-2 overflow-y-auto overflow-x-hidden cursor-text transition-opacity',
+              editorFocused
+                ? 'z-0 opacity-0 pointer-events-none'
+                : 'z-[2] opacity-100 pointer-events-auto',
             ].join(' ')}
+          >
+            {lines.map((line, i) => {
+              const isErr = !isValidJson && errorLine === i;
+              return (
+                <div
+                  key={i}
+                  className={[
+                    'relative whitespace-pre',
+                    isErr ? 'underline decoration-wavy decoration-red-500' : '',
+                  ].join(' ')}
+                  style={{
+                    height: `${LINE_H}px`,
+                    lineHeight: `${LINE_H}px`,
+                    fontFamily:
+                      "'Monaco','Menlo','Consolas','source-code-pro',monospace",
+                    fontSize: '13px',
+                    textDecorationSkipInk: 'none',
+                  }}
+                  onMouseEnter={() => showSubstituteButton && setHoveredLine(i)}
+                  onMouseLeave={() =>
+                    showSubstituteButton && setHoveredLine(null)
+                  }
+                >
+                  <TokenizedLine raw={line} />
+                  {isErr && errorMsg && hoveredLine === i && (
+                    <span className='absolute left-0 top-full z-10 pointer-events-none max-w-[400px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-0.5 rounded-b text-[10px] text-red-300 bg-[#3b1111] border border-red-500/40'>
+                      {errorMsg}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Actual editable textarea */}
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange?.(e.target.value)}
+            onFocus={() => setEditorFocused(true)}
+            onBlur={() => setEditorFocused(false)}
+            onClick={syncCursorLine}
+            onKeyUp={syncCursorLine}
+            onScroll={syncScroll}
+            readOnly={readOnly}
+            spellCheck={false}
+            className={[
+              'flex-1 pt-[10px] pl-3 pr-2 bg-transparent border-none outline-none resize-none overflow-hidden',
+              editorFocused
+                ? 'relative z-[2] text-[#d4d4d4]'
+                : 'relative z-[1] text-transparent',
+            ].join(' ')}
+            style={{
+              fontSize: '13px',
+              lineHeight: `${LINE_H}px`,
+              fontFamily:
+                "'Monaco','Menlo','Consolas','source-code-pro',monospace",
+              caretColor: '#aeafad',
+              minHeight: `${lines.length * LINE_H + 20}px`,
+            }}
+          />
+        </div>
+
+        {/* ══ RIGHT 30% — substitute panel ═════════════════════════ */}
+        {showSubstituteButton && (
+          <div
+            className='w-[30%] bg-[#252526]'
             style={{ minHeight: `${lines.length * LINE_H + 20}px` }}
           >
-            {/* Line number gutter */}
-            <div className='w-[42px] shrink-0 bg-[#1e1e1e] border-r border-[#2b2b2b] pt-[10px] select-none relative z-[2]'>
-              {lines.map((_, i) => {
-                const isErr = !isValidJson && errorLine === i;
-                const isHov = hoveredLine === i;
-                return (
-                  <div
-                    key={i}
-                    className={[
-                      'relative text-right pr-2 text-[11px] transition-colors duration-100',
-                      isErr
-                        ? 'text-red-400 bg-red-500/[0.12]'
-                        : isHov
-                          ? 'text-[#c6c6c6]'
-                          : 'text-[#858585]',
-                    ].join(' ')}
-                    style={{ height: `${LINE_H}px`, lineHeight: `${LINE_H}px` }}
-                  >
-                    {isErr && (
-                      <span className='absolute left-1 top-1/2 -translate-y-1/2 text-[10px]'>
-                        ⚠
-                      </span>
-                    )}
-                    {i + 1}
-                  </div>
-                );
-              })}
-            </div>
+            <div className='pt-[10px]'>
+              {lines.map((line, i) => {
+                if (!hasKey(line)) {
+                  return <div key={i} style={{ height: `${LINE_H}px` }} />;
+                }
 
-            {/* Row highlight layer — sits behind textarea */}
-            <div className='absolute left-[42px] right-0 top-[10px] pointer-events-none z-0'>
-              {lines.map((_, i) => {
-                const isErr = !isValidJson && errorLine === i;
+                const alreadySubstituted = getAlreadySubstitutedVariable(i);
+                const selectedVar = getSelectedVariableForLine(i);
+                const varInfo = selectedVar
+                  ? allVariables.find((v) => v.name === selectedVar)
+                  : null;
                 const isHov = hoveredLine === i;
+                const isErrRow = !isValidJson && errorLine === i;
+                const isOpen = dropdownLine === i;
+
                 return (
                   <div
                     key={i}
+                    onMouseEnter={() => setHoveredLine(i)}
+                    onMouseLeave={() => {
+                      if (!isOpen) setHoveredLine(null);
+                    }}
                     className={[
-                      'transition-all duration-100 border-l-2',
-                      isErr
-                        ? 'bg-red-500/10 border-l-red-500'
+                      'flex items-center justify-end pr-2 gap-1 border-b border-white/[0.025] transition-all duration-100 relative border-l-2',
+                      isErrRow
+                        ? 'border-l-red-500 bg-red-500/[0.07]'
                         : isHov
-                          ? 'bg-white/[0.04] border-l-[#3794ff]'
+                          ? 'border-l-[#3794ff] bg-[rgba(55,148,255,0.10)]'
                           : 'border-l-transparent',
                     ].join(' ')}
                     style={{ height: `${LINE_H}px` }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Syntax-coloured overlay — visible when editor NOT focused */}
-            <div
-              ref={overlayRef}
-              onClick={() => {
-                textareaRef.current?.focus();
-                setEditorFocused(true);
-              }}
-              className={[
-                'absolute left-[42px] right-0 top-0 bottom-0 pt-[10px] pl-3 pr-2 overflow-y-auto overflow-x-hidden cursor-text transition-opacity',
-                editorFocused
-                  ? 'z-0 opacity-0 pointer-events-none'
-                  : 'z-[2] opacity-100 pointer-events-auto',
-              ].join(' ')}
-            >
-              {lines.map((line, i) => {
-                const isErr = !isValidJson && errorLine === i;
-                return (
-                  <div
-                    key={i}
-                    className={[
-                      'relative whitespace-pre',
-                      isErr ? 'underline decoration-wavy decoration-red-500' : '',
-                    ].join(' ')}
-                    style={{
-                      height: `${LINE_H}px`,
-                      lineHeight: `${LINE_H}px`,
-                      fontFamily:
-                        "'Monaco','Menlo','Consolas','source-code-pro',monospace",
-                      fontSize: '13px',
-                      textDecorationSkipInk: 'none',
-                    }}
-                    onMouseEnter={() => showSubstituteButton && setHoveredLine(i)}
-                    onMouseLeave={() =>
-                      showSubstituteButton && setHoveredLine(null)
-                    }
                   >
-                    <TokenizedLine raw={line} />
-                    {isErr && errorMsg && hoveredLine === i && (
-                      <span className='absolute left-0 top-full z-10 pointer-events-none max-w-[400px] overflow-hidden text-ellipsis whitespace-nowrap px-2 py-0.5 rounded-b text-[10px] text-red-300 bg-[#3b1111] border border-red-500/40'>
-                        {errorMsg}
-                      </span>
+                    {/* Already-substituted-in-text badge */}
+                    {/* Selected (saved) variable badge */}
+                    {selectedVar && !alreadySubstituted && (
+                      <>
+                        <span
+                          className={[
+                            'text-[9px] px-[6px] py-0.5 rounded border uppercase tracking-[0.05em] font-medium whitespace-nowrap',
+                            varInfo?.type === 'dynamic'
+                              ? 'bg-[rgba(139,92,246,0.18)] border-[rgba(139,92,246,0.35)] text-[#c4b5fd]'
+                              : 'bg-[rgba(14,165,233,0.15)] border-[rgba(14,165,233,0.3)] text-[#7dd3fc]',
+                          ].join(' ')}
+                        >
+                          {selectedVar}
+                        </span>
+                        {isHov && (
+                          <button
+                            onClick={() =>
+                              confirmDeleteSaved(extractPathFromLine(i))
+                            }
+                            className='p-0.5 hover:bg-red-500/20 rounded transition-colors'
+                            title='Remove variable'
+                          >
+                            <Trash2 className='w-3 h-3 text-red-400' />
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {/* Substitute Variable trigger button */}
+                    {!selectedVar && !alreadySubstituted && isHov && (
+                      <Button
+                        ref={(el) => {
+                          if (el) buttonRefs.current.set(i, el);
+                          else buttonRefs.current.delete(i);
+                        }}
+                        onClick={() => handleSubstituteClick(i)}
+                        size='sm'
+                        className='bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-[10px] whitespace-nowrap h-5 px-[9px] py-0.5'
+                      >
+                        Substitute Variable
+                      </Button>
                     )}
                   </div>
                 );
               })}
             </div>
-
-            {/* Actual editable textarea */}
-            <textarea
-              ref={textareaRef}
-              value={value}
-              onChange={(e) => onChange?.(e.target.value)}
-              onFocus={() => setEditorFocused(true)}
-              onBlur={() => setEditorFocused(false)}
-              onClick={syncCursorLine}
-              onKeyUp={syncCursorLine}
-              onScroll={syncScroll}
-              readOnly={readOnly}
-              spellCheck={false}
-              className={[
-                'flex-1 pt-[10px] pl-3 pr-2 bg-transparent border-none outline-none resize-none overflow-hidden',
-                editorFocused
-                  ? 'relative z-[2] text-[#d4d4d4]'
-                  : 'relative z-[1] text-transparent',
-              ].join(' ')}
-              style={{
-                fontSize: '13px',
-                lineHeight: `${LINE_H}px`,
-                fontFamily:
-                  "'Monaco','Menlo','Consolas','source-code-pro',monospace",
-                caretColor: '#aeafad',
-                minHeight: `${lines.length * LINE_H + 20}px`,
-              }}
-            />
           </div>
+        )}
+      </div>
 
-          {/* ══ RIGHT 30% — substitute panel ═════════════════════════ */}
-          {showSubstituteButton && (
-            <div
-              className='w-[30%] bg-[#252526]'
-              style={{ minHeight: `${lines.length * LINE_H + 20}px` }}
-            >
-              <div className='pt-[10px]'>
-                {lines.map((line, i) => {
-                  if (!hasKey(line)) {
-                    return <div key={i} style={{ height: `${LINE_H}px` }} />;
-                  }
-
-                  const alreadySubstituted = getAlreadySubstitutedVariable(i);
-                  const selectedVar = getSelectedVariableForLine(i);
-                  const varInfo = selectedVar
-                    ? allVariables.find((v) => v.name === selectedVar)
-                    : null;
-                  const isHov = hoveredLine === i;
-                  const isErrRow = !isValidJson && errorLine === i;
-                  const isOpen = dropdownLine === i;
-
-                  return (
-                    <div
-                      key={i}
-                      onMouseEnter={() => setHoveredLine(i)}
-                      onMouseLeave={() => {
-                        if (!isOpen) setHoveredLine(null);
-                      }}
-                      className={[
-                        'flex items-center justify-end pr-2 gap-1 border-b border-white/[0.025] transition-all duration-100 relative border-l-2',
-                        isErrRow
-                          ? 'border-l-red-500 bg-red-500/[0.07]'
-                          : isHov
-                            ? 'border-l-[#3794ff] bg-[rgba(55,148,255,0.10)]'
-                            : 'border-l-transparent',
-                      ].join(' ')}
-                      style={{ height: `${LINE_H}px` }}
-                    >
-                      {/* Already-substituted-in-text badge */}
-                      {/* Selected (saved) variable badge */}
-                      {selectedVar && !alreadySubstituted && (
-                        <>
-                          <span
-                            className={[
-                              'text-[9px] px-[6px] py-0.5 rounded border uppercase tracking-[0.05em] font-medium whitespace-nowrap',
-                              varInfo?.type === 'dynamic'
-                                ? 'bg-[rgba(139,92,246,0.18)] border-[rgba(139,92,246,0.35)] text-[#c4b5fd]'
-                                : 'bg-[rgba(14,165,233,0.15)] border-[rgba(14,165,233,0.3)] text-[#7dd3fc]',
-                            ].join(' ')}
-                          >
-                            {selectedVar}
-                          </span>
-                          {isHov && (
-                            <button
-                              onClick={() =>
-                                confirmDeleteSaved(extractPathFromLine(i))
-                              }
-                              className='p-0.5 hover:bg-red-500/20 rounded transition-colors'
-                              title='Remove variable'
-                            >
-                              <Trash2 className='w-3 h-3 text-red-400' />
-                            </button>
-                          )}
-                        </>
-                      )}
-                      {/* Substitute Variable trigger button */}
-                      {!selectedVar && !alreadySubstituted && isHov && (
-                        <Button
-                          ref={(el) => {
-                            if (el) buttonRefs.current.set(i, el);
-                            else buttonRefs.current.delete(i);
-                          }}
-                          onClick={() => handleSubstituteClick(i)}
-                          size='sm'
-                          className='bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-[10px] whitespace-nowrap h-5 px-[9px] py-0.5'
-                        >
-                          Substitute Variable
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+      {/* ── Floating variable picker dropdown ── */}
+      {showSubstituteButton && dropdownLine !== null && dropdownPosition && (
+        <div
+          className='fixed z-[9999]'
+          style={{
+            top: `${dropdownPosition.top}px`,
+            left: `${dropdownPosition.left}px`,
+          }}
+        >
+          <VariablePicker
+            staticVariables={staticVariables.map((v) => ({
+              name: v.name,
+              value: String((v as any).value ?? (v as any).initialValue ?? ''),
+            }))}
+            dynamicVariables={dynamicVariables.map((v) => ({
+              name: v.name,
+              value: String((v as any).value ?? (v as any).initialValue ?? ''),
+            }))}
+            bindingLabel={extractPathFromLine(dropdownLine)}
+            onSelect={(variableName) =>
+              handleVariableSelect(variableName, dropdownLine)
+            }
+          />
         </div>
+      )}
 
-        {/* ── Floating variable picker dropdown ── */}
-        {showSubstituteButton && dropdownLine !== null && dropdownPosition && (
-          <div
-            className='fixed z-[9999]'
-            style={{
-              top: `${dropdownPosition.top}px`,
-              left: `${dropdownPosition.left}px`,
-            }}
-          >
-            <VariablePicker
-              staticVariables={staticVariables.map((v) => ({
-                name: v.name,
-                value: String((v as any).value ?? (v as any).initialValue ?? ''),
-              }))}
-              dynamicVariables={dynamicVariables.map((v) => ({
-                name: v.name,
-                value: String((v as any).value ?? (v as any).initialValue ?? ''),
-              }))}
-              bindingLabel={extractPathFromLine(dropdownLine)}
-              onSelect={(variableName) =>
-                handleVariableSelect(variableName, dropdownLine)
-              }
-            />
-          </div>
-        )}
+      {/* ── Delete confirmation dialog ── */}
+      {showSubstituteButton && (
+        <AlertDialog
+          open={confirmState.open}
+          onOpenChange={(open) => {
+            if (!open) setConfirmState({ open: false });
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmState.open && confirmState.kind === 'saved'
+                  ? 'Remove substituted variable?'
+                  : 'Remove substitution from this line?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmState.open &&
+                confirmState.kind === 'saved' &&
+                confirmState.path
+                  ? `This will remove the variable mapping for "${confirmState.path}". This action cannot be undone.`
+                  : 'This will remove the in-line substitution comment. This action cannot be undone.'}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <Button onClick={performConfirmedDelete}>Delete</Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
 
-        {/* ── Delete confirmation dialog ── */}
-        {showSubstituteButton && (
-          <AlertDialog
-            open={confirmState.open}
-            onOpenChange={(open) => {
-              if (!open) setConfirmState({ open: false });
-            }}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>
-                  {confirmState.open && confirmState.kind === 'saved'
-                    ? 'Remove substituted variable?'
-                    : 'Remove substitution from this line?'}
-                </AlertDialogTitle>
-                <AlertDialogDescription>
-                  {confirmState.open &&
-                    confirmState.kind === 'saved' &&
-                    confirmState.path
-                    ? `This will remove the variable mapping for "${confirmState.path}". This action cannot be undone.`
-                    : 'This will remove the in-line substitution comment. This action cannot be undone.'}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <Button onClick={performConfirmedDelete}>Delete</Button>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        )}
-
-        <style>{`
+      <style>{`
           @keyframes jvs-slideDown {
             from { opacity: 0; transform: translateY(-4px); }
             to   { opacity: 1; transform: translateY(0); }
           }
         `}</style>
-      </div>
-    );
-  };
+    </div>
+  );
+};
 
 export default JsonVariableSubstitution;
