@@ -541,10 +541,10 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
           <div className='bg-white rounded-lg shadow-sm border border-gray-200'>
             <div className='p-4 border-b border-gray-200'>
               <div className='flex items-center justify-between mb-3'>
-                <h3 className='font-semibold text-gray-900 text-lg'>
+                <h3 className='text-sm font-semibold text-gray-900 md:text-lg'>
                   Detailed Results
                 </h3>
-                <div className='flex gap-2'>
+                <div className='flex flex-col md:flex-row gap-2'>
                   <Select
                     value={tableFilterStatus}
                     onValueChange={(value) =>
@@ -578,6 +578,7 @@ const AssertionResults: React.FC<AssertionResultsProps> = ({
                     </SelectContent>
                   </Select>
                 </div>
+
               </div>
             </div>
 

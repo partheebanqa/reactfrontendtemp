@@ -133,17 +133,17 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 
   const startTime = String(
     s.startTime ??
-      s.startedAt ??
-      s.start ??
-      requests[0]?.timestamp ??
-      new Date().toISOString(),
+    s.startedAt ??
+    s.start ??
+    requests[0]?.timestamp ??
+    new Date().toISOString(),
   );
   const endTime = String(
     s.endTime ??
-      s.endedAt ??
-      s.end ??
-      requests[requests.length - 1]?.timestamp ??
-      new Date().toISOString(),
+    s.endedAt ??
+    s.end ??
+    requests[requests.length - 1]?.timestamp ??
+    new Date().toISOString(),
   );
 
   const totalRequests = Number(s.totalRequests ?? requests.length);
@@ -163,11 +163,11 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 
   const minResp = Number(
     s.minResponseTime ??
-      Math.min(...(responseTimes.length ? responseTimes : [0])),
+    Math.min(...(responseTimes.length ? responseTimes : [0])),
   );
   const maxResp = Number(
     s.maxResponseTime ??
-      Math.max(...(responseTimes.length ? responseTimes : [0])),
+    Math.max(...(responseTimes.length ? responseTimes : [0])),
   );
 
   const p50 = Number(s.p50ResponseTime ?? computePercentile(responseTimes, 50));
@@ -515,7 +515,7 @@ export default function PerformanceTesting({
       try {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
         if (data.requestName) return data.requestName;
-      } catch {}
+      } catch { }
     }
 
     const collection = collections.find((c) => c.id === activeCollection?.id);
@@ -577,20 +577,31 @@ export default function PerformanceTesting({
   return (
     <div className='bg-white dark:bg-gray-900 w-full h-full flex flex-col overflow-auto'>
       <div className='border-b border-gray-200 dark:border-gray-800 pt-4 px-4 flex-shrink-0'>
-        <div className='flex items-center justify-between mb-3'>
-          <div className='flex-1'>
-            <div className='flex items-center gap-2 mb-1'>
-              <Rocket className='w-5 h-5 text-blue-500' />
-              <h2 className='text-lg font-semibold text-gray-900 dark:text-white'>
-                Rate Limit Test
-              </h2>
+        <div className='block md:flex items-center justify-between mb-3'>
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-2">
+              <Rocket className="hidden md:flex w-5 h-5 text-blue-500" />
+
+              <div className="flex flex-col">
+                <h2 className="text-md md:text-lg font-semibold text-gray-900 dark:text-white">
+                  Rate Limit Test
+                </h2>
+
+                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                  Request : {request?.name} ({request?.url})
+                </p>
+              </div>
             </div>
-            <p className='text-sm text-gray-600 dark:text-gray-400'>
-              Request : {request.name} ({request?.url})
-            </p>
+
+            <button
+              onClick={onClose}
+              className="flex md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
 
-          <div className='flex items-center gap-3'>
+          <div className='flex items-center gap-3 md:mb-0 mt-1'>
             <div className='flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md whitespace-nowrap'>
               <Globe className='w-4 h-4 text-blue-600 dark:text-blue-400' />
               <span className='text-xs text-gray-500 dark:text-gray-400'>
@@ -603,7 +614,7 @@ export default function PerformanceTesting({
 
             <button
               onClick={onClose}
-              className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
+              className='hidden md:flex p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
             >
               <X className='w-5 h-5 text-gray-500' />
             </button>
@@ -662,16 +673,16 @@ export default function PerformanceTesting({
           {/* IDLE — show config list */}
           {authFlowStatus === 'idle' && (
             <>
-              <Card className='flex justify-between p-3 mb-2'>
+              <Card className='hidden md:flex justify-between p-3 mb-2'>
                 <div>
-                  <CardTitle>Rate Limit Configurations</CardTitle>
-                  <CardDescription>
+                  <CardTitle className='text-sm md:text-lg'>Rate Limit Configurations</CardTitle>
+                  <CardDescription className='text-xs md:text-md'>
                     Manage your performance test configurations
                   </CardDescription>
                 </div>
                 <div className='flex items-center gap-3'>
                   {preRequestId && (
-                    <div className='mt-4 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
+                    <div className='flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
                       <Key className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
                       <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
                         Auto Auth Enabled -
@@ -684,6 +695,33 @@ export default function PerformanceTesting({
                   <Button onClick={handleCreateClick}>
                     <Plus className='h-4 w-4 mr-2' />
                     New Configuration
+                  </Button>
+                </div>
+              </Card>
+
+              <Card className='flex md:hidden flex-col justify-between p-3 mb-2'>
+                <div>
+                  <CardTitle className='text-sm md:text-lg'>Rate Limit Configurations</CardTitle>
+                  <CardDescription className='text-xs md:text-md'>
+                    Manage your performance test configurations
+                  </CardDescription>
+                </div>
+
+                <div className='flex items-center gap-3 mt-2'>
+                  {preRequestId && (
+                    <div className='flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
+                      <Key className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
+                      <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
+                        Auto Auth Enabled -
+                      </span>
+                      <span className='text-xs text-gray-500 dark:text-gray-400'>
+                        {getAuthRequestName() || preRequestId}
+                      </span>
+                    </div>
+                  )}
+                  <Button onClick={handleCreateClick}>
+                    <Plus className='h-4 w-4 ' />
+                    New Config
                   </Button>
                 </div>
               </Card>

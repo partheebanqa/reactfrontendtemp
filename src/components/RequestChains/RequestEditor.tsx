@@ -796,8 +796,8 @@ export function RequestEditor({
       selectedVariable.length > 0
         ? selectedVariable
         : (initialRequest.variables || [])
-            .filter((v: any) => v.field === 'body' && v.key && v.variable)
-            .map((v: any) => ({ path: v.key, name: v.variable }));
+          .filter((v: any) => v.field === 'body' && v.key && v.variable)
+          .map((v: any) => ({ path: v.key, name: v.variable }));
 
     if (
       effectiveSelectedVars &&
@@ -863,25 +863,25 @@ export function RequestEditor({
       authApiValue: replaceVariables(request.authApiValue || '', variables),
       authorization: request.authorization
         ? {
-            ...request.authorization,
-            token: replaceVariables(
-              request.authorization.token || '',
-              variables,
-            ),
-            username: replaceVariables(
-              request.authorization.username || '',
-              variables,
-            ),
-            password: replaceVariables(
-              request.authorization.password || '',
-              variables,
-            ),
-            key: replaceVariables(request.authorization.key || '', variables),
-            value: replaceVariables(
-              request.authorization.value || '',
-              variables,
-            ),
-          }
+          ...request.authorization,
+          token: replaceVariables(
+            request.authorization.token || '',
+            variables,
+          ),
+          username: replaceVariables(
+            request.authorization.username || '',
+            variables,
+          ),
+          password: replaceVariables(
+            request.authorization.password || '',
+            variables,
+          ),
+          key: replaceVariables(request.authorization.key || '', variables),
+          value: replaceVariables(
+            request.authorization.value || '',
+            variables,
+          ),
+        }
         : request.authorization,
     };
   };
@@ -1942,8 +1942,8 @@ export function RequestEditor({
                       );
                       return String(
                         boundVar?.value ??
-                          boundVar?.initialValue ??
-                          `{{${boundVarName}}}`,
+                        boundVar?.initialValue ??
+                        `{{${boundVarName}}}`,
                       );
                     }
                     return originalSegmentContents.current[i] ?? seg.content;
@@ -2065,7 +2065,7 @@ export function RequestEditor({
       (chain: any) =>
         normalizeString(chain.name) === normalizeString(chainName) &&
         normalizeString(chain.description) ===
-          normalizeString(chainDescription) &&
+        normalizeString(chainDescription) &&
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
         chain.environmentId === activeEnvironment?.id,
     );
@@ -2769,7 +2769,7 @@ export function RequestEditor({
             e.stopPropagation();
             setInlinePickerTarget(isOpen ? null : { field, index, subField });
           }}
-          className='flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-blue-500 hover:border-blue-500 hover:bg-blue-50 transition-colors whitespace-nowrap'
+          className='bg-blue-900 flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-white hover:border-blue-500 hover:bg-blue-50 transition-colors whitespace-nowrap'
           title={`Bind a variable to ${subField}`}
         >
           <Plus className='w-3 h-3' />
@@ -2882,11 +2882,11 @@ export function RequestEditor({
   const compactView = (
     <div className='space-y-4'>
       <VariableAutocomplete />
-      <div className='flex items-center space-x-2'>
+      <div className='block md:flex items-center'>
         <select
           value={initialRequest.method}
           onChange={(e) => onUpdate({ method: e.target.value as any })}
-          className={`w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+          className={`w-full md:w-auto mb-1 md:mb-0 border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
             initialRequest.method as any,
           )}`}
           style={{ appearance: 'auto' }}
@@ -2908,13 +2908,14 @@ export function RequestEditor({
           onChange={(e) => handleInputChange(e, setUrl)}
           onKeyUp={(e) => handleAutocomplete(e)}
           placeholder='Enter request URL'
-          className='flex-1'
+          className='flex-1 text-xs md:text-md mb-1 md:mb-0'
           name='url'
         />
         <Button
+
           onClick={handleExecute}
           disabled={isExecuting}
-          className='hover-scale bg-[#136fb0] text-white'
+          className='hover-scale w-full md:w-[150px] bg-[#136fb0] text-white'
         >
           <Play className='w-4 h-4' />
           {isExecuting ? 'Running...' : 'Run'}
@@ -2946,7 +2947,7 @@ export function RequestEditor({
                   if (
                     reqId &&
                     extractedVariablesByRequest[reqId]?.[variableName] !==
-                      undefined
+                    undefined
                   ) {
                     sourceRequestIndex = i + 1;
                     sourceRequestName =
@@ -2986,8 +2987,8 @@ export function RequestEditor({
         </div>
       )}
       <div className='border-b border-gray-200'>
-        <div className='flex items-center justify-between px-6 relative'>
-          <nav className='flex space-x-6'>
+        <div className='flex items-center justify-between px-6 relative overflow-auto'>
+          <nav className='flex space-x-6 '>
             {tabs.map((tab) => {
               const count = tab.count ?? 0;
               const showBlueDot =
@@ -2999,13 +3000,12 @@ export function RequestEditor({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors flex items-center space-x-2 ${
-                    activeTab === tab.id
-                      ? 'border-blue-500 text-[#136fb0]'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors overflow-auto flex items-center space-x-2 ${activeTab === tab.id
+                    ? 'border-blue-500 text-[#136fb0]'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
-                  <span className='whitespace-nowrap'>{tab.label}</span>
+                  <span className='text-xs md:text-sm whitespace-nowrap'>{tab.label}</span>
 
                   {/* Blue dot for auth and body tabs when count > 0 */}
                   {showBlueDot && (
@@ -3099,7 +3099,7 @@ export function RequestEditor({
         {activeTab === 'params' && (
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
-              <h3 className='text-lg font-medium text-gray-900'>
+              <h3 className='text-xs md:text-md font-medium text-gray-900'>
                 Query Parameters
               </h3>
               <button
@@ -3107,7 +3107,7 @@ export function RequestEditor({
                 className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
               >
                 <Plus className='w-4 h-4' color='#136fb0' />
-                <span className='text-[#136fb0]'>Add Parameter</span>
+                <span className='text-xs md:text-md text-[#136fb0]'>Add Parameter</span>
               </button>
             </div>
 
@@ -3179,7 +3179,7 @@ export function RequestEditor({
         {activeTab === 'headers' && (
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
-              <h3 className='text-lg font-medium text-gray-900'>Headers</h3>
+              <h3 className='text-xs md:text-md font-medium text-gray-900'>Headers</h3>
               <button
                 onClick={addHeader}
                 className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
@@ -3281,18 +3281,18 @@ export function RequestEditor({
 
         {activeTab === 'auth' && (
           <div className='space-y-4'>
-            <h3 className='text-lg font-medium text-gray-900'>
+            <h3 className='text-xs md:text-md font-medium text-gray-900'>
               Authentication
             </h3>
             <div className='space-y-4'>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-xs md:text-md font-medium text-gray-700 mb-2'>
                   Auth Type
                 </label>
                 <select
                   value='bearer'
-                  onChange={() => {}}
-                  className='w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                  onChange={() => { }}
+                  className='text-xs md:text-md w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                   disabled
                 >
                   <option value='bearer'>Bearer Token</option>
@@ -3300,7 +3300,7 @@ export function RequestEditor({
               </div>
 
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                <label className='block text-xs md:text-md font-medium text-gray-700 mb-2'>
                   Bearer Token
                 </label>
                 <div className='relative flex items-center group'>
@@ -3322,7 +3322,7 @@ export function RequestEditor({
                       }))
                     }
                     onKeyUp={(e) => handleAutocomplete(e)}
-                    className='w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                    className='w-full text-xs md:text-md px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                     placeholder='Enter bearer token or use {{tokenVariable}}'
                   />
                   <div className='absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity'>
@@ -3379,7 +3379,7 @@ export function RequestEditor({
 
         {activeTab === 'settings' && (
           <div className='space-y-4'>
-            <h3 className='text-lg font-semibold mb-4'>Request Settings</h3>
+            <h3 className='text-xs md:text-md font-semibold mb-4'>Request Settings</h3>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
               <div>
@@ -3610,7 +3610,7 @@ export function RequestEditor({
                       if (
                         reqId &&
                         extractedVariablesByRequest[reqId]?.[variableName] !==
-                          undefined
+                        undefined
                       ) {
                         sourceRequestIndex = i + 1;
                         sourceRequestName =
@@ -3973,7 +3973,7 @@ export function RequestEditor({
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
-                <Select value='bearer' onValueChange={() => {}} disabled>
+                <Select value='bearer' onValueChange={() => { }} disabled>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>

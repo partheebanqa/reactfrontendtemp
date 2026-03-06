@@ -140,10 +140,10 @@ const RequestBuilder = () => {
         return prev.map((e) =>
           e.name === extraction.name
             ? {
-                name: extraction.name,
-                path: extraction.path,
-                source: extraction.source,
-              }
+              name: extraction.name,
+              path: extraction.path,
+              source: extraction.source,
+            }
             : e,
         );
       }
@@ -291,18 +291,20 @@ const RequestBuilder = () => {
     }
   }, []);
 
+
   return (
     <>
       <div className='flex h-full relative border border-gray-200 bg-background rounded-lg mt-2'>
         {showSidebar && (
           <div
-            className={`${isMobile ? 'absolute z-10 h-full shadow-lg' : ''}`}
+            className={`${isMobile ? 'absolute z-10 h-full shadow-lg bg-white' : ''}`}
           >
-            <Sidebar />
+            <Sidebar toggleSidebar={toggleSidebar} />
+
           </div>
         )}
 
-        <div className='flex-1 flex flex-col overflow-hidden'>
+        <div className='flex-1 flex flex-col overflow-hidden' >
           {isMobile && (
             <div className='flex justify-between items-center p-2 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700'>
               <button
@@ -317,24 +319,23 @@ const RequestBuilder = () => {
                 )}
               </button>
 
-              <button
+              {/* <button
                 onClick={toggleLayout}
-                className='p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
-                aria-label='Toggle view'
+                className="flex items-center gap-2 p-2 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                aria-label="Toggle view"
               >
-                <Layers size={18} />
-                <span className='ml-2 text-sm'>
+                <Layers size={15} />
+                <span className="text-xs md:text-sm whitespace-nowrap">
                   {activePanel === 'editor' ? 'View Response' : 'Edit Request'}
                 </span>
-              </button>
+              </button> */}
             </div>
           )}
 
           <div
             ref={containerRef}
-            className={`flex-1 flex overflow-hidden ${
-              isBottomLayout ? 'flex-col' : 'flex-row'
-            }`}
+            className={`flex-1 flex overflow-hidden ${isBottomLayout ? 'flex-col' : 'flex-row'
+              }`}
           >
             {sanitizeTestRunner.isOpen && sanitizeCollection ? (
               <div className='flex-1 w-full h-full'>
@@ -396,9 +397,8 @@ const RequestBuilder = () => {
               <>
                 {/* Request Editor */}
                 <div
-                  className={`flex flex-col min-h-0 overflow-hidden ${
-                    isMobile && activePanel === 'response' ? 'hidden' : ''
-                  }`}
+                  className={`flex flex-col min-h-0 overflow-hidden ${isMobile && activePanel === 'response' ? 'hidden' : ''
+                    }`}
                   style={{
                     height: isBottomLayout ? `${resizePosition}%` : undefined,
                     width: !isBottomLayout ? `${resizePosition}%` : undefined,
@@ -416,19 +416,18 @@ const RequestBuilder = () => {
                     existingExtractions={existingExtractions}
                     onRemoveExtraction={handleRemoveExtraction}
                   />
+
                 </div>
 
                 {/* Resizer Handle */}
                 {!isMobile ||
-                (isMobile && isBottomLayout && activePanel === 'editor') ? (
+                  (isMobile && isBottomLayout && activePanel === 'editor') ? (
                   <div
-                    className={`flex justify-center items-center ${
-                      isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
-                    } ${
-                      isBottomLayout
+                    className={`flex justify-center items-center ${isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
+                      } ${isBottomLayout
                         ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
                         : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                    } ${isMobile ? 'touch-manipulation' : ''}`}
+                      } ${isMobile ? 'touch-none' : ''}`}
                     onMouseDown={handleResizeStart}
                     onTouchStart={(e) => {
                       e.preventDefault();
@@ -448,11 +447,11 @@ const RequestBuilder = () => {
                   </div>
                 ) : null}
 
+
+
                 {/* Response Viewer */}
                 <div
-                  className={`flex flex-col min-h-0 overflow-hidden ${
-                    isMobile && activePanel === 'editor' ? 'hidden' : ''
-                  }`}
+                  className={`flex flex-col min-h-0 overflow-hidden`}
                   style={{
                     height: isBottomLayout
                       ? `${100 - resizePosition}%`
@@ -487,9 +486,8 @@ const RequestBuilder = () => {
           <button
             onClick={toggleLayout}
             className='fixed bottom-4 right-4 z-10 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg'
-            title={`Switch to ${
-              isBottomLayout ? 'side-by-side' : 'top-bottom'
-            } layout`}
+            title={`Switch to ${isBottomLayout ? 'side-by-side' : 'top-bottom'
+              } layout`}
           >
             {isBottomLayout ? (
               <svg
