@@ -140,10 +140,10 @@ const RequestBuilder = () => {
         return prev.map((e) =>
           e.name === extraction.name
             ? {
-              name: extraction.name,
-              path: extraction.path,
-              source: extraction.source,
-            }
+                name: extraction.name,
+                path: extraction.path,
+                source: extraction.source,
+              }
             : e,
         );
       }
@@ -204,6 +204,48 @@ const RequestBuilder = () => {
       document.body.style.userSelect = 'none';
     },
     [isBottomLayout],
+  );
+
+  const handleTouchResizeStart = useCallback(
+    (e: React.TouchEvent) => {
+      const touch = e.touches[0];
+      const startClientPos = isBottomLayout ? touch.clientY : touch.clientX;
+      const containerEl = containerRef.current;
+      if (!containerEl) return;
+
+      const containerRect = containerEl.getBoundingClientRect();
+      const containerSize = isBottomLayout
+        ? containerRect.height
+        : containerRect.width;
+      const containerStart = isBottomLayout
+        ? containerRect.top
+        : containerRect.left;
+
+      const handleTouchMove = (moveEvent: TouchEvent) => {
+        moveEvent.preventDefault();
+        const moveTouch = moveEvent.touches[0];
+        const currentPos = isBottomLayout
+          ? moveTouch.clientY
+          : moveTouch.clientX;
+
+        const newPosition =
+          ((currentPos - containerStart) / containerSize) * 100;
+        const minSize = isMobile ? 30 : 20;
+        const maxSize = isMobile ? 70 : 80;
+        setResizePosition(Math.max(minSize, Math.min(maxSize, newPosition)));
+      };
+
+      const handleTouchEnd = () => {
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
+      };
+
+      document.addEventListener('touchmove', handleTouchMove, {
+        passive: false,
+      });
+      document.addEventListener('touchend', handleTouchEnd);
+    },
+    [isBottomLayout, isMobile],
   );
 
   const handleRedirectToTab = useCallback((tabName: string) => {
@@ -291,7 +333,6 @@ const RequestBuilder = () => {
     }
   }, []);
 
-
   return (
     <>
       <div className='flex h-full relative border border-gray-200 bg-background rounded-lg mt-2'>
@@ -300,11 +341,10 @@ const RequestBuilder = () => {
             className={`${isMobile ? 'absolute z-10 h-full shadow-lg bg-white' : ''}`}
           >
             <Sidebar toggleSidebar={toggleSidebar} />
-
           </div>
         )}
 
-        <div className='flex-1 flex flex-col overflow-hidden' >
+        <div className='flex-1 flex flex-col overflow-hidden'>
           {isMobile && (
             <div className='flex justify-between items-center p-2 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700'>
               <button
@@ -334,8 +374,9 @@ const RequestBuilder = () => {
 
           <div
             ref={containerRef}
-            className={`flex-1 flex overflow-hidden ${isBottomLayout ? 'flex-col' : 'flex-row'
-              }`}
+            className={`flex-1 flex overflow-hidden ${
+              isBottomLayout ? 'flex-col' : 'flex-row'
+            }`}
           >
             {sanitizeTestRunner.isOpen && sanitizeCollection ? (
               <div className='flex-1 w-full h-full'>
@@ -397,8 +438,9 @@ const RequestBuilder = () => {
               <>
                 {/* Request Editor */}
                 <div
-                  className={`flex flex-col min-h-0 overflow-hidden ${isMobile && activePanel === 'response' ? 'hidden' : ''
-                    }`}
+                  className={`flex flex-col min-h-0 overflow-hidden ${
+                    isMobile && activePanel === 'response' ? 'hidden' : ''
+                  }`}
                   style={{
                     height: isBottomLayout ? `${resizePosition}%` : undefined,
                     width: !isBottomLayout ? `${resizePosition}%` : undefined,
@@ -416,28 +458,31 @@ const RequestBuilder = () => {
                     existingExtractions={existingExtractions}
                     onRemoveExtraction={handleRemoveExtraction}
                   />
-
                 </div>
 
                 {/* Resizer Handle */}
                 {!isMobile ||
-                  (isMobile && isBottomLayout && activePanel === 'editor') ? (
+                (isMobile && isBottomLayout && activePanel === 'editor') ? (
                   <div
-                    className={`flex justify-center items-center ${isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
-                      } ${isBottomLayout
-                        ? 'h-[6px] w-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                        : 'w-[6px] h-full bg-[#136fb0] dark:bg-gray-700 hover:bg-blue-300 dark:hover:bg-blue-800 transition-colors'
-                      } ${isMobile ? 'touch-none' : ''}`}
+                    className={`flex justify-center items-center ${
+                      isBottomLayout ? 'cursor-row-resize' : 'cursor-col-resize'
+                    } ${
+                      isBottomLayout
+                        ? 'h-[4px] w-full bg-[#136fb0] dark:bg-[#136fb0] hover:h-[5px] transition-all duration-150 relative group'
+                        : 'w-[4px] h-full bg-[#136fb0] dark:bg-[#136fb0] hover:w-[5px] transition-all duration-150 relative group'
+                    } ${isMobile ? 'touch-none' : ''}`}
                     onMouseDown={handleResizeStart}
-                    onTouchStart={(e) => {
-                      e.preventDefault();
-                      const touch = e.touches[0];
-                      const mouseEvent = new MouseEvent('mousedown', {
-                        clientX: touch.clientX,
-                        clientY: touch.clientY,
-                      });
-                      handleResizeStart(mouseEvent as any);
-                    }}
+                    // onTouchStart={(e) => {
+                    //   e.preventDefault();
+                    //   const touch = e.touches[0];
+                    //   const mouseEvent = new MouseEvent('mousedown', {
+                    //     clientX: touch.clientX,
+                    //     clientY: touch.clientY,
+                    //   });
+                    //   handleResizeStart(mouseEvent as any);
+                    // }}
+
+                    onTouchStart={handleTouchResizeStart}
                   >
                     {isBottomLayout ? (
                       <GripHorizontal className='h-3 w-3 text-white' />
@@ -446,8 +491,6 @@ const RequestBuilder = () => {
                     )}
                   </div>
                 ) : null}
-
-
 
                 {/* Response Viewer */}
                 <div
@@ -486,8 +529,9 @@ const RequestBuilder = () => {
           <button
             onClick={toggleLayout}
             className='fixed bottom-4 right-4 z-10 p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg'
-            title={`Switch to ${isBottomLayout ? 'side-by-side' : 'top-bottom'
-              } layout`}
+            title={`Switch to ${
+              isBottomLayout ? 'side-by-side' : 'top-bottom'
+            } layout`}
           >
             {isBottomLayout ? (
               <svg
