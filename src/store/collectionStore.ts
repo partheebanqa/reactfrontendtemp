@@ -100,9 +100,47 @@ export const initialCollectionState: CollectionState = {
   },
 };
 
-export const collectionStore = new Store<CollectionState>(
-  initialCollectionState,
-);
+const STORAGE_KEY = 'collection-store-tabs';
+
+function serializeTabState(state: CollectionState) {
+  return JSON.stringify({
+    openedRequests: state.openedRequests,
+    activeRequest: state.activeRequest,
+  });
+}
+
+function loadTabState(): Partial<CollectionState> {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    const openedRequests = (parsed.openedRequests || []).filter(
+      (r: any) => !r.id?.startsWith('temp-'),
+    );
+    const activeRequest = parsed.activeRequest?.id?.startsWith('temp-')
+      ? openedRequests[0] || null
+      : parsed.activeRequest || null;
+    return { openedRequests, activeRequest };
+  } catch {
+    return {};
+  }
+}
+
+export const collectionStore = new Store<CollectionState>({
+  ...initialCollectionState,
+  ...loadTabState(),
+});
+
+collectionStore.subscribe(() => {
+  try {
+    sessionStorage.setItem(
+      STORAGE_KEY,
+      serializeTabState(collectionStore.state),
+    );
+  } catch {
+    // sessionStorage unavailable (private mode, storage full, etc.)
+  }
+});
 
 export const collectionActions = {
   replaceRequest: (oldRequestId: string, newRequest: CollectionRequest) => {
@@ -147,25 +185,32 @@ export const collectionActions = {
   },
 
   setActiveRequest: (request: CollectionRequest) => {
-    collectionStore.setState((state) => ({
-      ...state,
-      activeRequest: request,
-    }));
+    collectionStore.setState((state) => {
+      // prefer the version already in openedRequests (has unsaved edits)
+      const existingOpen = state.openedRequests.find(
+        (r) => r.id === request.id,
+      );
+      return {
+        ...state,
+        activeRequest: existingOpen ?? request,
+      };
+    });
   },
 
   openRequest: (request: CollectionRequest) => {
     console.log('open request:', request);
 
     collectionStore.setState((state) => {
-      const isAlreadyOpen = state.openedRequests.some(
+      const existingOpen = state.openedRequests.find(
         (r) => r.id === request.id,
       );
       return {
         ...state,
-        openedRequests: isAlreadyOpen
+        openedRequests: existingOpen
           ? state.openedRequests
           : [...state.openedRequests, request],
-        activeRequest: request,
+        // prefer the already-open version (has unsaved edits) over the fresh one
+        activeRequest: existingOpen ?? request,
       };
     });
   },

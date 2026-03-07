@@ -2532,6 +2532,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
     if (activeRequest?.id) {
       collectionActions.markUnsaved(activeRequest.id);
+      collectionActions.updateOpenedRequest({
+        ...activeRequest,
+        params: newParams,
+      });
     }
   };
 
@@ -2559,6 +2563,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     setHeaders(newHeaders);
     if (activeRequest?.id) {
       collectionActions.markUnsaved(activeRequest.id);
+      collectionActions.updateOpenedRequest({
+        ...activeRequest,
+        headers: newHeaders,
+      });
     }
   };
 
@@ -3202,6 +3210,11 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 setBodyContent(newContent);
                 if (activeRequest?.id) {
                   collectionActions.markUnsaved(activeRequest.id);
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    bodyRawContent: newContent,
+                    bodyType,
+                  });
                 }
               }}
               onBeautify={handleBeautifyBody}
@@ -3236,9 +3249,15 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   type='text'
                   value={authData.token}
                   onChange={(e) => {
-                    setAuthData({ ...authData, token: e.target.value });
+                    const newToken = e.target.value;
+                    setAuthData({ ...authData, token: newToken });
                     if (activeRequest?.id) {
                       collectionActions.markUnsaved(activeRequest.id);
+                      collectionActions.updateOpenedRequest({
+                        ...activeRequest,
+                        authorizationType: authType,
+                        authorization: { ...authData, token: newToken },
+                      });
                     }
                   }}
                   placeholder='Enter token'
