@@ -5,8 +5,6 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { GitBranch, Trash2, ChevronDown, ChevronUp, X } from 'lucide-react';
 
-// ─── TYPES ────────────────────────────────────────────────────────────────────
-
 interface ExtractVariable {
   name?: string;
   variableName?: string;
@@ -98,8 +96,6 @@ interface EdgeData {
   y2: number;
 }
 
-// ─── METHOD COLORS ────────────────────────────────────────────────────────────
-
 function getMethodStyle(method: string) {
   switch (method) {
     case 'GET':
@@ -116,8 +112,6 @@ function getMethodStyle(method: string) {
       return { bg: '#f9fafb', text: '#374151', border: '#e5e7eb' };
   }
 }
-
-// ─── VARIABLE COLORS ──────────────────────────────────────────────────────────
 
 interface VarColor {
   stroke: string;
@@ -178,8 +172,6 @@ const FIELD_ICONS: Record<string, string> = {
   body: '📄',
   url: '🌐',
 };
-
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 function extractUrlVars(url = '') {
   return [...url.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
@@ -264,8 +256,6 @@ function buildVarMap(
   });
   return vars;
 }
-
-// ─── SHARED COMPONENTS ────────────────────────────────────────────────────────
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -362,8 +352,6 @@ function ActionButton({
   );
 }
 
-// ─── PIPELINE EDGES ───────────────────────────────────────────────────────────
-
 function PipelineEdges({
   edges,
   activeVar,
@@ -423,7 +411,7 @@ function PipelineEdges({
             stroke={c.stroke}
             strokeWidth={1}
             strokeDasharray='2 6'
-            opacity={isActive ? 0.35 : 0.12}
+            opacity={isActive ? 0.35 : 0}
           />
         );
       })}
@@ -441,7 +429,7 @@ function PipelineEdges({
             fontFamily='ui-monospace,monospace'
             fontWeight='700'
             textAnchor='middle'
-            opacity={isActive ? 0.9 : 0.4}
+            opacity={isActive ? 0.9 : 0}
           >
             {name}
           </text>
@@ -517,8 +505,6 @@ function PipelineEdges({
     </svg>
   );
 }
-
-// ─── EXPANDED DETAIL ──────────────────────────────────────────────────────────
 
 function ExpandedDetail({
   req,
@@ -639,8 +625,6 @@ function ExpandedDetail({
     </div>
   );
 }
-
-// ─── REQUEST NODE ─────────────────────────────────────────────────────────────
 
 function RequestNode({
   req,
@@ -841,9 +825,9 @@ function RequestNode({
           </div>
           <span className='text-gray-400 shrink-0'>
             {expanded ? (
-              <ChevronUp className='w-4 h-4' />
+              <ChevronUp className='w-4 h-4 text-[rgb(19_111_176)]' />
             ) : (
-              <ChevronDown className='w-4 h-4' />
+              <ChevronDown className='w-4 h-4 text-[rgb(19_111_176)]' />
             )}
           </span>
         </div>
@@ -918,8 +902,6 @@ function RequestNode({
     </div>
   );
 }
-
-// ─── VARIABLE REGISTRY CARD ───────────────────────────────────────────────────
 
 function VariableCard({
   varData,
@@ -1008,8 +990,6 @@ function VariableCard({
     </div>
   );
 }
-
-// ─── FLOW VIEW ────────────────────────────────────────────────────────────────
 
 function FlowView({
   requests,
@@ -1127,9 +1107,9 @@ function FlowView({
             >
               <span>Variable Registry ({sortedVars.length})</span>
               {showRegistry ? (
-                <ChevronUp className='w-4 h-4 text-gray-400' />
+                <ChevronUp className='w-4 h-4 text-[rgb(19_111_176)]' />
               ) : (
-                <ChevronDown className='w-4 h-4 text-gray-400' />
+                <ChevronDown className='w-4 h-4 text-[rgb(19_111_176)]' />
               )}
             </button>
             {showRegistry && (
@@ -1213,8 +1193,6 @@ function FlowView({
     </div>
   );
 }
-
-// ─── TABLE VIEW ───────────────────────────────────────────────────────────────
 
 function TableView({
   requests,

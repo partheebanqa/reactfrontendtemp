@@ -84,7 +84,7 @@ import {
 import { CollectionRequestsResponse } from '@/shared/types/request';
 
 interface ISidebar {
-  toggleSidebar: () => void
+  toggleSidebar: () => void;
 }
 
 const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
@@ -170,7 +170,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
   ) => {
     try {
       setResponseData(null);
-    } catch { }
+    } catch {}
     setActiveCollection(parentCollection);
     setActiveRequest(req);
     collectionActions.openRequest(req);
@@ -455,9 +455,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-              ...col,
-              preRequestId: request.id,
-            }
+                ...col,
+                preRequestId: request.id,
+              }
             : col,
         ),
       );
@@ -673,14 +673,14 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
         collections.map((col) =>
           col.id === selectedCollection?.id
             ? {
-              ...col,
-              requests: col.requests,
-              folders: removeRequestAtIndexFromFolderTree(
-                (col as any).folders || [],
-                selectedFolder.id,
-                requestIndex,
-              ),
-            }
+                ...col,
+                requests: col.requests,
+                folders: removeRequestAtIndexFromFolderTree(
+                  (col as any).folders || [],
+                  selectedFolder.id,
+                  requestIndex,
+                ),
+              }
             : col,
         ),
       );
@@ -689,11 +689,11 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
         collections.map((col) =>
           col.id === selectedCollection.id
             ? {
-              ...col,
-              requests: col.requests.filter(
-                (_, index) => index !== requestIndex,
-              ),
-            }
+                ...col,
+                requests: col.requests.filter(
+                  (_, index) => index !== requestIndex,
+                ),
+              }
             : col,
         ),
       );
@@ -984,12 +984,12 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
           collections.map((col) =>
             col.id === collectionId
               ? {
-                ...col,
-                preRequestId: collectionData?.preRequestId,
-                hasFetchedRequests: true,
-                requests: collectionData.requests || col.requests,
-                folders: collectionData.folders || col.folders,
-              }
+                  ...col,
+                  preRequestId: collectionData?.preRequestId,
+                  hasFetchedRequests: true,
+                  requests: collectionData.requests || col.requests,
+                  folders: collectionData.folders || col.folders,
+                }
               : col,
           ),
         );
@@ -1186,8 +1186,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
         </SortableFolder>
 
         <div
-          className={`ml-4 transition-all ${isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
-            }`}
+          className={`ml-4 transition-all ${
+            isOpen ? 'max-h-[1000px]' : 'max-h-0 overflow-hidden'
+          }`}
         >
           <SortableContext
             items={sortableIds}
@@ -1203,13 +1204,15 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     collectionId={parentCollection.id}
                   >
                     <div
-                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                        ? 'bg-blue-50 dark:bg-blue-900/20'
-                        : ''
-                        } ${isAuthRequest(request.id, parentCollection.id)
+                      className={`group flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                        activeRequest?.id === request.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20'
+                          : ''
+                      } ${
+                        isAuthRequest(request.id, parentCollection.id)
                           ? 'border-2 border-blue-500 rounded-lg shadow-sm'
                           : ''
-                        }`}
+                      }`}
                     >
                       <div
                         className='flex items-center space-x-2 flex-1 min-w-0'
@@ -1319,7 +1322,6 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                 Collections
               </h2>
               <div className='flex items-center space-x-1'>
-
                 <TooltipContainer text='Create collection'>
                   <button
                     onClick={handleCreateCollection}
@@ -1481,7 +1483,6 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                         });
                                         setSelectedCollection(collection);
                                         setShowMenu(collection.id);
-
                                       }}
                                       className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
                                       aria-label='More options'
@@ -1495,12 +1496,13 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                           </div>
 
                           <div
-                            className={`ml-4 sm:ml-6 overflow-hidden ${expanded
-                              ? isSearching
-                                ? 'max-h-none'
-                                : 'max-h-[1000px]'
-                              : 'max-h-0'
-                              }`}
+                            className={`ml-4 sm:ml-6 overflow-hidden ${
+                              expanded
+                                ? isSearching
+                                  ? 'max-h-none'
+                                  : 'max-h-[1000px]'
+                                : 'max-h-0'
+                            }`}
                           >
                             {expanded && (
                               <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
@@ -1518,21 +1520,26 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                         collectionId={collection.id}
                                       >
                                         <div
-                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${activeRequest?.id === request.id
-                                            ? 'bg-blue-50 dark:bg-blue-900/20'
-                                            : ''
-                                            } ${isAuthRequest(
+                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                            activeRequest?.id === request.id
+                                              ? 'bg-blue-50 dark:bg-blue-900/20'
+                                              : ''
+                                          } ${
+                                            isAuthRequest(
                                               request.id,
                                               collection.id,
                                             )
                                               ? 'border-2 border-blue-500 rounded-lg'
                                               : ''
-                                            }`}
+                                          }`}
                                         >
                                           <div
                                             className='flex items-center space-x-2 flex-1 min-w-0'
                                             onClick={() => {
-                                              selectRequest(request, collection);
+                                              selectRequest(
+                                                request,
+                                                collection,
+                                              );
 
                                               toggleSidebar();
                                             }}
@@ -1541,17 +1548,17 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                               request.id,
                                               collection.id,
                                             ) && (
-                                                <TooltipProvider>
-                                                  <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                      <Key className='h-3 w-3 text-blue-600 flex-shrink-0' />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent side='top'>
-                                                      Auto Auth
-                                                    </TooltipContent>
-                                                  </Tooltip>
-                                                </TooltipProvider>
-                                              )}
+                                              <TooltipProvider>
+                                                <Tooltip>
+                                                  <TooltipTrigger asChild>
+                                                    <Key className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                  </TooltipTrigger>
+                                                  <TooltipContent side='top'>
+                                                    Auto Auth
+                                                  </TooltipContent>
+                                                </Tooltip>
+                                              </TooltipProvider>
+                                            )}
                                             <span
                                               className={`text-xs font-medium ${getMethodColor(
                                                 request.method,
@@ -1873,7 +1880,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     )}
                     <button
                       onClick={() => {
-                        handleOpenSecurityScan(selectedRequest)
+                        handleOpenSecurityScan(selectedRequest);
                         toggleSidebar();
                       }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1889,10 +1896,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
 
                     <button
                       onClick={() => {
-                        handleOpenPerformanceScanning(selectedRequest)
+                        handleOpenPerformanceScanning(selectedRequest);
                         toggleSidebar();
-                      }
-                      }
+                      }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
                       <Zap className='h-4 w-4 mr-2' />
@@ -2258,7 +2264,10 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
             <AlertDialogHeader>
               <AlertDialogTitle className='text-cyan-400 text-xl'>
                 <Key className='h-5 w-5 inline-block mr-2' />
-                Set "{selectedRequest?.name}" as Auto Auth?
+                {selectedRequest &&
+                getAutoAuthState(selectedRequest) === 'is-auth'
+                  ? `Remove Auto Auth from "${selectedRequest?.name}"?`
+                  : `Set "${selectedRequest?.name}" as Auto Auth?`}
               </AlertDialogTitle>
               <AlertDialogDescription className='text-gray-400'>
                 The token extracted from this API will be used for all requests

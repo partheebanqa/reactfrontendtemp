@@ -73,7 +73,6 @@ import {
 import { VariablesTable } from './VariablesTable';
 import { useWorkspace } from '@/hooks/useWorkspace';
 import { parseCookies } from '@/lib/cookieUtils';
-import { ChainViewerModal, ChainViewerButton } from './RequestViewer';
 import {
   buildRequestPayload,
   executeRequest,
@@ -3091,13 +3090,6 @@ export function RequestChainEditor({
                             </div>
                           </div>
 
-                          <ChainViewerButton
-                            onClick={() => setIsChainViewerOpen(true)}
-                            disabled={
-                              isExecuting || !formData.chainRequests?.length
-                            }
-                          />
-
                           <div className='mt-6 flex md:hidden flex-col gap-4'>
                             {/* TOP: Select Controls */}
                             <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3'>
@@ -3318,14 +3310,6 @@ export function RequestChainEditor({
           </Card>
         </div>
       </div>
-
-      <ChainViewerModal
-        open={isChainViewerOpen}
-        onOpenChange={setIsChainViewerOpen}
-        requests={formData.chainRequests || []}
-        executionLogs={executionLogs}
-        chainName={formData.name}
-      />
 
       <ImportModal
         isOpen={isImportModalOpen}
