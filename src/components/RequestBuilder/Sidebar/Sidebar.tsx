@@ -82,6 +82,7 @@ import {
   shouldRefreshExtractedVariables,
 } from '@/lib/request-utils';
 import { CollectionRequestsResponse } from '@/shared/types/request';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ISidebar {
   toggleSidebar: () => void
@@ -1136,6 +1137,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
       ...(folder.folders || []).map((f: any) => f.id),
     ];
 
+
     return (
       <div className='ml-3'>
         <SortableFolder
@@ -1303,6 +1305,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
       </div>
     );
   };
+  const isMobile = useIsMobile();
 
   return (
     <TooltipProvider>
@@ -1534,7 +1537,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                             onClick={() => {
                                               selectRequest(request, collection);
 
-                                              toggleSidebar();
+                                              if (isMobile) {
+                                                toggleSidebar();
+                                              }
                                             }}
                                           >
                                             {isAuthRequest(
@@ -1772,9 +1777,13 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                             selectedCollection.id,
                           );
                         }
+
                         setShowMenu(null);
                         setMenuPosition(null);
-                        toggleSidebar();
+
+                        if (isMobile) {
+                          toggleSidebar();
+                        }
                       }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1874,7 +1883,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     <button
                       onClick={() => {
                         handleOpenSecurityScan(selectedRequest)
-                        toggleSidebar();
+                        if (isMobile) {
+                          toggleSidebar();
+                        }
                       }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
@@ -1890,7 +1901,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     <button
                       onClick={() => {
                         handleOpenPerformanceScanning(selectedRequest)
-                        toggleSidebar();
+                        if (isMobile) {
+                          toggleSidebar();
+                        }
                       }
                       }
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -1907,7 +1920,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     <button
                       onClick={() => {
                         handleOpenPerformanceTesting(selectedRequest);
-                        toggleSidebar();
+                        if (isMobile) {
+                          toggleSidebar();
+                        }
                       }}
                       className='flex items-center w-full px-4 py-1 text-sm text-left hover:bg-gray-100 dark:hover:bg-gray-700'
                     >
