@@ -18,6 +18,7 @@ export interface RequestChain {
     name: string;
   };
   tags?: string[];
+  isImportant: string;
 }
 
 export interface APIRequest {

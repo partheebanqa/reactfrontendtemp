@@ -92,6 +92,11 @@ export function useCollection() {
     collection?: Collection,
     folderId?: string,
   ) => {
+    const alreadyHasNewTab = openedRequests.some((r) =>
+      r.id?.startsWith('temp-'),
+    );
+    if (alreadyHasNewTab && !collection) return;
+
     if (activeRequest && activeRequest.id) {
       collectionActions.updateOpenedRequest(activeRequest);
     }

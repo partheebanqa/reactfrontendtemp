@@ -24,6 +24,7 @@ import { useExecuteRequestChain } from '@/shared/hooks/requestChain';
 import { Button } from '../ui/button';
 import { useLocation } from 'wouter';
 import { useDataManagement } from '@/hooks/useDataManagement';
+import { ChainViewerModal, ChainViewerButton } from './RequestViewer';
 
 interface Variable {
   id?: string;
@@ -78,7 +79,7 @@ export function RequestExecutor({
   isSaveDisabled,
 }: RequestExecutorProps) {
   const { activeEnvironment } = useDataManagement();
-  console.log('requests123:', requests);
+  const [isChainViewerOpen, setIsChainViewerOpen] = useState(false);
 
   const [location, setLocation] = useLocation();
   const [isExecuting, setIsExecuting] = useState(false);
@@ -697,29 +698,46 @@ export function RequestExecutor({
             <>
               {onPreExecute && (
                 <>
+                  {/* NEW CHAIN: Chain Viewer + Save buttons */}
                   {!chainId && (
-                    <Button
-                      onClick={handleSaveChain}
-                      disabled={isSaveDisabled || (!!savedChainId && !chainId)}
-                      className={`hover-scale ${
-                        !chainName?.trim() || (!!savedChainId && !chainId)
-                          ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
-                          : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
-                      } disabled:opacity-70`}
-                    >
-                      <Save className='w-4 h-4' />
-                      Save
-                    </Button>
+                    <>
+                      <ChainViewerButton
+                        onClick={() => setIsChainViewerOpen(true)}
+                        disabled={isExecuting || requests.length === 0}
+                      />
+                      <Button
+                        onClick={handleSaveChain}
+                        disabled={
+                          isSaveDisabled || (!!savedChainId && !chainId)
+                        }
+                        className={`hover-scale ${
+                          !chainName?.trim() || (!!savedChainId && !chainId)
+                            ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
+                            : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
+                        } disabled:opacity-70`}
+                      >
+                        <Save className='w-4 h-4' />
+                        Save
+                      </Button>
+                    </>
                   )}
 
+                  {/* EXISTING CHAIN: Cancel + Chain Viewer + Update buttons */}
                   {chainId && (
-                    <Button variant='outline' onClick={handleBack}>
-                      Cancel
-                    </Button>
+                    <>
+                      <Button variant='outline' onClick={handleBack}>
+                        Cancel
+                      </Button>
+                      <ChainViewerButton
+                        onClick={() => setIsChainViewerOpen(true)}
+                        disabled={isExecuting || requests.length === 0}
+                      />
+                    </>
                   )}
                 </>
               )}
 
+              {/* Execute button (new chain only) */}
               {!chainId && (
                 <Button
                   onClick={handleExecuteChain}
@@ -741,6 +759,7 @@ export function RequestExecutor({
                 </Button>
               )}
 
+              {/* Update button (existing chain only) */}
               {chainId && (
                 <Button
                   onClick={handleUpdateChain}
@@ -750,7 +769,7 @@ export function RequestExecutor({
                   className={`hover-scale ${
                     !chainName?.trim()
                       ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
-                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0 py-4]'
+                      : 'bg-[#136fb0] text-white hover:bg-[#136fb0] py-4'
                   } disabled:opacity-70`}
                 >
                   <Save className='w-4 h-4' />
@@ -966,6 +985,13 @@ export function RequestExecutor({
           ))}
         </div>
       )}
+
+      <ChainViewerModal
+        open={isChainViewerOpen}
+        onOpenChange={setIsChainViewerOpen}
+        requests={requests}
+        chainName={chainName}
+      />
     </div>
   );
 }
