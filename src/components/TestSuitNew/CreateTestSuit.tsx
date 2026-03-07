@@ -370,15 +370,15 @@ const CreateTestSuit: React.FC = () => {
       selectedTestCases: req.selectedTestCases || [],
       meta: req.meta
         ? {
-            totalTests: req.meta.totalTests,
-            selectedTests: req.meta.selectedTests,
-            positive: req.meta.positive,
-            negative: req.meta.negative,
-            semantic: req.meta.semantic,
-            edgeCase: req.meta.edgeCase,
-            security: req.meta.security,
-            advancedSecurity: req.meta.advancedSecurity,
-          }
+          totalTests: req.meta.totalTests,
+          selectedTests: req.meta.selectedTests,
+          positive: req.meta.positive,
+          negative: req.meta.negative,
+          semantic: req.meta.semantic,
+          edgeCase: req.meta.edgeCase,
+          security: req.meta.security,
+          advancedSecurity: req.meta.advancedSecurity,
+        }
         : undefined,
     };
   };
@@ -629,14 +629,14 @@ const CreateTestSuit: React.FC = () => {
 
         opts?.goToNextAfterSave
           ? {
-              onSuccess: (created: any) => {
-                if (created?.id) {
-                  setLocation(`/test-suites/${created.id}?step=select-tests`);
-                } else {
-                  moveToNextStep();
-                }
-              },
-            }
+            onSuccess: (created: any) => {
+              if (created?.id) {
+                setLocation(`/test-suites/${created.id}?step=select-tests`);
+              } else {
+                moveToNextStep();
+              }
+            },
+          }
           : undefined,
       );
     } else {
@@ -660,10 +660,10 @@ const CreateTestSuit: React.FC = () => {
         },
         opts?.goToNextAfterSave
           ? {
-              onSuccess: () => {
-                moveToNextStep();
-              },
-            }
+            onSuccess: () => {
+              moveToNextStep();
+            },
+          }
           : undefined,
       );
     }
@@ -682,13 +682,13 @@ const CreateTestSuit: React.FC = () => {
     () =>
       isCreateMode
         ? requests.reduce(
-            (total, req) => total + (req.selectedTestCases?.length || 0),
-            0,
-          )
+          (total, req) => total + (req.selectedTestCases?.length || 0),
+          0,
+        )
         : requests.reduce(
-            (total, req) => total + (req.meta?.selectedTests ?? 0),
-            0,
-          ),
+          (total, req) => total + (req.meta?.selectedTests ?? 0),
+          0,
+        ),
     [requests, isCreateMode],
   );
 
@@ -769,7 +769,7 @@ const CreateTestSuit: React.FC = () => {
 
   const getNextButtonText = () => {
     if (isPreparingTestCases) {
-      return 'Select test cases';
+      return 'Select test cases to continue';
     }
 
     if (isSaving) {

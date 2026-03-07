@@ -15,6 +15,8 @@ import {
   Ticket,
   CircleCheckBig,
   Info,
+  CheckCircle,
+  CheckSquare,
 } from 'lucide-react';
 import { RequestTestDialog } from './RequestTestDialog';
 import {
@@ -421,7 +423,15 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
     [requests]
   );
 
-  // ✅ At least one request has selected test cases
+
+  const totalGeneratedTests = useMemo(() => {
+    return requests.reduce((sum, r) => {
+      const fromMeta = r.meta?.totalTests ?? 0;
+      const fromLocal = r.testCases?.total ?? 0;
+      return sum + (fromMeta || fromLocal);
+    }, 0);
+  }, [requests]);
+
   const hasAnySelectedTests = useMemo(
     () =>
       requests.some((r) => {
@@ -448,15 +458,25 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             <CardTitle>
               <div className='flex items-center gap-4'>
                 <p className='text-sm md:text-md'>Requests ({headerRequestsCount})</p>
+
                 {showTestcaseHint && (
-                  <p className='text-xs text-amber-600 flex items-center gap-1'>
-                    <span>
-                      Testcases are generated. Please select
-                      <span className='font-semibold'> testcases</span> before
-                      proceeding.
-                    </span>
-                  </p>
+                  <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-xs text-blue-900">
+                          <span className="font-semibold flex items-center gap-1 flex-wrap">
+                            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="text-xs sm:text-xs text-blue-900">{totalGeneratedTests} test cases generated successfully</span>
+                          </span>
+                        </p>
+                        <p className="text-xs sm:text-xs text-blue-800 mt-1">
+                          Review the requests below and select test cases you want to run.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
+
               </div>
             </CardTitle>
           ) : (
@@ -579,6 +599,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     </div>
                   </div>
 
+
+
                   <div className='flex items-center justify-end space-x-2'>
                     {showAuthCapture && request.method === 'POST' && (
                       <Button
@@ -599,6 +621,9 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                           Select testcases
                         </Button>
                       )}
+
+
+
 
 
 
@@ -646,6 +671,35 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     </AlertDialog>
                   </div>
                 </div>
+                {totalTests === 0 ? (
+                  <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-3 sm:p-4 mt-4">
+                    <div className="flex items-center justify-center gap-2 text-gray-500 text-center">
+                      <CheckSquare className="w-4 h-4" />
+                      <p className="text-xs sm:text-sm">
+                        <span className="font-medium">No test cases generated</span>
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedTests === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
+                    <div className="flex items-center justify-center gap-2 text-center">
+                      <CheckSquare className="w-4 h-4 text-yellow-600" />
+                      <p className="text-xs text-yellow-800">
+                        <span className="font-semibold">{totalTests}</span> test cases available • Click to select
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-4">
+                    <div className="flex items-center justify-center gap-2 text-center">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <p className="text-xs text-green-800">
+                        <span className="font-semibold">{selectedTests}</span> of {totalTests} test cases selected
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {testSuiteId &&
                   preRequestId !== request.id &&
                   isSelectTestsRoute && (
