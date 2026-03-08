@@ -125,7 +125,6 @@ function isAuthEndpoint(name: string, url: string): boolean {
   const lowerUrl = url.toLowerCase();
   return (
     lowerName.includes('login') ||
-    lowerName.includes('auth') ||
     lowerName.includes('signin') ||
     lowerName.includes('token') ||
     lowerUrl.includes('/login') ||

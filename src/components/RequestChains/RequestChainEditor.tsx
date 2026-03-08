@@ -451,7 +451,7 @@ export function RequestChainEditor({
     );
   };
   const isSaveDisabled =
-    !formData.name?.trim() || (formData.chainRequests?.length ?? 0) === 0;
+    !formData.name?.trim() || (formData.chainRequests?.length ?? 0) < 2;
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set(),
   );
@@ -680,7 +680,11 @@ export function RequestChainEditor({
     });
   };
 
-  const handleApplyToRequest = (requestId: string, variableName: string) => {
+  const handleApplyToRequest = (
+    requestId: string,
+    variableName: string,
+    forceSetAuth?: boolean,
+  ) => {
     if (!formData.chainRequests) return;
 
     const targetRequestIndex = formData.chainRequests.findIndex(
@@ -711,6 +715,33 @@ export function RequestChainEditor({
         title: 'Error',
         description: 'Could not find the extracted variable value',
         variant: 'destructive',
+      });
+      return;
+    }
+
+    if (forceSetAuth) {
+      const updatedRequests = formData.chainRequests.map((request, index) => {
+        if (index !== targetRequestIndex) return request;
+        return {
+          ...request,
+          authToken: `{{${variableName}}}`,
+          authorizationType: 'bearer' as const,
+          authorization: {
+            token: `{{${variableName}}}`,
+          },
+          authUsername: '',
+          authPassword: '',
+          authApiKey: '',
+          authApiValue: '',
+          authApiLocation: 'header',
+        };
+      });
+
+      setFormData({ ...formData, chainRequests: [...updatedRequests] });
+
+      toast({
+        title: 'Auth Token Applied',
+        description: `{{${variableName}}} set as Bearer Token on request #${targetRequestIndex + 1}`,
       });
       return;
     }
