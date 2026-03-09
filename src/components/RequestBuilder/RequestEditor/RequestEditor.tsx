@@ -2,7 +2,15 @@
 
 import type React from 'react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Save, FolderPlus, Info, Rocket, Key } from 'lucide-react';
+import {
+  Play,
+  Save,
+  FolderPlus,
+  Info,
+  Rocket,
+  Key,
+  Loader2,
+} from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -44,7 +52,11 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
-import { generateDynamicValueById, getMethodColor } from '@/lib/request-utils';
+import {
+  generateDynamicValueById,
+  getMethodColor,
+  getTokenExpiryDisplay,
+} from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
 import {
   collectionActions,
@@ -1923,13 +1935,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       return;
     }
 
-    setIsSaving(true);
+    // setIsSaving(true);
     setUrlAtOpen(url);
     setShowSaveModal(true);
   };
 
   const handleUpdateRequest = async (overrideName?: string) => {
     try {
+      console.log('coming to handle update method');
+
+      setIsSaving(true);
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
           'Invalid Request',
@@ -2105,6 +2120,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         title: 'Save Failed',
         description: 'An error occurred while saving the request.',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2267,6 +2284,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const handleUpdateContentRequest = async () => {
     try {
+      setIsSaving(true);
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
           'Invalid Request',
@@ -2426,6 +2444,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         title: 'Save Failed',
         description: 'An error occurred while saving the request.',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2997,18 +3017,28 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                 {isNewRequest(activeRequest.id) ? (
                   <button
                     onClick={handleSaveRequest}
-                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                    disabled={isSaving} // ← ADD
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
                     aria-label='Save request'
                   >
-                    <Save className='h-4 w-4 text-[#136fb0]' />
+                    {isSaving ? ( // ← REPLACE static icon
+                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                    ) : (
+                      <Save className='h-4 w-4 text-[#136fb0]' />
+                    )}
                   </button>
                 ) : (
                   <button
                     onClick={handleUpdateContentRequest}
-                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md'
+                    disabled={isSaving} // ← ADD
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
                     aria-label='Save request'
                   >
-                    <Save className='h-4 w-4 text-[#136fb0]' />
+                    {isSaving ? ( // ← REPLACE static icon
+                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                    ) : (
+                      <Save className='h-4 w-4 text-[#136fb0]' />
+                    )}
                   </button>
                 )}
               </TooltipContainer>
@@ -3232,8 +3262,20 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
+                <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
                   Authorization
+                  {(() => {
+                    const expiry = getTokenExpiryDisplay(authData);
+                    if (!expiry) return null;
+                    const isExpired = expiry === 'Expired';
+                    return (
+                      <span
+                        className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
+                      >
+                        (Expires in: {expiry})
+                      </span>
+                    );
+                  })()}
                 </h4>
                 <select
                   value='bearer'
@@ -3829,12 +3871,20 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               <button
                 onClick={handleConfirmSave}
                 disabled={
-                  !selectedCollectionId &&
-                  (!isCreatingCollection || !newCollectionName.trim())
+                  isSaving ||
+                  (!selectedCollectionId &&
+                    (!isCreatingCollection || !newCollectionName.trim()))
                 }
-                className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md'
+                className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md flex items-center gap-2' // ← ADD flex items-center gap-2
               >
-                Save
+                {isSaving ? (
+                  <>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    Saving...
+                  </>
+                ) : (
+                  'Save'
+                )}
               </button>
             </div>
           }

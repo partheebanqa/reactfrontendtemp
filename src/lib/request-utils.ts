@@ -1308,3 +1308,43 @@ export const getMethodColor = (method: string) => {
     'text-gray-600 bg-gray-50 border-gray-200'
   );
 };
+
+export const getTokenExpiryDisplay = (authData: any): string | null => {
+  const tokenValue = authData.token || authData;
+  if (!tokenValue || !tokenValue.trim()) return null;
+
+  try {
+    const parts = tokenValue.split('.');
+    if (parts.length !== 3) return null;
+
+    const payload = parts[1];
+    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(''),
+    );
+    const decoded = JSON.parse(jsonPayload);
+
+    if (!decoded.exp) return null;
+
+    const expiryMs = decoded.exp * 1000;
+    const diff = expiryMs - Date.now();
+
+    if (diff <= 0) return 'Expired';
+
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    const parts2 = [];
+    if (days > 0) parts2.push(`${days}d`);
+    if (hours > 0) parts2.push(`${hours}h`);
+    if (minutes > 0) parts2.push(`${minutes}m`);
+
+    return parts2.join(' ') || 'Expires soon';
+  } catch {
+    return null;
+  }
+};

@@ -13,6 +13,7 @@ import {
   Copy,
   Save,
   Globe,
+  Loader2,
 } from 'lucide-react';
 import { toast, useToast } from '@/hooks/use-toast';
 import type {
@@ -93,6 +94,7 @@ export function RequestExecutor({
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set());
   const [allVariables, setAllVariables] = useState<Variable[]>(variables);
   const { mutateAsync: playChain } = useExecuteRequestChain();
+  const [isSaving, setIsSaving] = useState(false);
 
   const processedRequests = useMemo(() => {
     return requests.map((req) => ({
@@ -304,6 +306,8 @@ export function RequestExecutor({
         return;
       }
 
+      setIsSaving(true);
+
       const savedChain = await onPreExecute();
 
       const currentChainId = savedChain?.id;
@@ -318,6 +322,12 @@ export function RequestExecutor({
         return;
       }
 
+      toast({
+        title: 'Chain Saved',
+        description: 'Request chain saved successfully.',
+        variant: 'default',
+      });
+
       return;
     } catch (err: any) {
       toast({
@@ -325,6 +335,8 @@ export function RequestExecutor({
         description: err?.message || 'Unable to save chain.',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -340,6 +352,8 @@ export function RequestExecutor({
         });
         return;
       }
+
+      setIsSaving(true);
 
       const savedChain = await onPreExecute();
       const currentChainId = savedChain?.requestchain?.id || savedChain?.id;
@@ -366,6 +380,8 @@ export function RequestExecutor({
         description: err?.message || 'Unable to update chain.',
         variant: 'destructive',
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -708,16 +724,29 @@ export function RequestExecutor({
                       <Button
                         onClick={handleSaveChain}
                         disabled={
-                          isSaveDisabled || (!!savedChainId && !chainId)
+                          isSaveDisabled ||
+                          isSaving ||
+                          (!!savedChainId && !chainId)
                         }
                         className={`hover-scale ${
-                          !chainName?.trim() || (!!savedChainId && !chainId)
+                          !chainName?.trim() ||
+                          isSaving ||
+                          (!!savedChainId && !chainId)
                             ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300'
                             : 'bg-[#136fb0] text-white hover:bg-[#136fb0]'
                         } disabled:opacity-70`}
                       >
-                        <Save className='w-4 h-4' />
-                        Save
+                        {isSaving ? (
+                          <>
+                            <Loader2 className='w-4 h-4 animate-spin' />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className='w-4 h-4' />
+                            Save
+                          </>
+                        )}
                       </Button>
                     </>
                   )}
@@ -759,21 +788,32 @@ export function RequestExecutor({
                 </Button>
               )}
 
-              {/* Update button (existing chain only) */}
               {chainId && (
                 <Button
                   onClick={handleUpdateChain}
                   disabled={
-                    !chainName?.trim() || isExecuting || isRunAllExecuting
+                    !chainName?.trim() ||
+                    isExecuting ||
+                    isRunAllExecuting ||
+                    isSaving // ← ADD isSaving
                   }
                   className={`hover-scale ${
-                    !chainName?.trim()
+                    !chainName?.trim() || isSaving
                       ? 'bg-gray-300 text-gray-600 cursor-not-allowed hover:bg-gray-300 py-4'
                       : 'bg-[#136fb0] text-white hover:bg-[#136fb0] py-4'
                   } disabled:opacity-70`}
                 >
-                  <Save className='w-4 h-4' />
-                  Update
+                  {isSaving ? (
+                    <>
+                      <Loader2 className='w-4 h-4 animate-spin' />
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <Save className='w-4 h-4' />
+                      Update
+                    </>
+                  )}
                 </Button>
               )}
             </>

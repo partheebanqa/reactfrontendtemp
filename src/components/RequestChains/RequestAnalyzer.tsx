@@ -13,7 +13,6 @@ import {
   ChevronUp,
   Plus,
   Zap,
-  ArrowRight,
   Database,
   ShieldAlert,
 } from 'lucide-react';
@@ -42,7 +41,11 @@ interface RequestAnalyzerProps {
     suggestedName: string,
   ) => void;
   onApplyToAllRequests?: (variableName: string) => void;
-  onApplyToRequest?: (requestId: string, variableName: string) => void;
+  onApplyToRequest?: (
+    requestId: string,
+    variableName: string,
+    forceSetAuth?: boolean,
+  ) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -453,6 +456,7 @@ export function RequestAnalyzer({
                                           onApplyToRequest(
                                             request.id,
                                             extractedTokenForSuggestion.key,
+                                            true,
                                           );
                                         }
                                       }}
