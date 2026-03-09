@@ -13,7 +13,6 @@ import {
   ChevronUp,
   Plus,
   Zap,
-  ArrowRight,
   Database,
   ShieldAlert,
 } from 'lucide-react';

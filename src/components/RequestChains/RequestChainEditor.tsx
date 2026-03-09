@@ -19,11 +19,8 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-
 import {
   ArrowLeft,
   Code,
@@ -32,8 +29,6 @@ import {
   PlayCircle,
   Info,
   Link2,
-  Shuffle,
-  Edit3,
   AlertTriangle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -89,7 +84,6 @@ import {
   detectAutocompletePrefix,
   calculateAutocompletePosition,
   generateDynamicValueById,
-  hasResponseChanged,
   getUsedVariablesForChain,
   syncParamsFromUrl,
   methodColor,
