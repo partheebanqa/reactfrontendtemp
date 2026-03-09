@@ -58,6 +58,7 @@ import {
   generateDynamicValueById,
   hasResponseChanged,
   getMethodColor,
+  getTokenExpiryDisplay,
 } from '@/lib/request-utils';
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
@@ -796,8 +797,8 @@ export function RequestEditor({
       selectedVariable.length > 0
         ? selectedVariable
         : (initialRequest.variables || [])
-          .filter((v: any) => v.field === 'body' && v.key && v.variable)
-          .map((v: any) => ({ path: v.key, name: v.variable }));
+            .filter((v: any) => v.field === 'body' && v.key && v.variable)
+            .map((v: any) => ({ path: v.key, name: v.variable }));
 
     if (
       effectiveSelectedVars &&
@@ -863,25 +864,25 @@ export function RequestEditor({
       authApiValue: replaceVariables(request.authApiValue || '', variables),
       authorization: request.authorization
         ? {
-          ...request.authorization,
-          token: replaceVariables(
-            request.authorization.token || '',
-            variables,
-          ),
-          username: replaceVariables(
-            request.authorization.username || '',
-            variables,
-          ),
-          password: replaceVariables(
-            request.authorization.password || '',
-            variables,
-          ),
-          key: replaceVariables(request.authorization.key || '', variables),
-          value: replaceVariables(
-            request.authorization.value || '',
-            variables,
-          ),
-        }
+            ...request.authorization,
+            token: replaceVariables(
+              request.authorization.token || '',
+              variables,
+            ),
+            username: replaceVariables(
+              request.authorization.username || '',
+              variables,
+            ),
+            password: replaceVariables(
+              request.authorization.password || '',
+              variables,
+            ),
+            key: replaceVariables(request.authorization.key || '', variables),
+            value: replaceVariables(
+              request.authorization.value || '',
+              variables,
+            ),
+          }
         : request.authorization,
     };
   };
@@ -1942,8 +1943,8 @@ export function RequestEditor({
                       );
                       return String(
                         boundVar?.value ??
-                        boundVar?.initialValue ??
-                        `{{${boundVarName}}}`,
+                          boundVar?.initialValue ??
+                          `{{${boundVarName}}}`,
                       );
                     }
                     return originalSegmentContents.current[i] ?? seg.content;
@@ -2065,7 +2066,7 @@ export function RequestEditor({
       (chain: any) =>
         normalizeString(chain.name) === normalizeString(chainName) &&
         normalizeString(chain.description) ===
-        normalizeString(chainDescription) &&
+          normalizeString(chainDescription) &&
         normalizeBool(chain.isImportant) === normalizeBool(chainEnabled) &&
         chain.environmentId === activeEnvironment?.id,
     );
@@ -2912,7 +2913,6 @@ export function RequestEditor({
           name='url'
         />
         <Button
-
           onClick={handleExecute}
           disabled={isExecuting}
           className='hover-scale w-full md:w-[150px] bg-[#136fb0] text-white'
@@ -2947,7 +2947,7 @@ export function RequestEditor({
                   if (
                     reqId &&
                     extractedVariablesByRequest[reqId]?.[variableName] !==
-                    undefined
+                      undefined
                   ) {
                     sourceRequestIndex = i + 1;
                     sourceRequestName =
@@ -3000,12 +3000,15 @@ export function RequestEditor({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors overflow-auto flex items-center space-x-2 ${activeTab === tab.id
-                    ? 'border-blue-500 text-[#136fb0]'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                    }`}
+                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors overflow-auto flex items-center space-x-2 ${
+                    activeTab === tab.id
+                      ? 'border-blue-500 text-[#136fb0]'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
                 >
-                  <span className='text-xs md:text-sm whitespace-nowrap'>{tab.label}</span>
+                  <span className='text-xs md:text-sm whitespace-nowrap'>
+                    {tab.label}
+                  </span>
 
                   {/* Blue dot for auth and body tabs when count > 0 */}
                   {showBlueDot && (
@@ -3107,7 +3110,9 @@ export function RequestEditor({
                 className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
               >
                 <Plus className='w-4 h-4' color='#136fb0' />
-                <span className='text-xs md:text-md text-[#136fb0]'>Add Parameter</span>
+                <span className='text-xs md:text-md text-[#136fb0]'>
+                  Add Parameter
+                </span>
               </button>
             </div>
 
@@ -3179,7 +3184,9 @@ export function RequestEditor({
         {activeTab === 'headers' && (
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
-              <h3 className='text-xs md:text-md font-medium text-gray-900'>Headers</h3>
+              <h3 className='text-xs md:text-md font-medium text-gray-900'>
+                Headers
+              </h3>
               <button
                 onClick={addHeader}
                 className='flex items-center space-x-2 px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors'
@@ -3281,8 +3288,32 @@ export function RequestEditor({
 
         {activeTab === 'auth' && (
           <div className='space-y-4'>
-            <h3 className='text-xs md:text-md font-medium text-gray-900'>
+            <h3 className='text-xs md:text-md font-medium text-gray-900 flex items-center gap-2'>
               Authentication
+              {(() => {
+                let resolvedToken = auth.token;
+                const varMatch = auth.token?.match(/^\{\{(\w+)\}\}$/);
+                if (varMatch) {
+                  const varName = varMatch[1];
+                  const allVars = getAllAvailableVariables();
+                  const found = allVars.find((v) => v.name === varName);
+                  resolvedToken = String(
+                    found?.value ?? found?.initialValue ?? '',
+                  );
+                }
+                const expiry = getTokenExpiryDisplay(resolvedToken);
+                console.log('Authentication123:', expiry);
+
+                if (!expiry) return null;
+                const isExpired = expiry === 'Expired';
+                return (
+                  <span
+                    className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
+                  >
+                    (Expires in: {expiry})
+                  </span>
+                );
+              })()}
             </h3>
             <div className='space-y-4'>
               <div>
@@ -3291,7 +3322,7 @@ export function RequestEditor({
                 </label>
                 <select
                   value='bearer'
-                  onChange={() => { }}
+                  onChange={() => {}}
                   className='text-xs md:text-md w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent'
                   disabled
                 >
@@ -3379,7 +3410,9 @@ export function RequestEditor({
 
         {activeTab === 'settings' && (
           <div className='space-y-4'>
-            <h3 className='text-xs md:text-md font-semibold mb-4'>Request Settings</h3>
+            <h3 className='text-xs md:text-md font-semibold mb-4'>
+              Request Settings
+            </h3>
 
             <div className='grid grid-cols-1 md:grid-cols-2 gap-6 mb-6'>
               <div>
@@ -3610,7 +3643,7 @@ export function RequestEditor({
                       if (
                         reqId &&
                         extractedVariablesByRequest[reqId]?.[variableName] !==
-                        undefined
+                          undefined
                       ) {
                         sourceRequestIndex = i + 1;
                         sourceRequestName =
@@ -3968,12 +4001,36 @@ export function RequestEditor({
         <TabsContent value='auth' className='space-y-4'>
           <Card>
             <CardHeader>
-              <CardTitle>Authentication</CardTitle>
+              <CardTitle className='flex items-center gap-2'>
+                Authentication
+                {(() => {
+                  let resolvedToken = auth.token;
+                  const varMatch = auth.token?.match(/^\{\{(\w+)\}\}$/);
+                  if (varMatch) {
+                    const varName = varMatch[1];
+                    const allVars = getAllAvailableVariables();
+                    const found = allVars.find((v) => v.name === varName);
+                    resolvedToken = String(
+                      found?.value ?? found?.initialValue ?? '',
+                    );
+                  }
+                  const expiry = getTokenExpiryDisplay(resolvedToken);
+                  if (!expiry) return null;
+                  const isExpired = expiry === 'Expired';
+                  return (
+                    <span
+                      className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
+                    >
+                      (Expires in: {expiry})
+                    </span>
+                  );
+                })()}
+              </CardTitle>
             </CardHeader>
             <CardContent className='space-y-4'>
               <div className='flex items-center space-x-4'>
                 <Label>Auth Type:</Label>
-                <Select value='bearer' onValueChange={() => { }} disabled>
+                <Select value='bearer' onValueChange={() => {}} disabled>
                   <SelectTrigger className='w-40'>
                     <SelectValue />
                   </SelectTrigger>

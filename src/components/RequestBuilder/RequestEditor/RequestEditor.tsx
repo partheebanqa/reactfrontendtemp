@@ -52,7 +52,11 @@ import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
 import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
-import { generateDynamicValueById, getMethodColor } from '@/lib/request-utils';
+import {
+  generateDynamicValueById,
+  getMethodColor,
+  getTokenExpiryDisplay,
+} from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
 import {
   collectionActions,
@@ -3258,8 +3262,20 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           {activeTab === 'auth' && (
             <div className='space-y-4'>
               <div className='flex items-center justify-between'>
-                <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
+                <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
                   Authorization
+                  {(() => {
+                    const expiry = getTokenExpiryDisplay(authData);
+                    if (!expiry) return null;
+                    const isExpired = expiry === 'Expired';
+                    return (
+                      <span
+                        className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
+                      >
+                        (Expires in: {expiry})
+                      </span>
+                    );
+                  })()}
                 </h4>
                 <select
                   value='bearer'
