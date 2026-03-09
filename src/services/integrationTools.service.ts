@@ -1,67 +1,97 @@
-import { IntegrationPayload } from '@/components/settings/ExternalTools';
-import { API_REPORTS } from '@/config/apiRoutes';
-import { ENV } from '@/config/env';
-import { apiRequest } from '@/lib/queryClient';
+import { IntegrationPayload } from "@/components/settings/ExternalTools";
+import { API_REPORTS } from "@/config/apiRoutes";
+import { ENV } from "@/config/env";
+import { apiRequest } from "@/lib/queryClient";
+import { JiraIntegrationPayload } from "@/models/intergeration.model";
 
 export const getWorkSpaceIntegrations = async (workspaceId: string) => {
   const response = await apiRequest(
-    'GET',
+    "GET",
     `${ENV.API_BASE_URL}/integrations?ws=${workspaceId}`,
     {
       headers: {
-        'X-Workspace-ID': workspaceId,
+        "X-Workspace-ID": workspaceId,
       },
-    }
+    },
   );
 
   if (!response.ok) {
-    throw new Error('Failed to fetch test suite report');
+    throw new Error("Failed to fetch test suite report");
   }
   return response.json();
 };
 
 export const createWorkSpaceIntegration = async (
   workspaceId: string,
-  payload: IntegrationPayload
+  payload: IntegrationPayload,
 ) => {
   try {
     const response = await apiRequest(
-      'POST',
+      "POST",
       `${ENV.API_BASE_URL}/integrations?ws=${workspaceId}`,
       {
         body: JSON.stringify(payload),
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       throw new Error(
-        `Failed to create workspace integration: ${response.status} ${response.statusText}`
+        `Failed to create workspace integration: ${response.status} ${response.statusText}`,
       );
     }
 
     return await response.json();
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to execute request');
+    throw new Error(error.message || "Failed to execute request");
+  }
+};
+
+export const createIntegrationJiraIssue = async (
+  integrationId: string,
+  payload: JiraIntegrationPayload,
+  workspaceId: string,
+) => {
+  try {
+    const response = await apiRequest(
+      "POST",
+      `${ENV.API_BASE_URL}/integrations/jira/${integrationId}?ws=${workspaceId}`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to create workspace integration: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return await response.json();
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to execute request");
   }
 };
 
 export const updateWorkSpaceIntegration = async (
   integrationId: string,
   workspaceId: string,
-  payload: IntegrationPayload
+  payload: IntegrationPayload,
 ) => {
   const response = await apiRequest(
-    'PUT',
+    "PUT",
     `${ENV.API_BASE_URL}/integrations/${integrationId}?ws=${workspaceId}`,
     {
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -73,56 +103,56 @@ export const updateWorkSpaceIntegration = async (
 
 export const deleteWorkSpaceIntegration = async (
   integrationId: string,
-  workspaceId: string
+  workspaceId: string,
 ) => {
   try {
     const response = await apiRequest(
-      'DELETE',
+      "DELETE",
       `${ENV.API_BASE_URL}/integrations/${integrationId}?ws=${workspaceId}`,
       {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
       throw new Error(
-        `Failed to delete workspace integration: ${response.status} ${response.statusText}`
+        `Failed to delete workspace integration: ${response.status} ${response.statusText}`,
       );
     }
 
     return await response.json();
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to execute request');
+    throw new Error(error.message || "Failed to execute request");
   }
 };
 
 export const toggleWorkSpaceIntegrationStatus = async (
   integrationId: string,
   workspaceId: string,
-  isActive: boolean
+  isActive: boolean,
 ) => {
   try {
     const response = await apiRequest(
-      'PATCH',
+      "PATCH",
       `${ENV.API_BASE_URL}/integrations/${integrationId}/togglestatus?ws=${workspaceId}`,
       {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ isActive }),
-      }
+      },
     );
 
     if (!response.ok) {
       throw new Error(
-        `Failed to toggle workspace integration status: ${response.status} ${response.statusText}`
+        `Failed to toggle workspace integration status: ${response.status} ${response.statusText}`,
       );
     }
 
     return await response.json();
   } catch (error: any) {
-    throw new Error(error.message || 'Failed to execute request');
+    throw new Error(error.message || "Failed to execute request");
   }
 };

@@ -1,5 +1,5 @@
 // src/components/Executions/ExecutionReportPage.tsx
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { executionService } from '@/services/executionService.service';
@@ -22,6 +22,7 @@ import {
   SkipForward,
   Activity,
   Globe,
+  Loader2,
 } from 'lucide-react';
 import {
   format,
@@ -62,6 +63,10 @@ import {
   isValidTimestamp,
 } from '@/utils/exportDate';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { createIntegrationJiraIssue, getWorkSpaceIntegrations } from '@/services/integrationTools.service';
+import { WorkSpaceIntegration } from '../settings/ExternalTools';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
+import { useToast } from '@/hooks/use-toast';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -226,6 +231,122 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
   const handleDownloadHTML = () =>
     downloadAsHTMLSameUI('report-content', `${data.name}_report.html`);
 
+  const JiraIcon = () => (
+    <svg
+      viewBox='0 0 48 48'
+      xmlns='http://www.w3.org/2000/svg'
+      className='w-6 h-6'
+      fill='none'
+    >
+      <path
+        d='M0 24C0 10.7452 10.7452 0 24 0C37.2548 0 48 10.7452 48 24C48 37.2548 37.2548 48 24 48C10.7452 48 0 37.2548 0 24Z'
+        fill='white'
+      />
+      <path
+        d='M34.9367 12H23.41C23.41 13.38 23.9582 14.7035 24.934 15.6793C25.9098 16.6551 27.2333 17.2033 28.6133 17.2033H30.7367V19.2533C30.7385 22.1245 33.0656 24.4515 35.9367 24.4533V13C35.9367 12.4477 35.489 12 34.9367 12Z'
+        fill='#2684FF'
+      />
+      <path
+        d='M29.2333 17.7433H17.7067C17.7085 20.6144 20.0355 22.9414 22.9067 22.9433H25.03V25C25.0337 27.8711 27.3622 30.1966 30.2333 30.1966V18.7433C30.2333 18.191 29.7856 17.7433 29.2333 17.7433Z'
+        fill='url(#paint0_linear)'
+      />
+      <path
+        d='M23.5267 23.4833H12C12 26.357 14.3296 28.6866 17.2033 28.6866H19.3333V30.7366C19.3352 33.6051 21.6582 35.9311 24.5267 35.9366V24.4833C24.5267 23.931 24.079 23.4833 23.5267 23.4833Z'
+        fill='url(#paint1_linear)'
+      />
+      <defs>
+        <linearGradient
+          id='paint0_linear'
+          x1='27.4434'
+          y1='15.326'
+          x2='22.5699'
+          y2='20.4112'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop offset='0.18' stopColor='#0052CC' />
+          <stop offset='1' stopColor='#2684FF' />
+        </linearGradient>
+        <linearGradient
+          id='paint1_linear'
+          x1='376.829'
+          y1='349.939'
+          x2='167.455'
+          y2='557.146'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop offset='0.18' stopColor='#0052CC' />
+          <stop offset='1' stopColor='#2684FF' />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+  const [integrations, setIntegrations] = useState<WorkSpaceIntegration[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+
+  const getIntegrations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getWorkSpaceIntegrations(workspaceId || '');
+      const data: WorkSpaceIntegration[] = await response;
+      setIntegrations(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to fetch integrations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (workspaceId) {
+      getIntegrations();
+    }
+  }, [workspaceId]);
+
+
+  const jiraIntegration = integrations?.find(
+    (integration) => integration.type === "jira"
+  );
+  const integrationId = jiraIntegration?.id
+
+  const [openJiraModal, setOpenJiraModal] = useState(false);
+
+  const [jiraPayload, setJiraPayload] = useState({
+    summary: "",
+    description: "",
+    issueType: "",
+  });
+
+  const [jiraLoading, setJiraLoading] = useState(false);
+
+  const { toast } = useToast();
+  const handleJiraSubmit = async (e: any) => {
+    e.preventDefault();
+    try {
+      setJiraLoading(true);
+
+      await createIntegrationJiraIssue(
+        integrationId || "",
+        jiraPayload,
+        workspaceId || ""
+      );
+      toast({ title: "Jira issue created successfully" });
+      setOpenJiraModal(false);
+
+    } catch (error) {
+      console.error("Failed to create Jira issue", error);
+    } finally {
+      setJiraLoading(false);
+    }
+  };
+
+
+
   return (
     <div id='report-content'>
       <div className='border border-gray-200 bg-background rounded-lg px-6 py-3 animate-fade-in mt-3'>
@@ -325,7 +446,72 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               </TooltipTrigger>
               <TooltipContent>Share Report</TooltipContent>
             </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setOpenJiraModal(true)}
+                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors'
+                >
+                  <JiraIcon />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Create Jira issue</TooltipContent>
+            </Tooltip>
           </TooltipProvider>
+
+          <Dialog open={openJiraModal} onOpenChange={setOpenJiraModal}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create Jira Issue</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-3">
+
+                <input
+                  className="w-full border rounded-md p-2 text-sm"
+                  placeholder="Summary"
+                  value={jiraPayload.summary}
+                  onChange={(e) =>
+                    setJiraPayload({ ...jiraPayload, summary: e.target.value })
+                  }
+                />
+
+                <textarea
+                  className="w-full border rounded-md p-2 text-sm"
+                  placeholder="Description"
+                  value={jiraPayload.description}
+                  onChange={(e) =>
+                    setJiraPayload({ ...jiraPayload, description: e.target.value })
+                  }
+                />
+
+                <select
+                  className="w-full border rounded-md p-2 text-sm"
+                  value={jiraPayload.issueType}
+                  onChange={(e) =>
+                    setJiraPayload({ ...jiraPayload, issueType: e.target.value })
+                  }
+                >
+                  <option value="Bug">Bug</option>
+                  <option value="Task">Task</option>
+                  <option value="Story">Story</option>
+                </select>
+
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpenJiraModal(false)}>
+                  Cancel
+                </Button>
+
+                <Button onClick={handleJiraSubmit} disabled={jiraLoading}>
+                  {jiraLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {jiraLoading ? "Creating..." : "Create Issue"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -565,6 +751,120 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
 
+  const JiraIcon = () => (
+    <svg
+      viewBox='0 0 48 48'
+      xmlns='http://www.w3.org/2000/svg'
+      className='w-6 h-6'
+      fill='none'
+    >
+      <path
+        d='M0 24C0 10.7452 10.7452 0 24 0C37.2548 0 48 10.7452 48 24C48 37.2548 37.2548 48 24 48C10.7452 48 0 37.2548 0 24Z'
+        fill='white'
+      />
+      <path
+        d='M34.9367 12H23.41C23.41 13.38 23.9582 14.7035 24.934 15.6793C25.9098 16.6551 27.2333 17.2033 28.6133 17.2033H30.7367V19.2533C30.7385 22.1245 33.0656 24.4515 35.9367 24.4533V13C35.9367 12.4477 35.489 12 34.9367 12Z'
+        fill='#2684FF'
+      />
+      <path
+        d='M29.2333 17.7433H17.7067C17.7085 20.6144 20.0355 22.9414 22.9067 22.9433H25.03V25C25.0337 27.8711 27.3622 30.1966 30.2333 30.1966V18.7433C30.2333 18.191 29.7856 17.7433 29.2333 17.7433Z'
+        fill='url(#paint0_linear)'
+      />
+      <path
+        d='M23.5267 23.4833H12C12 26.357 14.3296 28.6866 17.2033 28.6866H19.3333V30.7366C19.3352 33.6051 21.6582 35.9311 24.5267 35.9366V24.4833C24.5267 23.931 24.079 23.4833 23.5267 23.4833Z'
+        fill='url(#paint1_linear)'
+      />
+      <defs>
+        <linearGradient
+          id='paint0_linear'
+          x1='27.4434'
+          y1='15.326'
+          x2='22.5699'
+          y2='20.4112'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop offset='0.18' stopColor='#0052CC' />
+          <stop offset='1' stopColor='#2684FF' />
+        </linearGradient>
+        <linearGradient
+          id='paint1_linear'
+          x1='376.829'
+          y1='349.939'
+          x2='167.455'
+          y2='557.146'
+          gradientUnits='userSpaceOnUse'
+        >
+          <stop offset='0.18' stopColor='#0052CC' />
+          <stop offset='1' stopColor='#2684FF' />
+        </linearGradient>
+      </defs>
+    </svg>
+  );
+  const [integrations, setIntegrations] = useState<WorkSpaceIntegration[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { currentWorkspace } = useWorkspace();
+  const workspaceId = currentWorkspace?.id;
+
+  const getIntegrations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await getWorkSpaceIntegrations(workspaceId || '');
+      const data: WorkSpaceIntegration[] = await response;
+      setIntegrations(data);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Failed to fetch integrations');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (workspaceId) {
+      getIntegrations();
+    }
+  }, [workspaceId]);
+
+
+  const jiraIntegration = integrations?.find(
+    (integration) => integration.type === "jira"
+  );
+  const integrationId = jiraIntegration?.id
+
+  const [openJiraModal, setOpenJiraModal] = useState(false);
+
+  const [jiraPayload, setJiraPayload] = useState({
+    summary: "",
+    description: "",
+    issueType: "",
+  });
+
+  const [jiraLoading, setJiraLoading] = useState(false);
+
+  const { toast } = useToast();
+  const handleJiraSubmit = async (e: any) => {
+    e.preventDefault();
+    try {
+      setJiraLoading(true);
+
+      await createIntegrationJiraIssue(
+        integrationId || "",
+        jiraPayload,
+        workspaceId || ""
+      );
+      toast({ title: "Jira issue created successfully" });
+      setOpenJiraModal(false);
+
+    } catch (error) {
+      console.error("Failed to create Jira issue", error);
+    } finally {
+      setJiraLoading(false);
+    }
+  };
+
   return (
     <div>
       {/* Keeps your existing top summary card */}
@@ -671,7 +971,71 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
               </TooltipTrigger>
               <TooltipContent>Share Report</TooltipContent>
             </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setOpenJiraModal(true)}
+                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors'
+                >
+                  <JiraIcon />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Create Jira issue</TooltipContent>
+            </Tooltip>
           </TooltipProvider>
+
+          <Dialog open={openJiraModal} onOpenChange={setOpenJiraModal}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create Jira Issue</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-3">
+
+                <input
+                  className="w-full border rounded-md p-2 text-sm"
+                  placeholder="Summary"
+                  value={jiraPayload.summary}
+                  onChange={(e) =>
+                    setJiraPayload({ ...jiraPayload, summary: e.target.value })
+                  }
+                />
+
+                <textarea
+                  className="w-full border rounded-md p-2 text-sm"
+                  placeholder="Description"
+                  value={jiraPayload.description}
+                  onChange={(e) =>
+                    setJiraPayload({ ...jiraPayload, description: e.target.value })
+                  }
+                />
+
+                <select
+                  className="w-full border rounded-md p-2 text-sm"
+                  value={jiraPayload.issueType}
+                  onChange={(e) =>
+                    setJiraPayload({ ...jiraPayload, issueType: e.target.value })
+                  }
+                >
+                  <option value="Bug">Bug</option>
+                  <option value="Task">Task</option>
+                  <option value="Story">Story</option>
+                </select>
+
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setOpenJiraModal(false)}>
+                  Cancel
+                </Button>
+
+                <Button onClick={handleJiraSubmit} disabled={jiraLoading}>
+                  {jiraLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {jiraLoading ? "Creating..." : "Create Issue"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

@@ -134,11 +134,10 @@ export function CollaborationSection() {
               <motion.div
                 key={index}
                 variants={cardVariants}
-                className={`group relative rounded-xl p-8 border transition-all duration-300 ${
-                  feature.comingSoon
+                className={`group relative rounded-xl p-8 border transition-all duration-300 ${feature.comingSoon
                     ? 'bg-gradient-to-br from-slate-100 to-slate-50 border-slate-200 opacity-75'
                     : 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-lg'
-                }`}
+                  }`}
               >
                 {feature.comingSoon && (
                   <div className='absolute top-4 right-4'>
