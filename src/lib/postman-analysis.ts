@@ -27,7 +27,6 @@ export interface AnalyzedRequest {
     };
   }>;
   hasAuthWarning: boolean;
-  // NEW: flag specifically for 401 + no auth configured
   has401WithNoAuth?: boolean;
 }
 
@@ -306,8 +305,8 @@ export function analyzeRequestChain(
           currentHostname && prevHostname && currentHostname === prevHostname;
 
         const isCandidate =
-          tokenPath ||
-          isAuthEndpoint(prevRequest.name, prevRequest.url) ||
+          tokenPath &&
+          isAuthEndpoint(prevRequest.name, prevRequest.url) &&
           sameDomain;
 
         if (isCandidate) {
