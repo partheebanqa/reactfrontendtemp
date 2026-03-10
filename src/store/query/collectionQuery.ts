@@ -189,7 +189,44 @@ export const useCollectionRequestsQuery = () => {
       );
 
       collectionActions.setCollections(updatedCollection);
+      const currentActive = collectionStore.state.activeRequest;
+      const updatedOpenedRequests = collectionStore.state.openedRequests.map(
+        (openedReq) => {
+          const fresh = fetchedAll.find((f) => f.id === openedReq.id);
+          if (!fresh) return openedReq;
+          return {
+            ...openedReq,
+            assertions: fresh.assertions?.length
+              ? fresh.assertions
+              : openedReq.assertions,
+            extractVariables: fresh.extractVariables?.length
+              ? fresh.extractVariables
+              : openedReq.extractVariables,
+          };
+        },
+      );
 
+      collectionStore.setState((state) => {
+        const freshActive = fetchedAll.find((f) => f.id === currentActive?.id);
+        const updatedActive =
+          freshActive && currentActive
+            ? {
+                ...currentActive,
+                assertions: freshActive.assertions?.length
+                  ? freshActive.assertions
+                  : currentActive.assertions,
+                extractVariables: freshActive.extractVariables?.length
+                  ? freshActive.extractVariables
+                  : currentActive.extractVariables,
+              }
+            : currentActive;
+
+        return {
+          ...state,
+          openedRequests: updatedOpenedRequests,
+          activeRequest: updatedActive,
+        };
+      });
       return fetchedAll;
     },
   });

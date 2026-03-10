@@ -19,14 +19,14 @@ export const fetchCollectionList = async (workspaceId: string) => {
         headers: {
           'X-Workspace-ID': workspaceId,
         },
-      }
+      },
     );
     if (!response.ok) {
       throw new Error('Failed to fetch collection data');
     }
     const data = await response.json();
     const collections = data?.collections?.map((collection: any) =>
-      formatCollection(collection)
+      formatCollection(collection),
     );
     // Return a consistent structure
     return collections;
@@ -69,7 +69,7 @@ export const setFavouriteCollection = async ({
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     );
     if (!response.ok) {
       throw new Error('Failed to update collection');
@@ -89,7 +89,7 @@ export const unsetFavouriteCollection = async (collectionId: string) => {
       headers: {
         'Content-Type': 'application/json',
       },
-    }
+    },
   );
   return response;
 };
@@ -98,7 +98,7 @@ export const deleteCollection = async (collectionId: string) => {
   try {
     const response = await apiRequest(
       'DELETE',
-      `${API_COLLECTIONS}/${collectionId}`
+      `${API_COLLECTIONS}/${collectionId}`,
     );
     if (!response.ok) {
       throw new Error('Failed to delete collection');
@@ -114,7 +114,7 @@ export const getCollectionRequests = async (collectionId: string) => {
   try {
     const response = await apiRequest(
       'GET',
-      `${API_COLLECTIONS}/${collectionId}/folder-tree`
+      `${API_COLLECTIONS}/${collectionId}/folder-tree`,
     );
     if (!response.ok) {
       throw new Error('Failed to fetch collection requests');
@@ -128,7 +128,7 @@ export const getCollectionRequests = async (collectionId: string) => {
       createdAt: folder.CreatedAt || folder.createdAt,
       updatedAt: folder.UpdatedAt || folder.updatedAt,
       requests: (folder.Requests || folder.requests || []).map((r: any) =>
-        formatRequest(r)
+        formatRequest(r),
       ),
       folders: (folder.Folders || folder.folders || []).map(mapFolder),
     });
@@ -136,7 +136,7 @@ export const getCollectionRequests = async (collectionId: string) => {
       folders: (data?.Folders || data?.folders || []).map(mapFolder),
       preRequestId: data?.preRequestId,
       requests: (data?.Requests || data?.requests || []).map((r: any) =>
-        formatRequest(r)
+        formatRequest(r),
       ),
     };
 
@@ -171,7 +171,7 @@ export const renameCollection = async ({
 
 export const markRequestAsAuth = async (
   requestId: string,
-  collectionId: string
+  collectionId: string,
 ) => {
   const response = await apiRequest(
     'PUT',
@@ -181,7 +181,7 @@ export const markRequestAsAuth = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ preRequestId: requestId }),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -208,7 +208,7 @@ export const formatCollection = (collation: any) => {
 };
 
 export const importCollectionFile = async (
-  importCollection: ImportCollection
+  importCollection: ImportCollection,
 ) => {
   try {
     if (importCollection.inputMethod === 'file' && importCollection.file) {
@@ -243,7 +243,7 @@ export const importCollectionFile = async (
 };
 
 export const useImpotCollectionJsonMutation = async (
-  importCollection: ImportCollection
+  importCollection: ImportCollection,
 ) => {
   try {
     const response = await apiRequest('POST', API_COLLECTION_IMPORT, {
@@ -284,7 +284,7 @@ export const deleteRequest = async (requestId: string) => {
   try {
     const response = await apiRequest(
       'DELETE',
-      `${API_COLLECTION_REQUESTS}/${requestId}`
+      `${API_COLLECTION_REQUESTS}/${requestId}`,
     );
     if (!response.ok) {
       throw new Error('Failed to delete request');
@@ -309,7 +309,7 @@ export const duplicateRequest = async ({
         headers: {
           'Content-Type': 'application/json',
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -353,7 +353,7 @@ export const renameRequest = async ({
                 ...(folderId ? { folderId } : {}),
               })
             : undefined,
-      }
+      },
     );
     if (!response.ok) {
       throw new Error('Failed to rename request');
@@ -382,7 +382,7 @@ export const updateRequest = async ({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestData),
-      }
+      },
     );
     if (!response.ok) {
       throw new Error('Failed to update request');
@@ -415,7 +415,7 @@ export const formatRequest = (request: any) => {
     headers: request.Headers || request.headers || [],
     params: request.Params || request.params || [],
     variable: request.Variable || request.variable || [],
-    assertions: request.Assertions || request.assertions || [],
+    assertions: request.assertions || [],
     createdBy: request.CreatedBy || request.createdBy,
     createdAt: request.CreatedAt || request.createdAt,
     updatedAt: request.UpdatedAt || request.updatedAt,
@@ -423,12 +423,12 @@ export const formatRequest = (request: any) => {
 };
 
 export const getCollectionsWithRequests = async (
-  workspaceId: string
+  workspaceId: string,
 ): Promise<CollectionsResponse> => {
   try {
     const response = await apiRequest(
       'GET',
-      `${API_COLLECTIONS}/with-requests?ws=${workspaceId}`
+      `${API_COLLECTIONS}/with-requests?ws=${workspaceId}`,
     );
 
     if (!response.ok) {

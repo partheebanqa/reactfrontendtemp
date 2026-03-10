@@ -808,6 +808,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         headers,
         bodyType,
         bodyRawContent: bodyContent,
+        assertions,
         bodyFormData:
           bodyType === 'form-data' ? activeRequest.bodyFormData : undefined,
         authorizationType: authType,
@@ -1179,7 +1180,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
               token: tokenValue,
             }));
 
-            // ✅ ADD THIS: Update the opened request in store
             collectionActions.updateOpenedRequest({
               ...activeRequest,
               authorizationType: 'bearer',
@@ -1201,7 +1201,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     isCurrentRequestPreRequest,
   ]);
   const handlePreRequestToggle = (checked: boolean) => {
-    // Prevent toggling if this IS the pre-request
     if (isCurrentRequestPreRequest) {
       return;
     }
@@ -1809,8 +1808,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         const formattedResponse = formatBackendResponse(normalizedResponse);
         const generatedAssertions = generateAssertions(formattedResponse);
 
-        // Preserve assertions that are already saved (loaded from the request)
-        // Only add newly generated ones that don't already exist by description+type
         const assertionsMatch = (a: any, b: any) =>
           a.description === b.description &&
           a.category === b.category &&
@@ -1820,16 +1817,16 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         const mergedAssertions = generatedAssertions.map((newA) => {
           const existing = assertions.find((ex) => assertionsMatch(ex, newA));
           if (existing) {
-            // Keep the existing one (preserves enabled state, expectedValue, id)
             return { ...newA, enabled: existing.enabled ?? true };
           }
           return { ...newA, enabled: false };
         });
 
-        // Keep any custom assertions the user added manually
         const customAssertions = assertions.filter(
           (a) =>
-            a.isCustom === true &&
+            (a.isCustom === true ||
+              a.group === 'custom' ||
+              (a.id && String(a.id).startsWith('manual-'))) &&
             !mergedAssertions.some((m) => assertionsMatch(m, a)),
         );
 
@@ -1942,8 +1939,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const handleUpdateRequest = async (overrideName?: string) => {
     try {
-      console.log('coming to handle update method');
-
       setIsSaving(true);
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
