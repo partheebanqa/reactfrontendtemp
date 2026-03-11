@@ -3,6 +3,10 @@ import { X, CheckCircle2, Copy, ExternalLink, AlertCircle } from 'lucide-react';
 import { createIntegrationJiraIssue, getWorkSpaceIntegrations } from '@/services/integrationTools.service';
 import { WorkSpaceIntegration } from '../settings/ExternalTools';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Select } from '../ui/select';
+import { Button } from '../ui/button';
 
 // Types
 interface TestSuiteData {
@@ -149,7 +153,7 @@ If you have access by providing the valid credentials you will be able to access
         try {
             const payload = {
                 summary: summary.trim(),
-                description: userDescription,
+                description: generateDescription(),
                 issueType,
             };
 
@@ -238,13 +242,13 @@ If you have access by providing the valid credentials you will be able to access
                 style={{ maxHeight: '90vh' }}
             >
                 {/* Header */}
-                <div className="relative bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-4 sm:px-6 py-4 sm:py-5">
+                <div className="relative px-4 sm:px-6 py-4 sm:py-5">
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex-1 min-w-0">
-                            <h2 id="modal-title" className="text-xl sm:text-2xl font-bold text-white tracking-tight truncate">
+                            <h2 id="modal-title" className="text-xl sm:text-2xl font-bold text-black tracking-tight truncate">
                                 {jiraResponse ? 'Issue Created Successfully' : 'Create Jira Issue'}
                             </h2>
-                            <p className="text-indigo-100 text-xs sm:text-sm mt-1">
+                            <p className="text-black text-xs sm:text-sm mt-1">
                                 {jiraResponse ? 'Your bug report has been submitted' : 'Report a bug from test suite execution'}
                             </p>
                         </div>
@@ -255,7 +259,7 @@ If you have access by providing the valid credentials you will be able to access
                             aria-label="Close modal"
                             type="button"
                         >
-                            <X size={24} />
+                            <X size={24} className='text-black' />
                         </button>
                     </div>
                 </div>
@@ -296,7 +300,7 @@ If you have access by providing the valid credentials you will be able to access
                                 <label htmlFor="summary" className="block text-sm font-semibold text-slate-700">
                                     Summary <span className="text-red-500">*</span>
                                 </label>
-                                <input
+                                <Input
                                     id="summary"
                                     type="text"
                                     value={summary}
@@ -305,7 +309,7 @@ If you have access by providing the valid credentials you will be able to access
                                     required
                                     maxLength={200}
                                     disabled={isSubmitting}
-                                    className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200 text-slate-800 placeholder:text-slate-400 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                    // className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200 text-slate-800 placeholder:text-slate-400 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                     aria-required="true"
                                 />
                                 <p className="text-xs text-slate-500">{summary.length}/200 characters</p>
@@ -316,7 +320,7 @@ If you have access by providing the valid credentials you will be able to access
                                 <label htmlFor="userDescription" className="block text-sm font-semibold text-slate-700">
                                     Additional Description
                                 </label>
-                                <textarea
+                                <Textarea
                                     id="userDescription"
                                     value={userDescription}
                                     onChange={(e) => setUserDescription(e.target.value)}
@@ -324,7 +328,7 @@ If you have access by providing the valid credentials you will be able to access
                                     rows={3}
                                     maxLength={2000}
                                     disabled={isSubmitting}
-                                    className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200 text-slate-800 placeholder:text-slate-400 resize-none disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                // className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all duration-200 text-slate-800 placeholder:text-slate-400 resize-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                 />
                                 <p className="text-xs text-slate-500">{userDescription.length}/2000 characters</p>
                             </div>
@@ -360,19 +364,21 @@ If you have access by providing the valid credentials you will be able to access
                             )}
 
                             {/* Action Buttons */}
-                            <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">
-                                <button
+                            <div className="flex justify-end flex-col-reverse sm:flex-row gap-3 pt-4">
+                                {/* <Button
+                                    size={"lg"}
                                     type="button"
                                     onClick={handleClose}
                                     disabled={isSubmitting}
-                                    className="flex-1 px-6 py-3 rounded-lg border-2 border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                // className="flex-1 px-6 py-3 rounded-lg border-2 border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Cancel
-                                </button>
-                                <button
+                                </Button> */}
+                                <Button
                                     type="submit"
                                     disabled={isSubmitting || !summary.trim()}
-                                    className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+                                    size={"lg"}
+                                // className="flex-1 px-6 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-indigo-500/30 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                                 >
                                     {isSubmitting ? (
                                         <span className="flex items-center justify-center gap-2">
@@ -385,7 +391,7 @@ If you have access by providing the valid credentials you will be able to access
                                     ) : (
                                         'Create Issue'
                                     )}
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     ) : (
@@ -433,9 +439,10 @@ If you have access by providing the valid credentials you will be able to access
                                                 </span>
                                                 <ExternalLink size={18} className="flex-shrink-0 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200" />
                                             </a>
-                                            <button
+                                            <Button
                                                 onClick={handleCopyUrl}
-                                                className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-medium shadow-lg shadow-indigo-500/30 sm:min-w-[120px]"
+                                                size={'lg'}
+                                                // className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 font-medium shadow-lg shadow-indigo-500/30 sm:min-w-[120px]"
                                                 type="button"
                                             >
                                                 {copied ? (
@@ -449,7 +456,7 @@ If you have access by providing the valid credentials you will be able to access
                                                         <span>Copy URL</span>
                                                     </>
                                                 )}
-                                            </button>
+                                            </Button>
                                         </div>
                                     </div>
                                 </div>
@@ -470,13 +477,13 @@ If you have access by providing the valid credentials you will be able to access
 
                             {/* Close Button */}
                             <div className="flex justify-end pt-2">
-                                <button
+                                <Button
                                     onClick={handleClose}
-                                    className="w-full sm:w-auto px-8 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-indigo-500/30"
+                                    // className="w-full sm:w-auto px-8 py-3 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-lg shadow-indigo-500/30"
                                     type="button"
                                 >
                                     Close
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     )}
