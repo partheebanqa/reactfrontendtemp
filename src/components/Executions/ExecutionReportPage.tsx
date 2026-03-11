@@ -1,6 +1,6 @@
 // src/components/Executions/ExecutionReportPage.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'wouter';
+import { useLocation, useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { executionService } from '@/services/executionService.service';
 import AnalyticsReport from '@/components/Reports/Components/Analistics';
@@ -23,6 +23,7 @@ import {
   Activity,
   Globe,
   Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import {
   format,
@@ -67,6 +68,7 @@ import { createIntegrationJiraIssue, getWorkSpaceIntegrations } from '@/services
 import { WorkSpaceIntegration } from '../settings/ExternalTools';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import JiraIntegrationModal from './JiraIntegrationModal';
 
 type RouteParams = {
   type: 'test_suite' | 'request_chain';
@@ -459,8 +461,12 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               <TooltipContent>Create Jira issue</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-
-          <Dialog open={openJiraModal} onOpenChange={setOpenJiraModal}>
+          <JiraIntegrationModal
+            openJiraModal={openJiraModal}
+            setOpenJiraModal={() => setOpenJiraModal(false)}
+            testSuiteData={data}
+          />
+          {/* <Dialog open={openJiraModal} onOpenChange={setOpenJiraModal}>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Create Jira Issue</DialogTitle>
@@ -511,7 +517,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+          </Dialog> */}
         </div>
       </div>
 
@@ -845,6 +851,8 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
   const [jiraLoading, setJiraLoading] = useState(false);
 
   const { toast } = useToast();
+
+
   const handleJiraSubmit = async (e: any) => {
     e.preventDefault();
     try {
@@ -864,6 +872,9 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
       setJiraLoading(false);
     }
   };
+
+
+  const [, navigate] = useLocation()
 
   return (
     <div>
@@ -974,68 +985,35 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setOpenJiraModal(true)}
-                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors'
+                  onClick={() => {
+                    if (jiraIntegration) {
+                      setOpenJiraModal(true);
+                    } else {
+                      navigate("/settings/account?tab=external-tools");
+                    }
+                  }}
+                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1"
                 >
                   <JiraIcon />
+
+                  {!jiraIntegration && (
+                    <span className="text-xs text-red-500">Not Configured</span>
+                  )}
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Create Jira issue</TooltipContent>
+
+              <TooltipContent>
+                {jiraIntegration ? "Create Jira issue" : "Configure Jira"}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
 
-          <Dialog open={openJiraModal} onOpenChange={setOpenJiraModal}>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Create Jira Issue</DialogTitle>
-              </DialogHeader>
+          <JiraIntegrationModal
+            openJiraModal={openJiraModal}
+            setOpenJiraModal={() => setOpenJiraModal(false)}
+            testSuiteData={data}
+          />
 
-              <div className="space-y-3">
-
-                <input
-                  className="w-full border rounded-md p-2 text-sm"
-                  placeholder="Summary"
-                  value={jiraPayload.summary}
-                  onChange={(e) =>
-                    setJiraPayload({ ...jiraPayload, summary: e.target.value })
-                  }
-                />
-
-                <textarea
-                  className="w-full border rounded-md p-2 text-sm"
-                  placeholder="Description"
-                  value={jiraPayload.description}
-                  onChange={(e) =>
-                    setJiraPayload({ ...jiraPayload, description: e.target.value })
-                  }
-                />
-
-                <select
-                  className="w-full border rounded-md p-2 text-sm"
-                  value={jiraPayload.issueType}
-                  onChange={(e) =>
-                    setJiraPayload({ ...jiraPayload, issueType: e.target.value })
-                  }
-                >
-                  <option value="Bug">Bug</option>
-                  <option value="Task">Task</option>
-                  <option value="Story">Story</option>
-                </select>
-
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setOpenJiraModal(false)}>
-                  Cancel
-                </Button>
-
-                <Button onClick={handleJiraSubmit} disabled={jiraLoading}>
-                  {jiraLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {jiraLoading ? "Creating..." : "Create Issue"}
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
