@@ -93,12 +93,14 @@ const JiraIntegrationModal: React.FC<JiraModalProps> = ({
 
     // Generate auto-populated description
     const generateDescription = () => {
-        const { name, description, lastExecutionDate, environment } = testSuiteData;
+        const { name, lastExecutionDate, environment } = testSuiteData;
 
-        return `Name: ${name}, ${description}
-Executed date: ${formatDate(lastExecutionDate)}, Environment: ${environment || 'N/A'}
+        return `Name: ${name},
+Executed date: ${formatDate(lastExecutionDate)},
+Environment: ${environment || 'N/A'},
 Execution url: ${currentUrl}
 
+Additional Description :
 ${userDescription.trim()}
 
 To access the report:
