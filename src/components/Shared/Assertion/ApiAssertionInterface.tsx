@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Check,
@@ -128,10 +129,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   allExtractedVariables = [],
 }) => {
   const { activeEnvironment } = useDataManagement();
-
-  console.log('assertions909:', assertions);
-
   const { currentWorkspace } = useWorkspace();
+  const { toast } = useToast();
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const [localAssertions, setLocalAssertions] =
     useState<Assertion[]>(assertions);
@@ -249,10 +248,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return (
           index ===
           self.findIndex((a) => {
-            const key1 = `${a.category}-${a.type}-${a.field || ''}-${a.expectedValue
-              }`;
-            const key2 = `${assertion.category}-${assertion.type}-${assertion.field || ''
-              }-${assertion.expectedValue}`;
+            const key1 = `${a.category}-${a.type}-${a.field || ''}-${
+              a.expectedValue
+            }`;
+            const key2 = `${assertion.category}-${assertion.type}-${
+              assertion.field || ''
+            }-${assertion.expectedValue}`;
             return key1 === key2;
           })
         );
@@ -353,7 +354,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
   const getAvailableOperatorsForField = (field: string): string[] => {
     if (!field) {
-      // Default: show all operators
       return [
         'equals',
         'contains',
@@ -368,7 +368,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
     const normalizedField = field.trim().toLowerCase();
 
-    // Status - only equals operator
     if (
       normalizedField === 'status' ||
       normalizedField === 'statuscode' ||
@@ -377,22 +376,18 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return ['equals'];
     }
 
-    // Response time or response - only comparison operators
     if (normalizedField === 'response_time' || normalizedField === 'response') {
       return ['field_less_than', 'field_greater_than'];
     }
 
-    // Payload size or payload - only comparison operators
     if (normalizedField === 'payload_size' || normalizedField === 'payload') {
       return ['field_less_than', 'field_greater_than'];
     }
 
-    // Wildcard (*) - only contains operators
     if (normalizedField === '*') {
       return ['contains', 'field_not_contains'];
     }
 
-    // Regular JSON path - all operators
     return [
       'equals',
       'contains',
@@ -418,7 +413,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const updated = localAssertions.map((a) => ({ ...a, enabled: false }));
     setLocalAssertions(updated);
 
-    // Clear unsaved changes flag since nothing is selected
     setHasUnsavedChanges(false);
 
     if (onUpdateAssertions) {
@@ -478,7 +472,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const field = quickAddData.field.trim().toLowerCase();
     const value = quickAddData.value.trim();
 
-    // Check for status fields FIRST
     if (
       field === 'status' ||
       field === 'statuscode' ||
@@ -518,9 +511,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Check for response time fields
     if (field === 'response_time' || field === 'response') {
-      // Response time assertion
       const operatorLabel =
         quickAddData.operator === 'field_less_than'
           ? 'less than'
@@ -552,7 +543,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setQuickAddData({ field: '', operator: 'equals', value: '' });
       setHasUnsavedChanges(true);
 
-      // Reset available operators to default
       setAvailableOperators([
         'equals',
         'contains',
@@ -570,9 +560,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Check for payload size fields
     if (field === 'payload_size' || field === 'payload') {
-      // Payload size assertion
       const operatorLabel =
         quickAddData.operator === 'field_less_than'
           ? 'less than'
@@ -604,7 +592,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setQuickAddData({ field: '', operator: 'equals', value: '' });
       setHasUnsavedChanges(true);
 
-      // Reset available operators to default
       setAvailableOperators([
         'equals',
         'contains',
@@ -622,7 +609,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Original logic for regular fields (including * wildcard)
     const detectedType = inferDataType(quickAddData.value);
     const config = getFieldAssertionConfig(
       quickAddData.operator,
@@ -648,7 +634,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     setQuickAddData({ field: '', operator: 'equals', value: '' });
     setHasUnsavedChanges(true);
 
-    // Reset available operators to default
     setAvailableOperators([
       'equals',
       'contains',
@@ -678,7 +663,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       handleCancelEdit();
     }
 
-    // Check if this is a data presence assertion
     const currentAssertion = localAssertions.find((a) => a.id === assertionId);
     const isDataPresence = currentAssertion?.group === 'data_presence';
 
@@ -813,8 +797,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Combine both static and dynamic variables
-      // Combine all three variable types
       const allVariables = [
         ...allStaticVariables,
         ...allDynamicVariables,
@@ -826,7 +808,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Determine variable type (Static, Dynamic, or Extracted)
       const isStatic = allStaticVariables.some(
         (v) => v.name === selectedVariable,
       );
@@ -894,7 +875,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Handle performance assertions
     if (category === 'performance') {
       const isResponseTime = inlineFormData.field === 'response_time';
       const isPayloadSize = inlineFormData.field === 'payload_size';
@@ -944,8 +924,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       operator: config.operator,
       ...(inlineFormData.dataType !== 'null' &&
         inlineFormData.dataType !== 'boolean' && {
-        expectedValue: config.expectedValue,
-      }),
+          expectedValue: config.expectedValue,
+        }),
       enabled: true,
       category: category,
       group: 'custom',
@@ -973,7 +953,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const isDataPresence = assertion.group === 'data_presence';
 
     if (isDataPresence) {
-      // Extract variable name from expectedValue (remove {{ and }})
       const varName = assertion.expectedValue?.replace(/{{|}}/g, '') || '';
 
       setSelectedVariable(varName);
@@ -990,32 +969,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (assertion.category === 'performance') {
       detectedType = 'performance';
     } else if (assertion.dataType) {
-      // Use the stored dataType if available (most reliable)
       detectedType = assertion.dataType;
     } else if (
       assertion.type === 'field_null' ||
       assertion.type === 'field_not_null'
     ) {
-      // Null type assertions
       detectedType = 'null';
     } else if (
       assertion.type === 'field_is_true' ||
       assertion.type === 'field_is_false'
     ) {
-      // Boolean type assertions
       detectedType = 'boolean';
     } else if (
       assertion.type === 'array_length' ||
       assertion.type === 'array_present'
     ) {
-      // Array type assertions
       detectedType = 'array';
     } else if (
       assertion.expectedValue !== undefined &&
       assertion.expectedValue !== null &&
       assertion.expectedValue !== ''
     ) {
-      // Infer from expected value only if it exists
       detectedType = inferDataType(assertion.expectedValue);
     }
 
@@ -1048,7 +1022,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       (a) => a.id === assertionId,
     );
 
-    // Check if this is a data presence assertion
     const isDataPresence = assertionBeingEdited?.group === 'data_presence';
 
     if (isDataPresence) {
@@ -1056,8 +1029,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Combine both static and dynamic variables
-      // Combine all three variable types
       const allVariables = [
         ...allStaticVariables,
         ...allDynamicVariables,
@@ -1069,7 +1040,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Determine variable type (Static, Dynamic, or Extracted)
       const isStatic = allStaticVariables.some(
         (v) => v.name === selectedVariable,
       );
@@ -1089,11 +1059,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       const updated = localAssertions.map((a) =>
         a.id === assertionId
           ? {
-            ...a,
-            description: `${variableType} variable ${selectedVar.name} is present`,
-            expectedValue: `{{${selectedVar.name}}}`,
-            actualValue: selectedVar.value,
-          }
+              ...a,
+              description: `${variableType} variable ${selectedVar.name} is present`,
+              expectedValue: `{{${selectedVar.name}}}`,
+              actualValue: selectedVar.value,
+            }
           : a,
       );
 
@@ -1106,7 +1076,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // For null and boolean types, value is not required
     const requiresValue =
       editFormData.dataType !== 'null' && editFormData.dataType !== 'boolean';
 
@@ -1118,12 +1087,12 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       const updated = localAssertions.map((a) =>
         a.id === assertionId
           ? {
-            ...a,
-            expectedValue: editFormData.value,
-            description: `Status code equals ${editFormData.value}`,
-            type: 'status_equals',
-            operator: 'equals',
-          }
+              ...a,
+              expectedValue: editFormData.value,
+              description: `Status code equals ${editFormData.value}`,
+              type: 'status_equals',
+              operator: 'equals',
+            }
           : a,
       );
       setLocalAssertions(updated);
@@ -1135,7 +1104,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Handle performance assertions
     if (assertionBeingEdited?.category === 'performance') {
       const isResponseTime = assertionBeingEdited.type === 'response_time';
       const operatorLabel =
@@ -1148,14 +1116,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       const updated = localAssertions.map((a) =>
         a.id === assertionId
           ? {
-            ...a,
-            expectedValue: editFormData.value,
-            description: isResponseTime
-              ? `Response time ${operatorLabel} ${editFormData.value}ms`
-              : `Payload size ${operatorLabel} ${editFormData.value} kb`,
-            type: assertionBeingEdited.type,
-            operator: editFormData.operator,
-          }
+              ...a,
+              expectedValue: editFormData.value,
+              description: isResponseTime
+                ? `Response time ${operatorLabel} ${editFormData.value}ms`
+                : `Payload size ${operatorLabel} ${editFormData.value} kb`,
+              type: assertionBeingEdited.type,
+              operator: editFormData.operator,
+            }
           : a,
       );
       setLocalAssertions(updated);
@@ -1181,16 +1149,16 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const updated = localAssertions.map((a) =>
       a.id === assertionId
         ? {
-          ...a,
-          field: config.field,
-          operator: config.operator,
-          type: config.type,
-          ...(editFormData.dataType !== 'null' &&
-            editFormData.dataType !== 'boolean' && {
-            expectedValue: config.expectedValue,
-          }),
-          description: config.description,
-        }
+            ...a,
+            field: config.field,
+            operator: config.operator,
+            type: config.type,
+            ...(editFormData.dataType !== 'null' &&
+              editFormData.dataType !== 'boolean' && {
+                expectedValue: config.expectedValue,
+              }),
+            description: config.description,
+          }
         : a,
     );
     setLocalAssertions(updated);
@@ -1260,19 +1228,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         },
       );
 
-      // ✅ MERGE RESULTS IF IN RERUN MODE
       let finalResults: ValidationResult[];
 
       if (isRerunMode && validationResults) {
-        // Keep all previously passed assertions
         const previouslyPassedResults = validationResults.results.filter(
           (r) => r.status === 'passed',
         );
 
-        // Merge with new results (which only contain re-run failed assertions)
         finalResults = [...previouslyPassedResults, ...mappedResults];
 
-        // Remove duplicates (in case an assertion was re-run)
         finalResults = finalResults.filter((result, index, self) => {
           const firstIndex = self.findIndex((r) => {
             const categoryMatch = r.category === result.category;
@@ -1290,11 +1254,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           return index === firstIndex;
         });
       } else {
-        // Normal run: use all new results
         finalResults = mappedResults;
       }
 
-      // ✅ EXTRACT FAILED ASSERTIONS FROM FINAL RESULTS
       const failedResults = finalResults.filter((r) => r.status === 'failed');
 
       const failedAssertionsList: Assertion[] = failedResults
@@ -1319,12 +1281,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
       setFailedAssertions(failedAssertionsList);
 
-      // ✅ RECALCULATE SUMMARY BASED ON FINAL RESULTS
       const summary = {
         passed: finalResults.filter((r) => r.status === 'passed').length,
         failed: finalResults.filter((r) => r.status === 'failed').length,
         skipped: isRerunMode
-          ? 0 // No skipped when re-running
+          ? 0
           : selectedAssertions.length - finalResults.length,
         total: finalResults.length,
       };
@@ -1336,7 +1297,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           : 'N/A';
 
       setValidationResults({
-        results: finalResults, // ✅ USE MERGED RESULTS
+        results: finalResults,
         summary,
         timestamp: new Date().toISOString(),
         responseTime,
@@ -1345,7 +1306,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setValidationHistory((prev) => {
         const updated = [
           {
-            results: finalResults, // ✅ USE MERGED RESULTS
+            results: finalResults,
             summary,
             timestamp: new Date().toISOString(),
             responseTime,
@@ -1355,7 +1316,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return updated.slice(0, 10);
       });
 
-      // ✅ RESET RERUN MODE
       setIsRerunMode(false);
 
       setAppState('results');
@@ -1387,6 +1347,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
+    if (responseData?.statusCode !== 200 && responseData?.statusCode !== 201) {
+      toast({
+        description:
+          'Cannot verify assertions: API returned an error response.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setFailedAssertions([]);
     setIsRerunMode(false);
     setAppState('validating');
@@ -1413,32 +1382,32 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
       response: responseData
         ? {
-          requestId: responseData.requestId,
-          requestName: responseData.requestId,
-          ...(responseData.requestCurl && {
-            requestCurl: responseData.requestCurl,
-          }),
-          statusCode: responseData.statusCode || responseData.status || 0,
-          headers: responseData.headers,
-          body:
-            typeof responseData.body === 'string'
-              ? responseData.body
-              : JSON.stringify(responseData.body),
-          error: '',
-          extractedVariables: [],
-          ...(responseData.metrics && { metrics: responseData.metrics }),
-        }
+            requestId: responseData.requestId,
+            requestName: responseData.requestId,
+            ...(responseData.requestCurl && {
+              requestCurl: responseData.requestCurl,
+            }),
+            statusCode: responseData.statusCode || responseData.status || 0,
+            headers: responseData.headers,
+            body:
+              typeof responseData.body === 'string'
+                ? responseData.body
+                : JSON.stringify(responseData.body),
+            error: '',
+            extractedVariables: [],
+            ...(responseData.metrics && { metrics: responseData.metrics }),
+          }
         : {
-          requestId: 'unknown',
-          requestName: 'unknown',
-          requestCurl: '',
-          statusCode: 0,
-          headers: {},
-          body: '',
-          error: 'No response data available',
-          extractedVariables: [],
-          metrics: { bytesReceived: 0, responseTime: 0 },
-        },
+            requestId: 'unknown',
+            requestName: 'unknown',
+            requestCurl: '',
+            statusCode: 0,
+            headers: {},
+            body: '',
+            error: 'No response data available',
+            extractedVariables: [],
+            metrics: { bytesReceived: 0, responseTime: 0 },
+          },
     };
 
     try {
@@ -1532,32 +1501,32 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       })),
       response: responseData
         ? {
-          requestId: responseData.requestId,
-          requestName: responseData.requestId,
-          ...(responseData.requestCurl && {
-            requestCurl: responseData.requestCurl,
-          }),
-          statusCode: responseData.statusCode || responseData.status || 0,
-          headers: responseData.headers,
-          body:
-            typeof responseData.body === 'string'
-              ? responseData.body
-              : JSON.stringify(responseData.body),
-          error: '',
-          extractedVariables: [],
-          ...(responseData.metrics && { metrics: responseData.metrics }),
-        }
+            requestId: responseData.requestId,
+            requestName: responseData.requestId,
+            ...(responseData.requestCurl && {
+              requestCurl: responseData.requestCurl,
+            }),
+            statusCode: responseData.statusCode || responseData.status || 0,
+            headers: responseData.headers,
+            body:
+              typeof responseData.body === 'string'
+                ? responseData.body
+                : JSON.stringify(responseData.body),
+            error: '',
+            extractedVariables: [],
+            ...(responseData.metrics && { metrics: responseData.metrics }),
+          }
         : {
-          requestId: 'unknown',
-          requestName: 'unknown',
-          requestCurl: '',
-          statusCode: 0,
-          headers: {},
-          body: '',
-          error: 'No response data available',
-          extractedVariables: [],
-          metrics: { bytesReceived: 0, responseTime: 0 },
-        },
+            requestId: 'unknown',
+            requestName: 'unknown',
+            requestCurl: '',
+            statusCode: 0,
+            headers: {},
+            body: '',
+            error: 'No response data available',
+            extractedVariables: [],
+            metrics: { bytesReceived: 0, responseTime: 0 },
+          },
     };
 
     try {
@@ -1691,37 +1660,40 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     return (
       <div key={assertion.id} className='space-y-0'>
         <div
-          className={`group flex items-center gap-3 p-3 border rounded-lg ${hasResult
-            ? validationResult.result === 'passed'
-              ? 'bg-green-50 border-green-300'
-              : 'bg-red-50 border-red-300'
-            : assertion.enabled
-              ? 'bg-blue-50 border-blue-300'
-              : 'bg-white border-gray-200'
-            }`}
+          className={`group flex items-center gap-3 p-3 border rounded-lg ${
+            hasResult
+              ? validationResult.result === 'passed'
+                ? 'bg-green-50 border-green-300'
+                : 'bg-red-50 border-red-300'
+              : assertion.enabled
+                ? 'bg-blue-50 border-blue-300'
+                : 'bg-white border-gray-200'
+          }`}
         >
           {/* Checkbox */}
           <button
             onClick={() => toggleAssertion(assertion.id)}
             disabled={appState !== 'build'}
-            className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${assertion.enabled
-              ? 'bg-blue-600 border-blue-600'
-              : 'border-gray-300 hover:border-blue-400'
-              } ${appState !== 'build' ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+              assertion.enabled
+                ? 'bg-blue-600 border-blue-600'
+                : 'border-gray-300 hover:border-blue-400'
+            } ${appState !== 'build' ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {assertion.enabled && <Check className='w-3 h-3 text-white' />}
           </button>
 
           {/* Status Icon */}
           <div
-            className={`flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-semibold ${hasResult
-              ? validationResult.result === 'passed'
-                ? 'bg-green-600 text-white'
-                : 'bg-red-600 text-white'
-              : assertion.enabled
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-600'
-              }`}
+            className={`flex-shrink-0 w-7 h-7 rounded flex items-center justify-center text-xs font-semibold ${
+              hasResult
+                ? validationResult.result === 'passed'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-red-600 text-white'
+                : assertion.enabled
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-600'
+            }`}
           >
             {hasResult ? (
               validationResult.result === 'passed' ? (
@@ -1763,12 +1735,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
                     {getOperatorDisplayLabel(assertion.operator || 'less_than')}
                   </span>
-                  <span className='text-sm text-gray-700 font-mono'>
-                    ={' '}
-                    <span className='text-blue-600'>
-                      {assertion.expectedValue}
-                      {assertion.type === 'response_time' ? ' ms' : ' kb'}
-                    </span>
+                  <span className='text-sm text-blue-600 font-mono'>
+                    {assertion.expectedValue}
+                    {assertion.type === 'response_time' ? ' ms' : ' kb'}
                   </span>
                 </>
               ) : (
@@ -1780,21 +1749,21 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   )}
 
                   {assertion.type === 'field_present' ||
-                    assertion.type === 'field_exists' ||
-                    assertion.type === 'header_present' ||
-                    assertion.type === 'header_exists' ||
-                    assertion.type === 'field_null' ||
-                    assertion.type === 'field_not_null' ||
-                    assertion.type === 'field_is_true' ||
-                    assertion.type === 'field_is_false' ||
-                    assertion.type === 'field_not_empty' ||
-                    assertion.type === 'array_present' ||
-                    assertion.type === 'security_header_missing' ? (
+                  assertion.type === 'field_exists' ||
+                  assertion.type === 'header_present' ||
+                  assertion.type === 'header_exists' ||
+                  assertion.type === 'field_null' ||
+                  assertion.type === 'field_not_null' ||
+                  assertion.type === 'field_is_true' ||
+                  assertion.type === 'field_is_false' ||
+                  assertion.type === 'field_not_empty' ||
+                  assertion.type === 'array_present' ||
+                  assertion.type === 'security_header_missing' ? (
                     <span className='text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded'>
                       {assertion.type === 'field_present' ||
-                        assertion.type === 'field_exists' ||
-                        assertion.type?.startsWith('header') ||
-                        assertion.type === 'array_present'
+                      assertion.type === 'field_exists' ||
+                      assertion.type?.startsWith('header') ||
+                      assertion.type === 'array_present'
                         ? 'exists'
                         : assertion.type === 'field_null'
                           ? 'is null'
@@ -1809,8 +1778,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                                   : assertion.type === 'security_header_missing'
                                     ? 'should be present'
                                     : getOperatorDisplayLabel(
-                                      assertion.operator || 'exists',
-                                    )}
+                                        assertion.operator || 'exists',
+                                      )}
                     </span>
                   ) : (
                     <>
@@ -1853,16 +1822,17 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
                 {assertion.priority && (
                   <span
-                    className={`text-xs italic px-1.5 py-0.5 rounded w-fit ${assertion.priority?.toLowerCase() === 'critical'
-                      ? 'bg-red-100 text-red-700'
-                      : assertion.priority?.toLowerCase() === 'high'
-                        ? 'bg-orange-100 text-orange-700'
-                        : assertion.priority?.toLowerCase() === 'medium'
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : assertion.priority?.toLowerCase() === 'low'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                      }`}
+                    className={`text-xs italic px-1.5 py-0.5 rounded w-fit ${
+                      assertion.priority?.toLowerCase() === 'critical'
+                        ? 'bg-red-100 text-red-700'
+                        : assertion.priority?.toLowerCase() === 'high'
+                          ? 'bg-orange-100 text-orange-700'
+                          : assertion.priority?.toLowerCase() === 'medium'
+                            ? 'bg-yellow-100 text-yellow-700'
+                            : assertion.priority?.toLowerCase() === 'low'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-100 text-gray-700'
+                    }`}
                   >
                     {assertion.priority}
                   </span>
@@ -1879,10 +1849,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   onClick={() => handleExpandEditForm(assertion)}
                   className={`p-1 rounded transition-opacity
     sm:opacity-0 sm:group-hover:opacity-100
-    ${expandedEditForm === assertion.id
-                      ? 'bg-blue-600 text-white opacity-100'
-                      : 'hover:bg-gray-100 text-gray-500'
-                    }
+    ${
+      expandedEditForm === assertion.id
+        ? 'bg-blue-600 text-white opacity-100'
+        : 'hover:bg-gray-100 text-gray-500'
+    }
   `}
                   title='Edit assertion'
                 >
@@ -1905,10 +1876,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <>
                 <button
                   onClick={() => handleExpandEditForm(assertion)}
-                  className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity ${expandedEditForm === assertion.id
-                    ? 'bg-blue-600 text-white !opacity-100'
-                    : 'hover:bg-gray-100 text-gray-500'
-                    }`}
+                  className={`opacity-0 group-hover:opacity-100 p-1 rounded transition-opacity ${
+                    expandedEditForm === assertion.id
+                      ? 'bg-blue-600 text-white !opacity-100'
+                      : 'hover:bg-gray-100 text-gray-500'
+                  }`}
                   title='Edit assertion'
                 >
                   <Edit2 className='w-4 h-4' />
@@ -1934,10 +1906,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       assertion.category,
                     )
                   }
-                  className={`p-1 rounded transition-all ${isExpanded
-                    ? 'bg-blue-600 text-white'
-                    : 'hover:bg-blue-100 text-blue-600'
-                    }`}
+                  className={`p-1 rounded transition-all ${
+                    isExpanded
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-blue-100 text-blue-600'
+                  }`}
                   title='Create similar assertion'
                 >
                   <Plus className='w-4 h-4' />
@@ -1954,10 +1927,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
             {hasResult && (
               <div
-                className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${validationResult.result === 'passed'
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
-                  }`}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${
+                  validationResult.result === 'passed'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}
               >
                 {validationResult.result === 'passed' ? 'Passed' : 'Failed'}
               </div>
@@ -2979,10 +2953,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   }}
                   variant='ghost'
                   size='sm'
-                  className={`flex items-center gap-2 rounded-lg px-4 ${currentTab === 'build'
-                    ? 'bg-white shadow-sm'
-                    : 'text-gray-500 hover:bg-transparent'
-                    }`}
+                  className={`flex items-center gap-2 rounded-lg px-4 ${
+                    currentTab === 'build'
+                      ? 'bg-white shadow-sm'
+                      : 'text-gray-500 hover:bg-transparent'
+                  }`}
                 >
                   <Settings className='w-4 h-4' />
                   Build
@@ -2995,24 +2970,26 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                   }}
                   variant='ghost'
                   size='sm'
-                  className={`flex items-center gap-2 rounded-lg px-4 ${currentTab === 'results'
-                    ? 'bg-white shadow-sm'
-                    : 'text-gray-500 hover:bg-transparent'
-                    }`}
+                  className={`flex items-center gap-2 rounded-lg px-4 ${
+                    currentTab === 'results'
+                      ? 'bg-white shadow-sm'
+                      : 'text-gray-500 hover:bg-transparent'
+                  }`}
                 >
                   <TrendingUp className='w-4 h-4' />
                   Results
                   {validationResults && (
                     <span
-                      className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${validationResults.summary.failed === 0
-                        ? 'bg-green-100 text-green-700'
-                        : validationResults.summary.failed /
-                          (validationResults.summary.passed +
-                            validationResults.summary.failed) >=
-                          0.5
-                          ? 'bg-red-100 text-red-700'
-                          : 'bg-amber-100 text-amber-700'
-                        }`}
+                      className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        validationResults.summary.failed === 0
+                          ? 'bg-green-100 text-green-700'
+                          : validationResults.summary.failed /
+                                (validationResults.summary.passed +
+                                  validationResults.summary.failed) >=
+                              0.5
+                            ? 'bg-red-100 text-red-700'
+                            : 'bg-amber-100 text-amber-700'
+                      }`}
                     >
                       {validationResults.summary.passed}/
                       {validationResults.summary.passed +
@@ -3067,7 +3044,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               }}
               onRerunAll={handleRerun}
               onRerunFailed={handleRerunFailed}
-              onShare={() => { }}
+              onShare={() => {}}
             />
           )}
 
@@ -3098,14 +3075,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                             style={{ height: '100%' }}
                           >
                             <div
-                              className={`w-full rounded-t transition-all ${successRate === 100
-                                ? 'bg-green-500'
-                                : successRate >= 70
-                                  ? 'bg-blue-500'
-                                  : successRate >= 40
-                                    ? 'bg-amber-500'
-                                    : 'bg-red-500'
-                                }`}
+                              className={`w-full rounded-t transition-all ${
+                                successRate === 100
+                                  ? 'bg-green-500'
+                                  : successRate >= 70
+                                    ? 'bg-blue-500'
+                                    : successRate >= 40
+                                      ? 'bg-amber-500'
+                                      : 'bg-red-500'
+                              }`}
                               style={{ height: `${successRate}%` }}
                               title={`Run ${index + 1}: ${successRate.toFixed(
                                 0,
@@ -3291,11 +3269,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 const newField = e.target.value;
                 setQuickAddData({ ...quickAddData, field: newField });
 
-                // Update available operators based on field
                 const operators = getAvailableOperatorsForField(newField);
                 setAvailableOperators(operators);
 
-                // Reset operator if current one is not available
                 if (!operators.includes(quickAddData.operator)) {
                   setQuickAddData({
                     ...quickAddData,
@@ -3375,16 +3351,16 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
               <div className='font-mono text-sm text-gray-900'>
                 <span className='text-blue-600'>
                   {quickAddData.field.trim().toLowerCase() === 'status' ||
-                    quickAddData.field.trim().toLowerCase() === 'statuscode' ||
-                    quickAddData.field.trim().toLowerCase() === 'status_code'
+                  quickAddData.field.trim().toLowerCase() === 'statuscode' ||
+                  quickAddData.field.trim().toLowerCase() === 'status_code'
                     ? 'statusCode'
                     : quickAddData.field.trim().toLowerCase() ===
-                      'response_time' ||
-                      quickAddData.field.trim().toLowerCase() === 'response'
+                          'response_time' ||
+                        quickAddData.field.trim().toLowerCase() === 'response'
                       ? 'responseTime'
                       : quickAddData.field.trim().toLowerCase() ===
-                        'payload_size' ||
-                        quickAddData.field.trim().toLowerCase() === 'payload'
+                            'payload_size' ||
+                          quickAddData.field.trim().toLowerCase() === 'payload'
                         ? 'payloadSize'
                         : quickAddData.field}
                 </span>

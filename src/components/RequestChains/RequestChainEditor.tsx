@@ -1278,7 +1278,9 @@ export function RequestChainEditor({
 
       const customAssertions = existingAssertions.filter(
         (assertion) =>
-          assertion.isCustom === true &&
+          (assertion.isCustom === true ||
+            assertion.source === 'manual' ||
+            assertion.source === 'general') &&
           !mergedAssertions.some((merged) =>
             assertionsMatch(merged, assertion),
           ),

@@ -48,10 +48,8 @@ export function getCategoryForAssertionType(type: string): string {
 
 export function getOperatorsByDataType(
   dataType: string,
-  isArray: boolean = false
+  isArray: boolean = false,
 ): string[] {
-  console.log('dataType123:', dataType, 'isArray:', isArray);
-
   // Array-specific operators - FIXED to match backend
   if (dataType === 'array' || isArray) {
     return [
@@ -84,7 +82,7 @@ export function getOperatorsByDataType(
     object: ['exists', 'field_not_present'],
 
     // Performance operators for response_time and payload_size
-    performance: ['less_than', 'greater_than', 'equals'],
+    performance: ['less_than'],
   };
 
   return operators[dataType] || ['equals', 'field_not_equals'];
@@ -160,7 +158,7 @@ export function getFieldAssertionConfig(
   operator: string,
   value: any,
   fieldPath: string,
-  dataType?: string
+  dataType?: string,
 ): any {
   const detectedType = dataType || inferDataType(value);
 
@@ -215,7 +213,7 @@ export function getFieldAssertionConfig(
           config.description = `${fieldPath} array length is between ${value}`;
         } else {
           config.expectedValue = String(
-            Array.isArray(value) ? value.length : value
+            Array.isArray(value) ? value.length : value,
           );
           const arrayDesc = getOperatorDescription(operator);
           config.description = `${fieldPath} array ${arrayDesc} ${config.expectedValue}`;
@@ -250,7 +248,7 @@ export function getFieldAssertionConfig(
 export const getArrayAssertionConfig = (
   operator: string,
   value: string,
-  fieldPath: string
+  fieldPath: string,
 ) => {
   const config: any = {
     type: operator === 'array_present' ? 'array_present' : 'array_length',

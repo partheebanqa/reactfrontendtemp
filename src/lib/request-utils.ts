@@ -1311,7 +1311,8 @@ export const getMethodColor = (method: string) => {
 
 export const getTokenExpiryDisplay = (authData: any): string | null => {
   const tokenValue = authData.token || authData;
-  if (!tokenValue || !tokenValue.trim()) return null;
+
+  if (!tokenValue) return null;
 
   try {
     const parts = tokenValue.split('.');

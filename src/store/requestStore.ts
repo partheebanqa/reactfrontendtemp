@@ -42,6 +42,7 @@ export const initialRequestState: ExtendedRequestState = {
     bodyType: 'none',
     bodyFormData: null,
     bodyRawContent: null,
+    assertions: [],
     variables: {},
     order: 0,
     createdAt: new Date().toISOString(),
@@ -58,7 +59,7 @@ export const initialRequestState: ExtendedRequestState = {
 
 // Create the store
 export const requestStore = new Store<ExtendedRequestState>(
-  initialRequestState
+  initialRequestState,
 );
 
 // Define actions to update the store
@@ -96,7 +97,7 @@ export const requestActions = {
     requestStore.setState((state) => ({
       ...state,
       assertions: state.assertions.map((assertion) =>
-        assertion.id === assertionId ? { ...assertion, ...updates } : assertion
+        assertion.id === assertionId ? { ...assertion, ...updates } : assertion,
       ),
     }));
   },
@@ -108,7 +109,7 @@ export const requestActions = {
       assertions: state.assertions.map((assertion) =>
         assertion.id === assertionId
           ? { ...assertion, enabled: !assertion.enabled }
-          : assertion
+          : assertion,
       ),
     }));
   },

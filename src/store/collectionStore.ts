@@ -186,31 +186,48 @@ export const collectionActions = {
 
   setActiveRequest: (request: CollectionRequest) => {
     collectionStore.setState((state) => {
-      // prefer the version already in openedRequests (has unsaved edits)
       const existingOpen = state.openedRequests.find(
         (r) => r.id === request.id,
       );
+      const merged = existingOpen
+        ? {
+            ...existingOpen,
+            assertions: request.assertions?.length
+              ? request.assertions
+              : existingOpen.assertions,
+            extractVariables: request.extractVariables?.length
+              ? request.extractVariables
+              : existingOpen.extractVariables,
+          }
+        : request;
       return {
         ...state,
-        activeRequest: existingOpen ?? request,
+        activeRequest: merged,
       };
     });
   },
-
   openRequest: (request: CollectionRequest) => {
-    console.log('open request:', request);
-
     collectionStore.setState((state) => {
       const existingOpen = state.openedRequests.find(
         (r) => r.id === request.id,
       );
+      const merged = existingOpen
+        ? {
+            ...existingOpen,
+            assertions: request.assertions?.length
+              ? request.assertions
+              : existingOpen.assertions,
+            extractVariables: request.extractVariables?.length
+              ? request.extractVariables
+              : existingOpen.extractVariables,
+          }
+        : request;
       return {
         ...state,
         openedRequests: existingOpen
-          ? state.openedRequests
-          : [...state.openedRequests, request],
-        // prefer the already-open version (has unsaved edits) over the fresh one
-        activeRequest: existingOpen ?? request,
+          ? state.openedRequests.map((r) => (r.id === request.id ? merged : r))
+          : [...state.openedRequests, merged],
+        activeRequest: merged,
       };
     });
   },

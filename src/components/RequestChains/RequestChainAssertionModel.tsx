@@ -75,7 +75,7 @@ function AssertionModal({
   const [selectedSuggestedAssertions, setSelectedSuggestedAssertions] =
     useState<Set<string>>(new Set());
   const [assertionsToRemove, setAssertionsToRemove] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
   const [localDateValue, setLocalDateValue] = useState('');
   const [pendingAssertions, setPendingAssertions] = useState<any[]>([]);
@@ -437,7 +437,7 @@ function AssertionModal({
 
   const handleMarkForRemoval = (
     assertionId: string,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.stopPropagation();
     const newRemoveSet = new Set(assertionsToRemove);
@@ -455,7 +455,7 @@ function AssertionModal({
 
   const getAssertionTypeForOperator = (
     operator: string,
-    isHeader = false
+    isHeader = false,
   ): string => {
     if (isHeader) {
       const headerOperatorTypeMap: Record<string, string> = {
@@ -543,14 +543,14 @@ function AssertionModal({
           ...getArrayAssertionConfig(
             selectedOperator,
             manualValue,
-            normalizedFieldPath
+            normalizedFieldPath,
           ),
           source: 'manual',
         };
       } else {
         const assertionType = getAssertionTypeForOperator(
           selectedOperator,
-          isHeader
+          isHeader,
         );
 
         config = {
@@ -588,10 +588,10 @@ function AssertionModal({
             selectedOperator === 'field_greater_than'
               ? '>'
               : selectedOperator === 'field_less_than'
-              ? '<'
-              : selectedOperator === 'field_greater_equal'
-              ? '≥'
-              : '≤';
+                ? '<'
+                : selectedOperator === 'field_greater_equal'
+                  ? '≥'
+                  : '≤';
           config.description = `${normalizedFieldPath} ${opSymbol} ${manualValue}`;
         } else if (
           ['date_greater_than', 'date_less_than'].includes(selectedOperator)
@@ -650,11 +650,11 @@ function AssertionModal({
 
     selectedSuggestedAssertions.forEach((assertionId) => {
       const assertionItem = suggestedAssertionsList.find(
-        (a) => a.id === assertionId
+        (a) => a.id === assertionId,
       );
       if (assertionItem) {
         updatedAssertions = updatedAssertions.map((a: any) =>
-          a.id === assertionItem.assertion.id ? { ...a, enabled: true } : a
+          a.id === assertionItem.assertion.id ? { ...a, enabled: true } : a,
         );
       }
     });
@@ -762,14 +762,14 @@ function AssertionModal({
             ...getArrayAssertionConfig(
               selectedOperator,
               manualValue,
-              normalizedFieldPath
+              normalizedFieldPath,
             ),
             source: 'manual',
           };
         } else {
           const assertionType = getAssertionTypeForOperator(
             selectedOperator,
-            isHeader
+            isHeader,
           );
 
           config = {
@@ -807,10 +807,10 @@ function AssertionModal({
               selectedOperator === 'field_greater_than'
                 ? '>'
                 : selectedOperator === 'field_less_than'
-                ? '<'
-                : selectedOperator === 'field_greater_equal'
-                ? '≥'
-                : '≤';
+                  ? '<'
+                  : selectedOperator === 'field_greater_equal'
+                    ? '≥'
+                    : '≤';
             config.description = `${normalizedFieldPath} ${opSymbol} ${manualValue}`;
           } else if (
             ['date_greater_than', 'date_less_than'].includes(selectedOperator)
@@ -870,10 +870,10 @@ function AssertionModal({
 
   const staticVariables = variables.filter((v) => v.name.startsWith('S_'));
   const filteredDynamicVariables = dynamicVariables.filter((v) =>
-    v.name.startsWith('D_')
+    v.name.startsWith('D_'),
   );
   const filteredExtractedVariables = extractedVariables.filter((v) =>
-    v.name.startsWith('E_')
+    v.name.startsWith('E_'),
   );
 
   const displayedSuggestions = suggestedAssertionsList;
@@ -1004,7 +1004,7 @@ function AssertionModal({
 
                       const alreadyExists = allAssertions.some(
                         (assertion) =>
-                          assertion.type === a.id && assertion.enabled
+                          assertion.type === a.id && assertion.enabled,
                       );
 
                       return (
@@ -1058,14 +1058,14 @@ function AssertionModal({
                                 {savedData.comparison === 'less'
                                   ? '< '
                                   : savedData.comparison === 'more'
-                                  ? '> '
-                                  : ''}
+                                    ? '> '
+                                    : ''}
                                 {savedData.value}
                                 {a.id === 'response_time'
                                   ? 'ms'
                                   : a.id === 'payload_size'
-                                  ? 'KB'
-                                  : ''}
+                                    ? 'KB'
+                                    : ''}
                               </div>
                             )}
                           </div>
@@ -1249,10 +1249,10 @@ function AssertionModal({
 
                     const isAlreadyEnabled = assertionItem.assertion.enabled;
                     const isMarkedForRemoval = assertionsToRemove.has(
-                      assertionItem.id
+                      assertionItem.id,
                     );
                     const isSelected = selectedSuggestedAssertions.has(
-                      assertionItem.id
+                      assertionItem.id,
                     );
 
                     const isDisabled = isAlreadyEnabled && !isMarkedForRemoval;
@@ -1265,8 +1265,8 @@ function AssertionModal({
                           isMarkedForRemoval
                             ? 'border-red-300 bg-red-50'
                             : isVisuallySelected
-                            ? 'border-blue-400 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         <button
@@ -1278,8 +1278,8 @@ function AssertionModal({
                               isMarkedForRemoval
                                 ? 'bg-red-100'
                                 : isVisuallySelected
-                                ? 'bg-blue-100'
-                                : 'bg-gray-100'
+                                  ? 'bg-blue-100'
+                                  : 'bg-gray-100'
                             }`}
                           >
                             <Icon
@@ -1287,8 +1287,8 @@ function AssertionModal({
                                 isMarkedForRemoval
                                   ? 'text-red-500'
                                   : isVisuallySelected
-                                  ? 'text-blue-500'
-                                  : 'text-gray-600'
+                                    ? 'text-blue-500'
+                                    : 'text-gray-600'
                               }`}
                             />
                           </div>
@@ -1299,8 +1299,8 @@ function AssertionModal({
                                   isMarkedForRemoval
                                     ? 'text-red-700'
                                     : isVisuallySelected
-                                    ? 'text-blue-700'
-                                    : 'text-gray-900'
+                                      ? 'text-blue-700'
+                                      : 'text-gray-900'
                                 }`}
                               >
                                 {assertionItem.label}
@@ -1369,7 +1369,7 @@ function AssertionModal({
                               displayFieldPath.startsWith('headers.');
                             const assertionType = getAssertionTypeForOperator(
                               op.id,
-                              isHeader
+                              isHeader,
                             );
                             const normalizedFieldPath = isHeader
                               ? displayFieldPath
@@ -1498,7 +1498,7 @@ function AssertionModal({
                   {Array.from(selectedSuggestedAssertions).map(
                     (assertionId) => {
                       const assertionItem = suggestedAssertionsList.find(
-                        (a) => a.id === assertionId
+                        (a) => a.id === assertionId,
                       );
                       if (!assertionItem) return null;
 
@@ -1518,7 +1518,7 @@ function AssertionModal({
                           <button
                             onClick={() => {
                               const newSelected = new Set(
-                                selectedSuggestedAssertions
+                                selectedSuggestedAssertions,
                               );
                               newSelected.delete(assertionId);
                               setSelectedSuggestedAssertions(newSelected);
@@ -1530,14 +1530,14 @@ function AssertionModal({
                           </button>
                         </div>
                       );
-                    }
+                    },
                   )}
 
                   {/* General Assertions */}
                   {Array.from(selectedGeneralAssertions.entries()).map(
                     ([generalType, data]) => {
                       const assertion = generalAssertions.find(
-                        (a) => a.id === generalType
+                        (a) => a.id === generalType,
                       );
                       if (!assertion) return null;
 
@@ -1549,8 +1549,8 @@ function AssertionModal({
                           generalType === 'response_time'
                             ? 'ms'
                             : generalType === 'payload_size'
-                            ? 'KB'
-                            : ''
+                              ? 'KB'
+                              : ''
                         }`;
                       }
 
@@ -1580,7 +1580,7 @@ function AssertionModal({
                           </button>
                         </div>
                       );
-                    }
+                    },
                   )}
 
                   {/* Manual Assertions */}
