@@ -235,6 +235,8 @@ export function RequestEditor({
 
   const [assertions, setAssertions] = useState<any[]>([]);
 
+  console.log('assertions111:', assertions);
+
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null,
@@ -1325,7 +1327,9 @@ export function RequestEditor({
 
       const customAssertions = assertions.filter(
         (assertion) =>
-          assertion.isCustom === true &&
+          (assertion.isCustom === true ||
+            assertion.source === 'manual' ||
+            assertion.source === 'general') &&
           !mergedAssertions.some((merged) =>
             assertionsMatch(merged, assertion),
           ),
