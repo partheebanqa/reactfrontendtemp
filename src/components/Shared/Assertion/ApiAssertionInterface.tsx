@@ -1,6 +1,7 @@
 'use client';
 
 import type React from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   Check,
@@ -128,8 +129,8 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
   allExtractedVariables = [],
 }) => {
   const { activeEnvironment } = useDataManagement();
-
   const { currentWorkspace } = useWorkspace();
+  const { toast } = useToast();
   const saveMenuRef = useRef<HTMLDivElement>(null);
   const [localAssertions, setLocalAssertions] =
     useState<Assertion[]>(assertions);
@@ -353,7 +354,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
   const getAvailableOperatorsForField = (field: string): string[] => {
     if (!field) {
-      // Default: show all operators
       return [
         'equals',
         'contains',
@@ -368,7 +368,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
     const normalizedField = field.trim().toLowerCase();
 
-    // Status - only equals operator
     if (
       normalizedField === 'status' ||
       normalizedField === 'statuscode' ||
@@ -377,22 +376,18 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return ['equals'];
     }
 
-    // Response time or response - only comparison operators
     if (normalizedField === 'response_time' || normalizedField === 'response') {
       return ['field_less_than', 'field_greater_than'];
     }
 
-    // Payload size or payload - only comparison operators
     if (normalizedField === 'payload_size' || normalizedField === 'payload') {
       return ['field_less_than', 'field_greater_than'];
     }
 
-    // Wildcard (*) - only contains operators
     if (normalizedField === '*') {
       return ['contains', 'field_not_contains'];
     }
 
-    // Regular JSON path - all operators
     return [
       'equals',
       'contains',
@@ -418,7 +413,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const updated = localAssertions.map((a) => ({ ...a, enabled: false }));
     setLocalAssertions(updated);
 
-    // Clear unsaved changes flag since nothing is selected
     setHasUnsavedChanges(false);
 
     if (onUpdateAssertions) {
@@ -478,7 +472,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const field = quickAddData.field.trim().toLowerCase();
     const value = quickAddData.value.trim();
 
-    // Check for status fields FIRST
     if (
       field === 'status' ||
       field === 'statuscode' ||
@@ -518,9 +511,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Check for response time fields
     if (field === 'response_time' || field === 'response') {
-      // Response time assertion
       const operatorLabel =
         quickAddData.operator === 'field_less_than'
           ? 'less than'
@@ -552,7 +543,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setQuickAddData({ field: '', operator: 'equals', value: '' });
       setHasUnsavedChanges(true);
 
-      // Reset available operators to default
       setAvailableOperators([
         'equals',
         'contains',
@@ -570,9 +560,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Check for payload size fields
     if (field === 'payload_size' || field === 'payload') {
-      // Payload size assertion
       const operatorLabel =
         quickAddData.operator === 'field_less_than'
           ? 'less than'
@@ -604,7 +592,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setQuickAddData({ field: '', operator: 'equals', value: '' });
       setHasUnsavedChanges(true);
 
-      // Reset available operators to default
       setAvailableOperators([
         'equals',
         'contains',
@@ -622,7 +609,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Original logic for regular fields (including * wildcard)
     const detectedType = inferDataType(quickAddData.value);
     const config = getFieldAssertionConfig(
       quickAddData.operator,
@@ -648,7 +634,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     setQuickAddData({ field: '', operator: 'equals', value: '' });
     setHasUnsavedChanges(true);
 
-    // Reset available operators to default
     setAvailableOperators([
       'equals',
       'contains',
@@ -678,7 +663,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       handleCancelEdit();
     }
 
-    // Check if this is a data presence assertion
     const currentAssertion = localAssertions.find((a) => a.id === assertionId);
     const isDataPresence = currentAssertion?.group === 'data_presence';
 
@@ -813,8 +797,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Combine both static and dynamic variables
-      // Combine all three variable types
       const allVariables = [
         ...allStaticVariables,
         ...allDynamicVariables,
@@ -826,7 +808,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Determine variable type (Static, Dynamic, or Extracted)
       const isStatic = allStaticVariables.some(
         (v) => v.name === selectedVariable,
       );
@@ -894,7 +875,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Handle performance assertions
     if (category === 'performance') {
       const isResponseTime = inlineFormData.field === 'response_time';
       const isPayloadSize = inlineFormData.field === 'payload_size';
@@ -973,7 +953,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     const isDataPresence = assertion.group === 'data_presence';
 
     if (isDataPresence) {
-      // Extract variable name from expectedValue (remove {{ and }})
       const varName = assertion.expectedValue?.replace(/{{|}}/g, '') || '';
 
       setSelectedVariable(varName);
@@ -990,32 +969,27 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
     if (assertion.category === 'performance') {
       detectedType = 'performance';
     } else if (assertion.dataType) {
-      // Use the stored dataType if available (most reliable)
       detectedType = assertion.dataType;
     } else if (
       assertion.type === 'field_null' ||
       assertion.type === 'field_not_null'
     ) {
-      // Null type assertions
       detectedType = 'null';
     } else if (
       assertion.type === 'field_is_true' ||
       assertion.type === 'field_is_false'
     ) {
-      // Boolean type assertions
       detectedType = 'boolean';
     } else if (
       assertion.type === 'array_length' ||
       assertion.type === 'array_present'
     ) {
-      // Array type assertions
       detectedType = 'array';
     } else if (
       assertion.expectedValue !== undefined &&
       assertion.expectedValue !== null &&
       assertion.expectedValue !== ''
     ) {
-      // Infer from expected value only if it exists
       detectedType = inferDataType(assertion.expectedValue);
     }
 
@@ -1048,7 +1022,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       (a) => a.id === assertionId,
     );
 
-    // Check if this is a data presence assertion
     const isDataPresence = assertionBeingEdited?.group === 'data_presence';
 
     if (isDataPresence) {
@@ -1056,8 +1029,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Combine both static and dynamic variables
-      // Combine all three variable types
       const allVariables = [
         ...allStaticVariables,
         ...allDynamicVariables,
@@ -1069,7 +1040,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return;
       }
 
-      // Determine variable type (Static, Dynamic, or Extracted)
       const isStatic = allStaticVariables.some(
         (v) => v.name === selectedVariable,
       );
@@ -1106,7 +1076,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // For null and boolean types, value is not required
     const requiresValue =
       editFormData.dataType !== 'null' && editFormData.dataType !== 'boolean';
 
@@ -1135,7 +1104,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    // Handle performance assertions
     if (assertionBeingEdited?.category === 'performance') {
       const isResponseTime = assertionBeingEdited.type === 'response_time';
       const operatorLabel =
@@ -1260,19 +1228,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         },
       );
 
-      // ✅ MERGE RESULTS IF IN RERUN MODE
       let finalResults: ValidationResult[];
 
       if (isRerunMode && validationResults) {
-        // Keep all previously passed assertions
         const previouslyPassedResults = validationResults.results.filter(
           (r) => r.status === 'passed',
         );
 
-        // Merge with new results (which only contain re-run failed assertions)
         finalResults = [...previouslyPassedResults, ...mappedResults];
 
-        // Remove duplicates (in case an assertion was re-run)
         finalResults = finalResults.filter((result, index, self) => {
           const firstIndex = self.findIndex((r) => {
             const categoryMatch = r.category === result.category;
@@ -1290,11 +1254,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           return index === firstIndex;
         });
       } else {
-        // Normal run: use all new results
         finalResults = mappedResults;
       }
 
-      // ✅ EXTRACT FAILED ASSERTIONS FROM FINAL RESULTS
       const failedResults = finalResults.filter((r) => r.status === 'failed');
 
       const failedAssertionsList: Assertion[] = failedResults
@@ -1319,12 +1281,11 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
       setFailedAssertions(failedAssertionsList);
 
-      // ✅ RECALCULATE SUMMARY BASED ON FINAL RESULTS
       const summary = {
         passed: finalResults.filter((r) => r.status === 'passed').length,
         failed: finalResults.filter((r) => r.status === 'failed').length,
         skipped: isRerunMode
-          ? 0 // No skipped when re-running
+          ? 0
           : selectedAssertions.length - finalResults.length,
         total: finalResults.length,
       };
@@ -1336,7 +1297,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           : 'N/A';
 
       setValidationResults({
-        results: finalResults, // ✅ USE MERGED RESULTS
+        results: finalResults,
         summary,
         timestamp: new Date().toISOString(),
         responseTime,
@@ -1345,7 +1306,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       setValidationHistory((prev) => {
         const updated = [
           {
-            results: finalResults, // ✅ USE MERGED RESULTS
+            results: finalResults,
             summary,
             timestamp: new Date().toISOString(),
             responseTime,
@@ -1355,7 +1316,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
         return updated.slice(0, 10);
       });
 
-      // ✅ RESET RERUN MODE
       setIsRerunMode(false);
 
       setAppState('results');
@@ -1384,6 +1344,15 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
 
   const handleVerifyAssertions = async () => {
     if (getSelectedCount() === 0) {
+      return;
+    }
+
+    if (responseData?.statusCode !== 200 && responseData?.statusCode !== 201) {
+      toast({
+        description:
+          'Cannot verify assertions: API returned an error response.',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -3300,11 +3269,9 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                 const newField = e.target.value;
                 setQuickAddData({ ...quickAddData, field: newField });
 
-                // Update available operators based on field
                 const operators = getAvailableOperatorsForField(newField);
                 setAvailableOperators(operators);
 
-                // Reset operator if current one is not available
                 if (!operators.includes(quickAddData.operator)) {
                   setQuickAddData({
                     ...quickAddData,
