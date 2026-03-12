@@ -55,6 +55,7 @@ import UTFEncoderDecoder from '@/pages/UTFEncoderDecoder';
 import BS64EncoderDecoder from '@/pages/BS64EncoderDecoder';
 import RequestChainsList from '@/components/RequestChains/RequestChainList';
 import TestSuiteList from '@/components/TestSuit/TestSuiteListNew';
+import SwaggerParserNew from '@/components/SwaggerParse/ImprovedSwaggerParser';
 
 export default function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -78,6 +79,7 @@ export default function Router() {
       <Route path='/url-encoder' component={URLEncoder} />
       <Route path='/json-parser' component={JsonParser} />
       <Route path='/swagger-parser' component={SwaggerParser} />
+      <Route path='/swagger-parser-new' component={SwaggerParserNew} />
       <Route path='/json-viewer' component={JsonViewer} />
       <Route path='/utf-encoder-decoder' component={UTFEncoderDecoder} />
       <Route path='/bs64-encoder-decoder' component={BS64EncoderDecoder} />
