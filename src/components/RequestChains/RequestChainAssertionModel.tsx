@@ -107,7 +107,6 @@ function AssertionModal({
   const displayFieldPath = initialField || fieldPath || '';
   const displayFieldValue =
     initialValue !== undefined ? initialValue : fieldValue;
-
   const hasChanges =
     selectedSuggestedAssertions.size > 0 ||
     assertionsToRemove.size > 0 ||

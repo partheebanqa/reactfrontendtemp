@@ -1207,7 +1207,7 @@ export function ResponseExplorer({
                   response.assertions.length > 0 &&
                   response.assertions[0].responseTime && (
                     <span className='font-medium'>
-                      {response.assertions[0].responseTime}ms
+                      {response?.responseTime}ms
                     </span>
                   )}
 

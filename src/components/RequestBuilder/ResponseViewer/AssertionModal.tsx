@@ -23,6 +23,7 @@ import {
   getCategoryForAssertionType,
   removeDuplicateAssertions,
 } from '@/lib/assertion-utils';
+import { Assertion } from './ResponseViewer';
 
 interface AssertionModalProps {
   fieldPath: string;
@@ -35,7 +36,8 @@ interface AssertionModalProps {
   dynamicVariables?: Array<{ name: string; value: string }>;
   setAssertions: (assertions: any[]) => void;
   onRedirectToTab?: (tabName: string) => void;
-  onSave?: () => Promise<void>; // ✅ ADD THIS LINE
+  onSave?: () => Promise<void>;
+  onGenerateForPath?: (path: string, value: any) => Assertion[];
 }
 
 function AssertionModal({
@@ -50,6 +52,7 @@ function AssertionModal({
   setAssertions,
   onRedirectToTab,
   onSave,
+  onGenerateForPath,
 }: AssertionModalProps) {
   const [activeTab, setActiveTab] = useState<
     'suggested' | 'manual' | 'general'
@@ -63,7 +66,7 @@ function AssertionModal({
   const [selectedSuggestedAssertions, setSelectedSuggestedAssertions] =
     useState<Set<string>>(new Set());
   const [assertionsToRemove, setAssertionsToRemove] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [pendingAssertions, setPendingAssertions] = useState<any[]>([]);
@@ -110,13 +113,29 @@ function AssertionModal({
     setPendingAssertions(pendingAssertions.filter((a) => a.id !== id));
   };
 
+  // Inside the component, update suggestedAssertions useMemo
   const suggestedAssertions = useMemo(() => {
     const seenIds = new Set();
     const uniqueAssertions = new Map();
 
-    return allAssertions
+    const isNonZeroIndex = /\[([1-9]\d*)\]/.test(fieldPath);
+
+    let assertionsToFilter = allAssertions;
+
+    if (isNonZeroIndex && onGenerateForPath) {
+      const dynamicAssertions = onGenerateForPath(fieldPath, fieldValue);
+      const existingFields = new Set(allAssertions.map((a) => a.field));
+      const newOnes = dynamicAssertions.map((a) => ({
+        ...a,
+        id: `dynamic-${fieldPath}-${a.type}-${Date.now()}-${Math.random()}`,
+        field: fieldPath,
+        enabled: false,
+      }));
+      assertionsToFilter = [...allAssertions, ...newOnes];
+    }
+
+    return assertionsToFilter
       .filter((assertion) => {
-        // Skip if we've already seen this assertion ID
         if (seenIds.has(assertion.id)) {
           return false;
         }
@@ -133,12 +152,10 @@ function AssertionModal({
               assertion.category === 'headers') &&
             assertionField === headerName
           ) {
-            // Create a unique key based on type + field + value
             const uniqueKey = `${assertion.type}-${assertionField}-${
               assertion.value || ''
             }-${assertion.operator || ''}`;
 
-            // If we've seen this exact assertion before, skip it
             if (uniqueAssertions.has(uniqueKey)) {
               return false;
             }
@@ -151,7 +168,6 @@ function AssertionModal({
           return false;
         }
 
-        // For body fields
         const matches =
           assertion.category === 'body' && assertion.field === fieldPath;
         if (matches) {
@@ -263,7 +279,7 @@ function AssertionModal({
           assertion,
         };
       });
-  }, [allAssertions, fieldPath]);
+  }, [allAssertions, fieldPath, fieldValue, onGenerateForPath]);
 
   const allGeneralAssertions = [
     {
@@ -491,7 +507,7 @@ function AssertionModal({
 
   const operators = useMemo(
     () => getOperatorsForType(valueType, isArray),
-    [valueType, isArray]
+    [valueType, isArray],
   );
 
   const handleSuggestedClick = (assertionItem: any) => {
@@ -520,7 +536,7 @@ function AssertionModal({
 
   const handleMarkForRemoval = (
     assertionId: string,
-    event: React.MouseEvent
+    event: React.MouseEvent,
   ) => {
     event.stopPropagation();
     const newRemoveSet = new Set(assertionsToRemove);
@@ -554,7 +570,7 @@ function AssertionModal({
             ...getArrayAssertionConfig(
               selectedOperator,
               manualValue,
-              fieldPath
+              fieldPath,
             ),
             source: 'manual',
           };
@@ -600,10 +616,10 @@ function AssertionModal({
             selectedOperator === 'field_greater_than'
               ? '>'
               : selectedOperator === 'field_less_than'
-              ? '<'
-              : selectedOperator === 'field_greater_equal'
-              ? '≥'
-              : '≤';
+                ? '<'
+                : selectedOperator === 'field_greater_equal'
+                  ? '≥'
+                  : '≤';
           config.description = `${fieldPath} ${opSymbol} ${manualValue}`;
         } else if (
           ['date_greater_than', 'date_less_than'].includes(selectedOperator)
@@ -651,89 +667,55 @@ function AssertionModal({
   };
 
   const handleFinalSave = () => {
-    let updatedAssertions = [...allAssertions];
+    // Collect all selected suggested assertions (both existing and dynamic)
+    const suggestedToAdd: any[] = [];
+    selectedSuggestedAssertions.forEach((assertionId) => {
+      const assertionItem = suggestedAssertions.find(
+        (a) => a.id === assertionId,
+      );
+      if (assertionItem) {
+        suggestedToAdd.push(assertionItem.assertion);
+      }
+    });
 
-    if (assertionsToRemove.size > 0) {
-      updatedAssertions = updatedAssertions.map((a: any) => {
-        if (
-          assertionsToRemove.has(a.id) &&
-          !selectedSuggestedAssertions.has(a.id)
-        ) {
-          return { ...a, enabled: false };
-        }
-        return a;
+    // Collect assertions to remove
+    const toRemove = Array.from(assertionsToRemove);
+
+    // Fire onSelect with everything bundled
+    if (suggestedToAdd.length > 0 || toRemove.length > 0) {
+      onSelect('suggested-multiple', {
+        assertions: suggestedToAdd,
+        assertionsToRemove: toRemove,
       });
     }
 
-    selectedSuggestedAssertions.forEach((assertionId) => {
-      const assertionItem = suggestedAssertions.find(
-        (a) => a.id === assertionId
-      );
-      if (assertionItem) {
-        updatedAssertions = updatedAssertions.map((a: any) =>
-          a.id === assertionItem.assertion.id ? { ...a, enabled: true } : a
-        );
-      }
-    });
-
+    // Fire onSelect for each general assertion
     selectedGeneralAssertions.forEach((data, generalType) => {
       const assertion = generalAssertions.find((a) => a.id === generalType);
-
       const config: any = {
-        id: `general-${Date.now()}-${generalType}`,
-        type: generalType,
-        displayType: generalType,
-        category: getCategoryForAssertionType(generalType),
         isGeneral: true,
         value: data.value,
-        enabled: true,
-        source: 'general',
+        comparison: data.comparison,
       };
 
       if (assertion?.hasComparison) {
-        config.comparison = data.comparison;
         config.operator =
           data.comparison === 'less' ? 'less_than' : 'greater_than';
-
-        if (generalType === 'response_time') {
-          config.expectedTime = data.value;
-          config.description = `Response time ${
-            data.comparison === 'less' ? '<' : '>'
-          } ${data.value}ms`;
-        } else if (generalType === 'payload_size') {
-          config.expectedSize = data.value;
-          config.description = `Payload size ${
-            data.comparison === 'less' ? '<' : '>'
-          } ${data.value}KB`;
-        }
-      } else if (generalType === 'status_equals') {
+        if (generalType === 'response_time') config.expectedTime = data.value;
+        if (generalType === 'payload_size') config.expectedSize = data.value;
+      } else {
         config.operator = 'equals';
-        config.description = `Status code equals ${data.value}`;
-      } else if (generalType === 'contains_text') {
-        config.description = `Contains text "${data.value}"`;
-      } else if (generalType === 'contains_static') {
-        config.description = `Contains static variable ${data.value}`;
-      } else if (generalType === 'contains_dynamic') {
-        config.description = `Contains dynamic variable ${data.value}`;
-      } else if (generalType === 'contains_extracted') {
-        config.description = `Contains extracted variable ${data.value}`;
       }
 
-      if (
-        generalType === 'contains_static' ||
-        generalType === 'contains_dynamic' ||
-        generalType === 'contains_text'
-      ) {
-        config.scope = 'full';
-      }
-
-      updatedAssertions.push(config);
+      onSelect(generalType, config);
     });
 
-    updatedAssertions = [...updatedAssertions, ...pendingAssertions];
+    // Fire onSelect for each pending manual assertion
+    pendingAssertions.forEach((assertion) => {
+      onSelect('manual-direct', { assertion });
+    });
 
-    setAssertions(removeDuplicateAssertions(updatedAssertions));
-
+    // Reset state
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
     setPendingAssertions([]);
@@ -771,7 +753,7 @@ function AssertionModal({
               ...getArrayAssertionConfig(
                 selectedOperator,
                 manualValue,
-                fieldPath
+                fieldPath,
               ),
               source: 'manual',
             };
@@ -816,10 +798,10 @@ function AssertionModal({
               selectedOperator === 'field_greater_than'
                 ? '>'
                 : selectedOperator === 'field_less_than'
-                ? '<'
-                : selectedOperator === 'field_greater_equal'
-                ? '≥'
-                : '≤';
+                  ? '<'
+                  : selectedOperator === 'field_greater_equal'
+                    ? '≥'
+                    : '≤';
             config.description = `${fieldPath} ${opSymbol} ${manualValue}`;
           } else if (
             ['date_greater_than', 'date_less_than'].includes(selectedOperator)
@@ -880,13 +862,13 @@ function AssertionModal({
 
   const staticVariables = variables.filter((v) => v.name.startsWith('S_'));
   const filteredDynamicVariables = dynamicVariables.filter((v) =>
-    v.name.startsWith('D_')
+    v.name.startsWith('D_'),
   );
 
   const displayedSuggestions = suggestedAssertions;
 
   const initialEnabledCount = suggestedAssertions.filter(
-    (a) => a.assertion.enabled
+    (a) => a.assertion.enabled,
   ).length;
 
   const finalCount =
@@ -1026,7 +1008,7 @@ function AssertionModal({
 
                       const alreadyExists = allAssertions.some(
                         (assertion) =>
-                          assertion.type === a.id && assertion.enabled
+                          assertion.type === a.id && assertion.enabled,
                       );
 
                       return (
@@ -1081,14 +1063,14 @@ function AssertionModal({
                                 {savedData.comparison === 'less'
                                   ? '< '
                                   : savedData.comparison === 'more'
-                                  ? '> '
-                                  : ''}
+                                    ? '> '
+                                    : ''}
                                 {savedData.value}
                                 {a.id === 'response_time'
                                   ? 'ms'
                                   : a.id === 'payload_size'
-                                  ? 'KB'
-                                  : ''}
+                                    ? 'KB'
+                                    : ''}
                               </div>
                             )}
                           </div>
@@ -1243,10 +1225,10 @@ function AssertionModal({
                     const isAlreadyEnabled =
                       assertionItem.assertion?.enabled || false;
                     const isMarkedForRemoval = assertionsToRemove.has(
-                      assertionItem.id
+                      assertionItem.id,
                     );
                     const isSelected = selectedSuggestedAssertions.has(
-                      assertionItem.id
+                      assertionItem.id,
                     );
                     const isDisabled = isAlreadyEnabled && !isMarkedForRemoval;
                     const isVisuallySelected = isSelected || isDisabled;
@@ -1258,8 +1240,8 @@ function AssertionModal({
                           isMarkedForRemoval
                             ? 'border-red-300 bg-red-50'
                             : isVisuallySelected
-                            ? 'border-blue-400 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                              ? 'border-blue-400 bg-blue-50'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                         }`}
                       >
                         <button
@@ -1271,8 +1253,8 @@ function AssertionModal({
                               isMarkedForRemoval
                                 ? 'bg-red-100'
                                 : isVisuallySelected
-                                ? 'bg-blue-100'
-                                : 'bg-gray-100'
+                                  ? 'bg-blue-100'
+                                  : 'bg-gray-100'
                             }`}
                           >
                             <Icon
@@ -1280,8 +1262,8 @@ function AssertionModal({
                                 isMarkedForRemoval
                                   ? 'text-red-600'
                                   : isVisuallySelected
-                                  ? 'text-blue-600'
-                                  : 'text-gray-600'
+                                    ? 'text-blue-600'
+                                    : 'text-gray-600'
                               }`}
                             />
                           </div>
@@ -1293,8 +1275,8 @@ function AssertionModal({
                                   isMarkedForRemoval
                                     ? 'text-red-700'
                                     : isVisuallySelected
-                                    ? 'text-blue-700'
-                                    : 'text-gray-900'
+                                      ? 'text-blue-700'
+                                      : 'text-gray-900'
                                 }`}
                               >
                                 {assertionItem.label}
@@ -1389,8 +1371,8 @@ function AssertionModal({
                           selectedOperator === op.id
                             ? ' text-white border-blue-600'
                             : op.disabled
-                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-50'
+                              : 'bg-white text-gray-700 border-gray-200 hover:border-blue-300'
                         }`}
                       >
                         {op.label}
@@ -1483,7 +1465,7 @@ function AssertionModal({
                   {Array.from(selectedSuggestedAssertions).map(
                     (assertionId) => {
                       const assertionItem = suggestedAssertions.find(
-                        (a) => a.id === assertionId
+                        (a) => a.id === assertionId,
                       );
                       if (!assertionItem) return null;
 
@@ -1503,7 +1485,7 @@ function AssertionModal({
                           <button
                             onClick={() => {
                               const newSelected = new Set(
-                                selectedSuggestedAssertions
+                                selectedSuggestedAssertions,
                               );
                               newSelected.delete(assertionId);
                               setSelectedSuggestedAssertions(newSelected);
@@ -1515,13 +1497,13 @@ function AssertionModal({
                           </button>
                         </div>
                       );
-                    }
+                    },
                   )}
 
                   {Array.from(selectedGeneralAssertions.entries()).map(
                     ([generalType, data]) => {
                       const assertion = generalAssertions.find(
-                        (a) => a.id === generalType
+                        (a) => a.id === generalType,
                       );
                       if (!assertion) return null;
 
@@ -1533,8 +1515,8 @@ function AssertionModal({
                           generalType === 'response_time'
                             ? 'ms'
                             : generalType === 'payload_size'
-                            ? 'KB'
-                            : ''
+                              ? 'KB'
+                              : ''
                         }`;
                       }
 
@@ -1564,7 +1546,7 @@ function AssertionModal({
                           </button>
                         </div>
                       );
-                    }
+                    },
                   )}
 
                   {pendingAssertions.map((assertion) => (
