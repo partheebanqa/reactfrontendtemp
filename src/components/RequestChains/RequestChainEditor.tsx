@@ -444,13 +444,14 @@ export function RequestChainEditor({
       environments.find((env) => env.id === environmentId) || null,
     );
   };
-  const isSaveDisabled =
-    !formData.name?.trim() || (formData.chainRequests?.length ?? 0) < 2;
+  const isSaveDisabled = !formData.name?.trim();
   const [expandedRequests, setExpandedRequests] = useState<Set<string>>(
     new Set(),
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
+
+  console.log('executionLogs123:', executionLogs);
 
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
@@ -472,6 +473,7 @@ export function RequestChainEditor({
   const [activeTab, setActiveTab] = useState('requests');
   const [isSaving, setIsSaving] = useState(false);
   const runAllButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelExecutionRef = useRef<boolean>(false);
   const [showRunAllHint, setShowRunAllHint] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const requestsTopRef = useRef<HTMLDivElement>(null);
@@ -1238,7 +1240,8 @@ export function RequestChainEditor({
             return {};
           }
         })(),
-        responseTime: result?.metrics?.responseTime ?? 0,
+        responseTime:
+          result?.metrics?.responseTime ?? result.metrics?.totalTime ?? 0,
         size: result?.metrics?.bytesReceived ?? 0,
       };
 
@@ -1419,6 +1422,7 @@ export function RequestChainEditor({
     setExpandedRequests(new Set());
     regenerateAllDynamicVariables();
 
+    cancelExecutionRef.current = false;
     setIsExecuting(true);
     setCurrentRequestIndex(0);
     setExecutionLogs([]);
@@ -1450,15 +1454,17 @@ export function RequestChainEditor({
         description: `Running ${selectedRequests.length} selected requests sequentially...`,
       });
 
-      console.log('request123');
-
       for (let i = 0; i < selectedRequests.length; i++) {
-        console.log('selectedRequests123:', selectedRequests);
-
+        if (cancelExecutionRef.current) {
+          toast({
+            title: 'Execution Cancelled',
+            description: `Stopped after ${i} request(s)`,
+          });
+          break;
+        }
         const rawRequest = selectedRequests[i];
-        const request = syncParamsFromUrl(rawRequest);
 
-        console.log('requestB:', request);
+        const request = syncParamsFromUrl(rawRequest);
 
         const originalIndex = formData.chainRequests.findIndex(
           (r) => r.id === request.id,
@@ -1612,6 +1618,10 @@ export function RequestChainEditor({
       setIsExecuting(false);
       setCurrentRequestIndex(-1);
     }
+  };
+
+  const handleCancelExecution = () => {
+    cancelExecutionRef.current = true;
   };
 
   const handleRequestExecution = (
@@ -3066,32 +3076,36 @@ export function RequestChainEditor({
                             </div>
 
                             <div className='flex items-center gap-3'>
-                              <Button
-                                ref={runAllButtonRef}
-                                variant='outline'
-                                onClick={handleRunAll}
-                                disabled={
-                                  isExecuting ||
-                                  !formData.chainRequests?.length ||
-                                  formData.chainRequests?.filter(
-                                    (r) => r.isSelected !== false,
-                                  ).length === 0
-                                }
-                                className='gap-2 bg-transparent'
-                              >
-                                {isExecuting ? (
+                              {isExecuting ? (
+                                <Button
+                                  variant='outline'
+                                  onClick={handleCancelExecution}
+                                  className='gap-2 bg-transparent text-blue-600 border-blue-300 hover:bg-blue-50'
+                                >
                                   <Loader2 className='w-4 h-4 animate-spin' />
-                                ) : (
+                                  Cancel
+                                </Button>
+                              ) : (
+                                <Button
+                                  ref={runAllButtonRef}
+                                  variant='outline'
+                                  onClick={handleRunAll}
+                                  disabled={
+                                    !formData.chainRequests?.length ||
+                                    formData.chainRequests?.filter(
+                                      (r) => r.isSelected !== false,
+                                    ).length === 0
+                                  }
+                                  className='gap-2 bg-transparent'
+                                >
                                   <PlayCircle className='w-4 h-4' />
-                                )}
-                                {isExecuting
-                                  ? 'Running...'
-                                  : `Run Selected (${
-                                      formData.chainRequests?.filter(
-                                        (r) => r.isSelected !== false,
-                                      ).length || 0
-                                    })`}
-                              </Button>
+                                  {`Run Selected (${
+                                    formData.chainRequests?.filter(
+                                      (r) => r.isSelected !== false,
+                                    ).length || 0
+                                  })`}
+                                </Button>
+                              )}
 
                               {executionLogs.length > 0 &&
                                 executionLogs.length ===
@@ -3166,32 +3180,36 @@ export function RequestChainEditor({
                               </div>
 
                               {/* Run Button - Full Width on Mobile */}
-                              <Button
-                                ref={runAllButtonRef}
-                                variant='outline'
-                                onClick={handleRunAll}
-                                disabled={
-                                  isExecuting ||
-                                  !formData.chainRequests?.length ||
-                                  formData.chainRequests?.filter(
-                                    (r) => r.isSelected !== false,
-                                  ).length === 0
-                                }
-                                className='w-full sm:w-auto gap-2'
-                              >
-                                {isExecuting ? (
+                              {isExecuting ? (
+                                <Button
+                                  variant='outline'
+                                  onClick={handleCancelExecution}
+                                  className='w-full sm:w-auto gap-2 text-blue-600 border-blue-300 hover:bg-blue-50'
+                                >
                                   <Loader2 className='w-4 h-4 animate-spin' />
-                                ) : (
+                                  Cancel
+                                </Button>
+                              ) : (
+                                <Button
+                                  ref={runAllButtonRef}
+                                  variant='outline'
+                                  onClick={handleRunAll}
+                                  disabled={
+                                    !formData.chainRequests?.length ||
+                                    formData.chainRequests?.filter(
+                                      (r) => r.isSelected !== false,
+                                    ).length === 0
+                                  }
+                                  className='w-full sm:w-auto gap-2'
+                                >
                                   <PlayCircle className='w-4 h-4' />
-                                )}
-                                {isExecuting
-                                  ? 'Running...'
-                                  : `Run Selected (${
-                                      formData.chainRequests?.filter(
-                                        (r) => r.isSelected !== false,
-                                      ).length || 0
-                                    })`}
-                              </Button>
+                                  {`Run Selected (${
+                                    formData.chainRequests?.filter(
+                                      (r) => r.isSelected !== false,
+                                    ).length || 0
+                                  })`}
+                                </Button>
+                              )}
                             </div>
 
                             {/* Bottom Row: Analyzer + Add */}

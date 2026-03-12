@@ -259,6 +259,7 @@ export interface ExecutionResponse {
       headers: Record<string, string>;
       body: any;
       metrics: {
+        totalTime: number;
         responseTime: number;
         bytesReceived: number;
       };

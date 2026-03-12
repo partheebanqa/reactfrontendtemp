@@ -35,6 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { generateAssertionsForPath } from '@/utils/assertionGenerator';
 
 interface JsonNode {
   key: string;
@@ -97,6 +98,8 @@ const ResponseViewer = ({
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
   const { activeCollection, activeRequest } = useCollection();
+
+  console.log('assertions123:', assertions);
 
   const [activeTab, setActiveTab] = useState<
     | 'body'
@@ -532,19 +535,35 @@ const ResponseViewer = ({
 
   const handleAssertionSelect = (assertionType: string, config?: any) => {
     if (assertionType === 'suggested-multiple' && config?.assertions) {
-      const assertionsToEnable = config.assertions;
-      const assertionIds = assertionsToEnable.map((a: any) => a.id);
+      const assertionsToEnable: any[] = config.assertions;
+      const toRemoveIds: string[] = config.assertionsToRemove || [];
 
-      const updatedAssertions = assertions.map((a: any) =>
-        assertionIds.includes(a.id) ? { ...a, enabled: true } : a,
-      );
-      setAssertions(updatedAssertions);
-    } else if (assertionType === 'suggested' && config?.assertion) {
-      const assertion = config.assertion;
-      const updatedAssertions = assertions.map((a: any) =>
-        a.id === assertion.id ? { ...a, enabled: true } : a,
-      );
-      setAssertions(updatedAssertions);
+      let updatedAssertions = [...assertions];
+
+      if (toRemoveIds.length > 0) {
+        updatedAssertions = updatedAssertions.map((a: any) =>
+          toRemoveIds.includes(a.id) ? { ...a, enabled: false } : a,
+        );
+      }
+
+      assertionsToEnable.forEach((assertion: any) => {
+        const existingIndex = updatedAssertions.findIndex(
+          (a: any) => a.id === assertion.id,
+        );
+        if (existingIndex !== -1) {
+          updatedAssertions[existingIndex] = {
+            ...updatedAssertions[existingIndex],
+            enabled: true,
+          };
+        } else {
+          updatedAssertions.push({ ...assertion, enabled: true });
+        }
+      });
+
+      setAssertions(removeDuplicateAssertions(updatedAssertions));
+    } else if (assertionType === 'manual-direct' && config?.assertion) {
+      const assertion = { ...config.assertion, enabled: true };
+      setAssertions(removeDuplicateAssertions([...assertions, assertion]));
     } else {
       let description = '';
       let finalType = assertionType;
@@ -569,15 +588,15 @@ const ResponseViewer = ({
             finalType = 'contains';
             break;
           case 'contains_static':
-            description = `Response should contain static value: "${
-              config.value
-            }"${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            description = `Response should contain static value: "${config.value}"${
+              config.scope === 'field' ? ` in ${activeFieldPath}` : ''
+            }`;
             finalType = 'contains';
             break;
           case 'contains_dynamic':
-            description = `Response should contain dynamic variable: ${
-              config.value
-            }${config.scope === 'field' ? ` in ${activeFieldPath}` : ''}`;
+            description = `Response should contain dynamic variable: ${config.value}${
+              config.scope === 'field' ? ` in ${activeFieldPath}` : ''
+            }`;
             finalType = 'contains';
             break;
           case 'contains_extracted':
@@ -646,9 +665,9 @@ const ResponseViewer = ({
               field: normalizeFieldPath(activeFieldPath),
             };
 
-      const updatedAssertions = [...assertions, newAssertion];
-      setAssertions(removeDuplicateAssertions(updatedAssertions));
+      setAssertions(removeDuplicateAssertions([...assertions, newAssertion]));
     }
+
     handleModalClose();
   };
 
@@ -1085,6 +1104,10 @@ const ResponseViewer = ({
         </div>
       </div>
     );
+  };
+
+  const handleGenerateForPath = (path: string, value: any) => {
+    return generateAssertionsForPath(path, value);
   };
 
   const tabs = [
@@ -1646,6 +1669,7 @@ const ResponseViewer = ({
         setAssertions={setAssertions}
         onRedirectToTab={onRedirectToTab}
         onSave={onSaveAssertions}
+        onGenerateForPath={handleGenerateForPath}
       />
 
       {extractionModal && (

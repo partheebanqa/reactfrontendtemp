@@ -306,6 +306,16 @@ export function RequestExecutor({
         return;
       }
 
+      if (!requests || requests.filter((r) => r.enabled !== false).length < 2) {
+        toast({
+          title: 'Minimum requests required',
+          description:
+            'Please add at least 2 requests before saving the chain.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       setIsSaving(true);
 
       const savedChain = await onPreExecute();
@@ -795,7 +805,7 @@ export function RequestExecutor({
                     !chainName?.trim() ||
                     isExecuting ||
                     isRunAllExecuting ||
-                    isSaving // ← ADD isSaving
+                    isSaving
                   }
                   className={`hover-scale ${
                     !chainName?.trim() || isSaving

@@ -844,3 +844,126 @@ const generateBodyAssertions = (data: any, prefix = ''): Assertion[] => {
 
   return assertions;
 };
+
+export const generateAssertionsForPath = (
+  path: string,
+  value: any,
+): Assertion[] => {
+  const assertions: Assertion[] = [];
+  const dataType = getDataType(value);
+
+  assertions.push({
+    id: `field-present-${path}-${Date.now()}`,
+    category: 'body',
+    type: 'field_present',
+    description: `Field '${path}' is present`,
+    field: path,
+    dataType,
+    enabled: false,
+  });
+
+  const type = Array.isArray(value) ? 'array' : typeof value;
+  assertions.push({
+    id: `field-type-${path}-${Date.now()}`,
+    category: 'body',
+    type: 'field_type',
+    description: `Field '${path}' is of type '${type}'`,
+    field: path,
+    expectedValue: type,
+    dataType,
+    enabled: false,
+  });
+
+  if (typeof value === 'string') {
+    const stringDataType = isDateString(value) ? 'date' : 'string';
+
+    assertions.push({
+      id: `field-not-empty-${path}-${Date.now()}`,
+      category: 'body',
+      type: 'field_not_empty',
+      description: `Field '${path}' is not empty`,
+      field: path,
+      dataType: stringDataType,
+      enabled: false,
+    });
+
+    assertions.push({
+      id: `field-equals-${path}-${Date.now()}`,
+      category: 'body',
+      type: 'field_equals',
+      description: `Field '${path}' equals '${value}'`,
+      field: path,
+      expectedValue: value,
+      dataType: stringDataType,
+      enabled: false,
+    });
+
+    if (value.length > 3) {
+      const substring = value.substring(0, Math.min(value.length - 1, 10));
+      assertions.push({
+        id: `field-contains-${path}-${Date.now()}`,
+        category: 'body',
+        type: 'field_contains',
+        description: `Field '${path}' contains '${substring}'`,
+        field: path,
+        expectedValue: substring,
+        dataType: stringDataType,
+        enabled: false,
+      });
+    }
+  } else if (typeof value === 'number') {
+    assertions.push({
+      id: `field-equals-${path}-${Date.now()}`,
+      category: 'body',
+      type: 'field_equals',
+      description: `Field '${path}' equals ${value}`,
+      field: path,
+      expectedValue: String(value),
+      dataType: 'number',
+      enabled: false,
+    });
+
+    if (value >= 0) {
+      assertions.push({
+        id: `field-positive-${path}-${Date.now()}`,
+        category: 'body',
+        type: 'field_range',
+        description: `Field '${path}' is positive`,
+        field: path,
+        operator: 'greater_than_or_equal',
+        expectedValue: '0',
+        dataType: 'number',
+        enabled: false,
+      });
+    }
+  } else if (typeof value === 'boolean') {
+    assertions.push({
+      id: `field-equals-${path}-${Date.now()}`,
+      category: 'body',
+      type: 'field_equals',
+      description: `Field '${path}' is ${value}`,
+      field: path,
+      expectedValue: String(value),
+      dataType: 'boolean',
+      enabled: false,
+    });
+  } else if (value === null) {
+    assertions.push({
+      id: `field-null-${path}-${Date.now()}`,
+      category: 'body',
+      type: 'field_null',
+      description: `Field '${path}' is null`,
+      field: path,
+      dataType: 'null',
+      enabled: false,
+    });
+  } else if (typeof value === 'object' && !Array.isArray(value)) {
+    Object.keys(value).forEach((key) => {
+      const childPath = `${path}.${key}`;
+      const childAssertions = generateAssertionsForPath(childPath, value[key]);
+      assertions.push(...childAssertions);
+    });
+  }
+
+  return assertions;
+};

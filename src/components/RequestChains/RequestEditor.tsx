@@ -2774,7 +2774,7 @@ export function RequestEditor({
             e.stopPropagation();
             setInlinePickerTarget(isOpen ? null : { field, index, subField });
           }}
-          className='bg-blue-900 flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-white hover:border-blue-500 hover:bg-blue-50 transition-colors whitespace-nowrap'
+          className='flex items-center gap-1 px-2 py-1 text-xs rounded border border-dashed border-blue-300 text-blue-500 hover:border-blue-500 hover:bg-blue-100 transition-colors whitespace-nowrap'
           title={`Bind a variable to ${subField}`}
         >
           <Plus className='w-3 h-3' />
