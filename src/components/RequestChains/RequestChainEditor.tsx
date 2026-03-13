@@ -146,6 +146,8 @@ export function RequestChainEditor({
     return initial;
   });
 
+  console.log('assertionsByRequest123:', assertionsByRequest);
+
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
     chain?.environmentId || activeEnvironment?.id || '',
   );

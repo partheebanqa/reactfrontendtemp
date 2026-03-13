@@ -17,7 +17,7 @@ import {
   XCircle,
   Trash2,
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import {
   getArrayAssertionConfig,
   getCategoryForAssertionType,
@@ -40,6 +40,7 @@ interface AssertionModalProps {
   dynamicVariables?: Array<{ name: string; value: string }>;
   extractedVariables?: Array<{ name: string; value: string }>;
   setAssertions?: (assertions: any[]) => void;
+  onGenerateForPath?: (path: string, value: any) => any[];
   initialField?: string;
   initialValue?: any;
   fieldType?: string;
@@ -58,6 +59,7 @@ function AssertionModal({
   dynamicVariables = [],
   extractedVariables = [],
   setAssertions,
+  onGenerateForPath,
   initialField,
   initialValue,
   fieldType,
@@ -82,6 +84,8 @@ function AssertionModal({
   const [selectedGeneralAssertions, setSelectedGeneralAssertions] = useState<
     Map<string, { value: string; comparison?: string }>
   >(new Map());
+
+  console.log('allAssertions123:', allAssertions);
 
   const isDateValue = (value: any): boolean => {
     if (typeof value !== 'string') return false;
@@ -239,102 +243,119 @@ function AssertionModal({
 
   const operators = getOperatorsForType(valueType, isArray);
 
-  const suggestedAssertionsList = suggestedAssertions.map((assertion) => {
-    let label = '';
-    let description = '';
-    let icon = CheckCircle;
+  const suggestedAssertionsList = useMemo(() => {
+    const isNonZeroIndex = /\[([1-9]\d*)\]/.test(displayFieldPath);
+    let assertionsToFilter = suggestedAssertions;
 
-    switch (assertion.type) {
-      case 'field_present':
-        label = 'Field Exists';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'header_present':
-        label = 'Header Exists';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'header_equals':
-        label = 'Header Equals';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'header_contains':
-        label = 'Header Contains';
-        description = assertion.description;
-        icon = Code;
-        break;
-      case 'header_security_present':
-        label = 'Security Header Present';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'header_security_value':
-        label = 'Security Header Value Check';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'field_type':
-        label = 'Check Data Type';
-        description = assertion.description;
-        icon = Type;
-        break;
-      case 'field_not_empty':
-        label = 'Not Empty';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'field_equals':
-        label = 'Equals Value';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'field_contains':
-        label = 'Contains';
-        description = assertion.description;
-        icon = Code;
-        break;
-      case 'field_pattern':
-        label = 'Matches Pattern';
-        description = assertion.description;
-        icon = Code;
-        break;
-      case 'field_range':
-        label = 'Range Check';
-        description = assertion.description;
-        icon = CheckCircle;
-        break;
-      case 'field_null':
-        label = 'Is Null';
-        description = assertion.description;
-        icon = XCircle;
-        break;
-      case 'array_length':
-        label = 'Array Length';
-        description = assertion.description;
-        icon = List;
-        break;
-      case 'array_present':
-        label = 'Array Present';
-        description = assertion.description;
-        icon = List;
-        break;
-      default:
-        label = assertion.type.replace(/_/g, ' ');
-        description = assertion.description;
-        icon = CheckCircle;
+    if (isNonZeroIndex && onGenerateForPath) {
+      const dynamicAssertions = onGenerateForPath(
+        displayFieldPath,
+        displayFieldValue,
+      );
+      const newOnes = dynamicAssertions.map((a: any) => ({
+        ...a,
+        id: `dynamic-${displayFieldPath}-${a.type}-${Date.now()}-${Math.random()}`,
+        field: displayFieldPath,
+        enabled: false,
+      }));
+      assertionsToFilter = [...suggestedAssertions, ...newOnes];
     }
 
-    return {
-      id: assertion.id,
-      label,
-      description,
-      icon,
-      assertion,
-    };
-  });
+    return assertionsToFilter.map((assertion) => {
+      let label = '';
+      let description = '';
+      let icon = CheckCircle;
 
+      switch (assertion.type) {
+        case 'field_present':
+          label = 'Field Exists';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_present':
+          label = 'Header Exists';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_equals':
+          label = 'Header Equals';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_contains':
+          label = 'Header Contains';
+          description = assertion.description;
+          icon = Code;
+          break;
+        case 'header_security_present':
+          label = 'Security Header Present';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'header_security_value':
+          label = 'Security Header Value Check';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_type':
+          label = 'Check Data Type';
+          description = assertion.description;
+          icon = Type;
+          break;
+        case 'field_not_empty':
+          label = 'Not Empty';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_equals':
+          label = 'Equals Value';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_contains':
+          label = 'Contains';
+          description = assertion.description;
+          icon = Code;
+          break;
+        case 'field_pattern':
+          label = 'Matches Pattern';
+          description = assertion.description;
+          icon = Code;
+          break;
+        case 'field_range':
+          label = 'Range Check';
+          description = assertion.description;
+          icon = CheckCircle;
+          break;
+        case 'field_null':
+          label = 'Is Null';
+          description = assertion.description;
+          icon = XCircle;
+          break;
+        case 'array_length':
+          label = 'Array Length';
+          description = assertion.description;
+          icon = List;
+          break;
+        case 'array_present':
+          label = 'Array Present';
+          description = assertion.description;
+          icon = List;
+          break;
+        default:
+          label = assertion.type.replace(/_/g, ' ');
+          description = assertion.description;
+          icon = CheckCircle;
+      }
+
+      return { id: assertion.id, label, description, icon, assertion };
+    });
+  }, [
+    suggestedAssertions,
+    displayFieldPath,
+    displayFieldValue,
+    onGenerateForPath,
+  ]);
   const allGeneralAssertions = [
     {
       id: 'response_time',
@@ -627,99 +648,56 @@ function AssertionModal({
       return;
     }
 
-    if (activeTab === 'suggested' && hasChanges) {
-      handleFinalSave();
-    }
+    // if (activeTab === 'suggested' && hasChanges) {
+    //   handleFinalSave();
+    // }
   };
 
   const handleFinalSave = () => {
-    let updatedAssertions = [...allAssertions];
+    if (!onSelect) return;
 
-    if (assertionsToRemove.size > 0) {
-      updatedAssertions = updatedAssertions.map((a: any) => {
-        if (
-          assertionsToRemove.has(a.id) &&
-          !selectedSuggestedAssertions.has(a.id)
-        ) {
-          return { ...a, enabled: false };
-        }
-        return a;
-      });
-    }
-
+    const suggestedToAdd: any[] = [];
     selectedSuggestedAssertions.forEach((assertionId) => {
       const assertionItem = suggestedAssertionsList.find(
         (a) => a.id === assertionId,
       );
-      if (assertionItem) {
-        updatedAssertions = updatedAssertions.map((a: any) =>
-          a.id === assertionItem.assertion.id ? { ...a, enabled: true } : a,
-        );
-      }
+      if (assertionItem) suggestedToAdd.push(assertionItem.assertion);
     });
+
+    const toRemove = Array.from(assertionsToRemove);
+
+    if (suggestedToAdd.length > 0 || toRemove.length > 0) {
+      onSelect('suggested-multiple', {
+        assertions: suggestedToAdd,
+        assertionsToRemove: toRemove,
+      });
+    }
 
     selectedGeneralAssertions.forEach((data, generalType) => {
       const assertion = generalAssertions.find((a) => a.id === generalType);
-
       const config: any = {
-        id: `general-${Date.now()}-${generalType}`,
-        type: generalType,
-        displayType: generalType,
-        category: getCategoryForAssertionType(generalType),
         isGeneral: true,
         value: data.value,
-        enabled: true,
-        source: 'general',
+        comparison: data.comparison,
       };
 
       if (assertion?.hasComparison) {
-        config.comparison = data.comparison;
         config.operator =
           data.comparison === 'less' ? 'less_than' : 'greater_than';
-
-        if (generalType === 'response_time') {
-          config.expectedTime = data.value;
-          config.description = `Response time ${
-            data.comparison === 'less' ? '<' : '>'
-          } ${data.value}ms`;
-        } else if (generalType === 'payload_size') {
-          config.expectedSize = data.value;
-          config.description = `Payload size ${
-            data.comparison === 'less' ? '<' : '>'
-          } ${data.value}KB`;
-        }
-      } else if (generalType === 'status_equals') {
+        if (generalType === 'response_time') config.expectedTime = data.value;
+        if (generalType === 'payload_size') config.expectedSize = data.value;
+      } else {
         config.operator = 'equals';
-        config.description = `Status code equals ${data.value}`;
-      } else if (generalType === 'contains_text') {
-        config.description = `Contains text "${data.value}"`;
-      } else if (generalType === 'contains_static') {
-        config.description = `Contains static variable ${data.value}`;
-      } else if (generalType === 'contains_dynamic') {
-        config.description = `Contains dynamic variable ${data.value}`;
-      } else if (generalType === 'contains_extracted') {
-        config.description = `Contains extracted variable ${data.value}`;
       }
 
-      if (
-        generalType === 'contains_static' ||
-        generalType === 'contains_dynamic' ||
-        generalType === 'contains_text'
-      ) {
-        config.scope = 'full';
-      }
-
-      updatedAssertions.push(config);
+      onSelect(generalType, config);
     });
 
-    updatedAssertions = [...updatedAssertions, ...pendingAssertions];
+    pendingAssertions.forEach((assertion) => {
+      onSelect('manual-direct', { assertion });
+    });
 
-    // 5. Save everything at once
-    if (setAssertions) {
-      setAssertions(updatedAssertions);
-    }
-
-    // 6. Clear all pending states
+    // 4. Clear all pending states
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
     setPendingAssertions([]);
