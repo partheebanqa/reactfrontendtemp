@@ -50,9 +50,6 @@ const RequestChainEdit = () => {
       console.error('Failed to save chain:', error);
     },
   });
-
-  console.log('editingChain:', editingChain);
-
   const handleSaveChain = async (
     chain: RequestChain,
   ): Promise<RequestChain | null> => {

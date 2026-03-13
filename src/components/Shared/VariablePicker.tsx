@@ -45,8 +45,6 @@ export default function VariablePicker({
   onSelect,
   bindingLabel,
 }: VariablePickerProps) {
-  console.log('staticVariables:', staticVariables);
-
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'all' | VariableType>('all');
 

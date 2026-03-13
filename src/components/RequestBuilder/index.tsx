@@ -93,11 +93,6 @@ const RequestBuilder = () => {
       const collectionVars = collectionActions.getExtractedVariables(
         activeCollection.id,
       );
-      console.log(
-        'Loading extracted variables for collection:',
-        activeCollection.id,
-        collectionVars,
-      );
       setExtractedVariables(collectionVars);
     } else {
       setExtractedVariables({});

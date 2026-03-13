@@ -63,7 +63,7 @@ const ExecutionsNew: React.FC = () => {
   const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [activeQuickFilter, setActiveQuickFilter] = useState<string | null>(
-    null
+    null,
   );
   const [dateRange, setDateRange] = useState<{
     from: Date | undefined;
@@ -75,7 +75,7 @@ const ExecutionsNew: React.FC = () => {
   const [durationRange, setDurationRange] = useState({ min: 0, max: 10000 });
 
   const [selectedExecution, setSelectedExecution] = useState<Execution | null>(
-    null
+    null,
   );
   const [showExecutionDetails, setShowExecutionDetails] = useState(false);
 
@@ -302,11 +302,11 @@ const ExecutionsNew: React.FC = () => {
   };
 
   const applySavedFilter = (filter: SavedFilter) => {
-    console.log('Applying filter', filter);
+    // console.log('Applying filter', filter);
   };
 
   const applyQuickFilter = (type: string) => {
-    console.log('Applying quick filter', type);
+    // console.log('Applying quick filter', type);
   };
 
   const clearAllFilters = () => {

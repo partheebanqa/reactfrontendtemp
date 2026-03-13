@@ -1273,8 +1273,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     return { metrics, testResults, insights };
   }, [requests, collection.preRequestId]);
 
-  console.log('metrics:', metrics);
-
   const handleShare = async () => {
     const summaryText = `
 Test Summary: ${collection.name}

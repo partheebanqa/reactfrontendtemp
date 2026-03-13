@@ -1205,7 +1205,6 @@ export const shouldRefreshExtractedVariables = (
     );
 
     if (storageKeys.length === 0) {
-      console.log('No extracted variables found, needs refresh');
       return true;
     }
 
@@ -1216,19 +1215,13 @@ export const shouldRefreshExtractedVariables = (
         const isJWT = data.value.split('.').length === 3;
 
         if (isJWT) {
-          console.log(`Checking token: ${data.name}`);
-
           if (isTokenExpired(data.value)) {
-            console.log(`Token ${data.name} is expired, needs refresh`);
             return true;
           }
 
           if (isTokenExpiringWithin2Mins(data.value)) {
-            console.log(`Token ${data.name} is expiring soon, needs refresh`);
             return true;
           }
-
-          console.log(`Token ${data.name} is still valid`);
         }
       }
     }
@@ -1237,11 +1230,9 @@ export const shouldRefreshExtractedVariables = (
     const alreadyExecuted = localStorage.getItem(executionKey);
 
     if (!alreadyExecuted) {
-      console.log('Pre-request never executed, needs refresh');
       return true;
     }
 
-    console.log('All tokens are valid, no refresh needed');
     return false;
   } catch (error) {
     console.error('Error checking extracted variables:', error);

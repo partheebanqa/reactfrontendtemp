@@ -107,8 +107,6 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
-  console.log('allAssertions:', allAssertions);
-
   const generateUUID = (): string => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
       /[xy]/g,
@@ -150,16 +148,10 @@ export function ResponseExplorer({
   } | null>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
   const [normalizedAssertions, setNormalizedAssertions] = useState<any[]>([]);
-
-  console.log('normalizedAssertions123:', normalizedAssertions);
-
-  // Ensure all assertions have unique IDs
   useEffect(() => {
     if (allAssertions && allAssertions.length > 0) {
       const assertionsWithIds = ensureAssertionIds(allAssertions);
       setNormalizedAssertions(assertionsWithIds);
-
-      // Optionally update parent component with normalized assertions
       if (
         onAssertionsUpdate &&
         JSON.stringify(assertionsWithIds) !== JSON.stringify(allAssertions)
@@ -169,7 +161,7 @@ export function ResponseExplorer({
     } else {
       setNormalizedAssertions([]);
     }
-  }, [allAssertions]); // Remove onAssertionsUpdate from dependencies to avoid infinite loop
+  }, [allAssertions]);
 
   const getValueByPath = (obj: any, path: string): any => {
     if (!obj || !path) return undefined;

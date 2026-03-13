@@ -228,8 +228,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     [],
   );
 
-  console.log('assertions128:', assertions);
-
   const [dynamicVarTrigger, setDynamicVarTrigger] = useState(0);
 
   const [pendingSubstitutions, setPendingSubstitutions] = useState<

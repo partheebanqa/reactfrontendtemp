@@ -99,8 +99,6 @@ const ResponseViewer = ({
   const { responseData, assertions, setAssertions } = useRequest();
   const { activeCollection, activeRequest } = useCollection();
 
-  console.log('assertions123:', assertions);
-
   const [activeTab, setActiveTab] = useState<
     | 'body'
     | 'headers'

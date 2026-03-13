@@ -79,17 +79,8 @@ const EditTestSuiteContent: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
 
-  // Fix the parameter access by properly handling the params object
   const id = (params as any).id;
   const isCreateMode = location.includes('/create');
-
-  console.log('🔍 Debug Info:', {
-    id,
-    isCreateMode,
-    currentWorkspaceId: currentWorkspace?.id,
-    location,
-    params,
-  });
 
   const { environments, activeEnvironment, setActiveEnvironment } =
     useDataManagement();
@@ -116,10 +107,6 @@ const EditTestSuiteContent: React.FC = () => {
   } = useQuery({
     queryKey: ['testSuite', id, currentWorkspace?.id],
     queryFn: async () => {
-      console.log('Fetching test suite:', {
-        id,
-        workspaceId: currentWorkspace?.id,
-      });
       if (!id || !currentWorkspace?.id) {
         throw new Error('Missing id or workspace');
       }
