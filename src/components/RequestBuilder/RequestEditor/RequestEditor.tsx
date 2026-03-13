@@ -228,6 +228,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     [],
   );
 
+  console.log('assertions128:', assertions);
+
   const [dynamicVarTrigger, setDynamicVarTrigger] = useState(0);
 
   const [pendingSubstitutions, setPendingSubstitutions] = useState<
@@ -1822,15 +1824,30 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           return { ...newA, enabled: false };
         });
 
-        const customAssertions = assertions.filter(
-          (a) =>
-            (a.isCustom === true ||
-              a.group === 'custom' ||
-              (a.id && String(a.id).startsWith('manual-'))) &&
-            !mergedAssertions.some((m) => assertionsMatch(m, a)),
-        );
+        // Preserve ALL existing assertions that are not regenerated:
+        // 1. Manual assertions (id starts with 'manual-')
+        // 2. Dynamic path assertions (id starts with 'dynamic-')
+        // 3. Custom/group assertions
+        // 4. Any enabled assertion not covered by the new generated set
+        const preservedAssertions = assertions.filter((a) => {
+          // Already represented in mergedAssertions — skip
+          if (mergedAssertions.some((m) => assertionsMatch(m, a))) return false;
 
-        setAssertions([...mergedAssertions, ...customAssertions]);
+          const isDynamic = a.id && String(a.id).startsWith('dynamic-');
+          const isManual = a.id && String(a.id).startsWith('manual-');
+          const isCustomGroup = a.isCustom === true || a.group === 'custom';
+
+          // Preserve dynamic index assertions (e.g. data[1].workspaceId)
+          if (isDynamic) return true;
+          // Preserve manually created assertions
+          if (isManual) return true;
+          // Preserve custom group assertions
+          if (isCustomGroup) return true;
+
+          return false;
+        });
+
+        setAssertions([...mergedAssertions, ...preservedAssertions]);
       }
     } catch (error: any) {
       const backendErrorMessage =

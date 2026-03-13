@@ -132,6 +132,5 @@ export default function Router() {
 
       <Route path='*' component={NotFound} />
     </Switch>
-
   );
 }

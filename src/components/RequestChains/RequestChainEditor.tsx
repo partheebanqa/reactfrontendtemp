@@ -146,6 +146,8 @@ export function RequestChainEditor({
     return initial;
   });
 
+  console.log('assertionsByRequest123:', assertionsByRequest);
+
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
     chain?.environmentId || activeEnvironment?.id || '',
   );
@@ -1257,7 +1259,9 @@ export function RequestChainEditor({
           assertion1.description === assertion2.description &&
           assertion1.category === assertion2.category &&
           assertion1.type === assertion2.type &&
-          assertion1.operator === assertion2.operator
+          assertion1.operator === assertion2.operator &&
+          (assertion1.field === assertion2.field ||
+            (!assertion1.field && !assertion2.field))
         );
       };
 
@@ -1281,9 +1285,6 @@ export function RequestChainEditor({
 
       const customAssertions = existingAssertions.filter(
         (assertion) =>
-          (assertion.isCustom === true ||
-            assertion.source === 'manual' ||
-            assertion.source === 'general') &&
           !mergedAssertions.some((merged) =>
             assertionsMatch(merged, assertion),
           ),

@@ -26,6 +26,7 @@ import {
   type Operator,
 } from '@/lib/operators';
 import ApiAssertionInterface from '../Shared/Assertion/ApiAssertionInterface';
+import { generateAssertionsForPath } from '@/utils/assertionGenerator';
 
 interface ResponseExplorerProps {
   response?: {
@@ -106,7 +107,7 @@ export function ResponseExplorer({
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
 
-  console.log('reesponse:', response);
+  console.log('allAssertions:', allAssertions);
 
   const generateUUID = (): string => {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(
@@ -508,11 +509,10 @@ export function ResponseExplorer({
     const fieldType = getFieldType(value);
     const operators = getOperatorsForFieldType(fieldType);
 
-    const filteredAssertions = filterAssertionsByField(
-      normalizedAssertions,
-      path,
-      value,
-    );
+    const isNonZeroIndex = /\[([1-9]\d*)\]/.test(path);
+    const filteredAssertions = isNonZeroIndex
+      ? []
+      : filterAssertionsByField(normalizedAssertions, path, value);
 
     setSelectedAssertion({
       path,
@@ -1473,24 +1473,75 @@ export function ResponseExplorer({
           fieldType={selectedAssertion.fieldType}
           allAssertions={normalizedAssertions}
           setAssertions={onAssertionsUpdate}
+          onGenerateForPath={(path, value) =>
+            generateAssertionsForPath(path, value)
+          }
           variables={variables}
           dynamicVariables={dynamicVariables}
           extractedVariables={getExtractedVariablesForAssertion()}
           onSelect={(assertionType: string, config?: any) => {
+            // Handle suggested-multiple — add each assertion INDIVIDUALLY
+            if (assertionType === 'suggested-multiple' && config?.assertions) {
+              const assertionsToEnable: any[] = config.assertions;
+              const toRemoveIds: string[] = config.assertionsToRemove || [];
+
+              let updatedAssertions = [...normalizedAssertions];
+
+              // Handle removals
+              if (toRemoveIds.length > 0) {
+                updatedAssertions = updatedAssertions.map((a: any) =>
+                  toRemoveIds.includes(a.id) ? { ...a, enabled: false } : a,
+                );
+              }
+
+              // Add/enable each assertion individually
+              assertionsToEnable.forEach((assertion: any) => {
+                const existingIndex = updatedAssertions.findIndex(
+                  (a: any) => a.id === assertion.id,
+                );
+                if (existingIndex !== -1) {
+                  // Already exists — just enable it
+                  updatedAssertions[existingIndex] = {
+                    ...updatedAssertions[existingIndex],
+                    enabled: true,
+                  };
+                } else {
+                  // Dynamic assertion — add individually with a clean UUID
+                  updatedAssertions.push({
+                    ...assertion,
+                    id: generateUUID(), // ← fresh UUID, drops the "dynamic-..." prefix id
+                    enabled: true,
+                  });
+                }
+              });
+
+              if (onAssertionsUpdate) onAssertionsUpdate(updatedAssertions);
+              setAssertionModalOpen(false);
+              setSelectedAssertion(null);
+              return;
+            }
+
+            // Handle manual-direct
+            if (assertionType === 'manual-direct' && config?.assertion) {
+              const assertion = { ...config.assertion, enabled: true };
+              if (onAssertionsUpdate)
+                onAssertionsUpdate([...normalizedAssertions, assertion]);
+              setAssertionModalOpen(false);
+              setSelectedAssertion(null);
+              return;
+            }
+
+            // Handle general + old direct flow (unchanged)
             let description = '';
             let finalType = assertionType;
 
             if (config?.isGeneral) {
               switch (assertionType) {
                 case 'response_time':
-                  description = `Response time should be ${
-                    config.comparison === 'less' ? 'less than' : 'more than'
-                  } ${config.value}ms`;
+                  description = `Response time should be ${config.comparison === 'less' ? 'less than' : 'more than'} ${config.value}ms`;
                   break;
                 case 'payload_size':
-                  description = `Payload size should be ${
-                    config.comparison === 'less' ? 'less than' : 'more than'
-                  } ${config.value}KB`;
+                  description = `Payload size should be ${config.comparison === 'less' ? 'less than' : 'more than'} ${config.value}KB`;
                   break;
                 case 'status_equals':
                   description = `Response status should be ${config.value}`;
@@ -1544,6 +1595,13 @@ export function ResponseExplorer({
               return path;
             };
 
+            // Strip undefined fields from config before spreading to avoid polluting assertion
+            const {
+              requestChainId: _rci,
+              requestId: _ri,
+              ...cleanConfig
+            } = config || {};
+
             const baseAssertion = {
               id: generateUUID(),
               type: finalType,
@@ -1558,7 +1616,7 @@ export function ResponseExplorer({
               expectedValue: config.expectedValue || config.value,
               enabled: true,
               operator: config.operator,
-              ...config,
+              ...cleanConfig,
             };
 
             const newAssertion =
@@ -1569,10 +1627,8 @@ export function ResponseExplorer({
                     field: normalizeFieldPath(selectedAssertion.path),
                   };
 
-            const updatedAssertions = [...normalizedAssertions, newAssertion];
-            if (onAssertionsUpdate) {
-              onAssertionsUpdate(updatedAssertions);
-            }
+            if (onAssertionsUpdate)
+              onAssertionsUpdate([...normalizedAssertions, newAssertion]);
             setAssertionModalOpen(false);
             setSelectedAssertion(null);
           }}

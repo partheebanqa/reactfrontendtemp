@@ -26,7 +26,6 @@ import {
   Settings,
   TriangleAlert,
   Play,
-  Copy,
   AlertTriangle,
   FileText,
   Shuffle,
@@ -56,7 +55,6 @@ import {
   parseUrlParams,
   buildUrlWithParams,
   generateDynamicValueById,
-  hasResponseChanged,
   getMethodColor,
   getTokenExpiryDisplay,
 } from '@/lib/request-utils';
@@ -317,6 +315,8 @@ export function RequestEditor({
     token:
       initialRequest.authToken || initialRequest.authorization?.token || '',
   });
+
+  console.log('auth999:', auth);
 
   const [bodyType, setBodyType] = useState<any>(
     initialRequest.bodyType || 'none',
@@ -859,6 +859,7 @@ export function RequestEditor({
           key: replaceVariables(param.key, variables),
           value: replaceVariables(param.value, variables),
         })) || [],
+      authorizationType: request.authorizationType,
       authToken: replaceVariables(request.authToken || '', variables),
       authUsername: replaceVariables(request.authUsername || '', variables),
       authPassword: replaceVariables(request.authPassword || '', variables),
@@ -1147,7 +1148,9 @@ export function RequestEditor({
       authToken: auth.token,
       authUsername: auth.username,
       authPassword: auth.password,
-      authorization: initialRequest.authorization,
+      authorization: auth.token.trim() // ← FIX: use live auth state
+        ? { token: auth.token.trim() }
+        : (initialRequest.authorization ?? {}),
       bodyType: bodyType,
     };
 
@@ -1200,14 +1203,10 @@ export function RequestEditor({
       safeRequest.bodyFormData = null;
       safeRequest.bodyRawContent = body;
     } else {
-      (safeRequest as any).authorizationType = 'none';
-      (safeRequest as any).authorization = {};
-      const headers = Array.isArray(safeRequest.headers)
-        ? [...safeRequest.headers]
-        : [];
-      (safeRequest as any).headers = headers.filter(
-        (h) => h?.key?.toLowerCase() !== 'authorization',
-      );
+      // bodyType is 'none' — clear body but DO NOT wipe auth
+      safeRequest.body = '';
+      safeRequest.bodyFormData = null;
+      safeRequest.bodyRawContent = '';
     }
 
     if (!safeRequest.url) {
@@ -1253,6 +1252,8 @@ export function RequestEditor({
 
       payload.assertions = processedAssertions;
 
+      console.log('payload999:', payload);
+
       const backendData = await executeRequest(payload);
 
       const assertionResult = backendData?.data?.assertionResults || [];
@@ -1296,7 +1297,9 @@ export function RequestEditor({
           assertion1.description === assertion2.description &&
           assertion1.category === assertion2.category &&
           assertion1.type === assertion2.type &&
-          assertion1.operator === assertion2.operator
+          assertion1.operator === assertion2.operator &&
+          (assertion1.field === assertion2.field ||
+            (!assertion1.field && !assertion2.field))
         );
       };
 
@@ -1327,9 +1330,6 @@ export function RequestEditor({
 
       const customAssertions = assertions.filter(
         (assertion) =>
-          (assertion.isCustom === true ||
-            assertion.source === 'manual' ||
-            assertion.source === 'general') &&
           !mergedAssertions.some((merged) =>
             assertionsMatch(merged, assertion),
           ),
