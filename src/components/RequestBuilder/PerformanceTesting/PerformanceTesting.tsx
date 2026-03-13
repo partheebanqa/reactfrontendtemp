@@ -92,9 +92,6 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 } {
   const results = runResultsResponse?.results ?? [];
   const s = runResultsResponse?.summary ?? {};
-
-  console.log(results, 'results');
-
   const requests: RateLimitRequest[] = results.map((r: any, idx: number) => {
     const statusCode = Number(r.statusCode ?? r.status ?? 0);
     const responseTime = Number(r.responseTime ?? r.latencyMs ?? 0);
@@ -133,17 +130,17 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 
   const startTime = String(
     s.startTime ??
-    s.startedAt ??
-    s.start ??
-    requests[0]?.timestamp ??
-    new Date().toISOString(),
+      s.startedAt ??
+      s.start ??
+      requests[0]?.timestamp ??
+      new Date().toISOString(),
   );
   const endTime = String(
     s.endTime ??
-    s.endedAt ??
-    s.end ??
-    requests[requests.length - 1]?.timestamp ??
-    new Date().toISOString(),
+      s.endedAt ??
+      s.end ??
+      requests[requests.length - 1]?.timestamp ??
+      new Date().toISOString(),
   );
 
   const totalRequests = Number(s.totalRequests ?? requests.length);
@@ -163,11 +160,11 @@ function mapRunResultsToRateLimitDashboard(runResultsResponse: any): {
 
   const minResp = Number(
     s.minResponseTime ??
-    Math.min(...(responseTimes.length ? responseTimes : [0])),
+      Math.min(...(responseTimes.length ? responseTimes : [0])),
   );
   const maxResp = Number(
     s.maxResponseTime ??
-    Math.max(...(responseTimes.length ? responseTimes : [0])),
+      Math.max(...(responseTimes.length ? responseTimes : [0])),
   );
 
   const p50 = Number(s.p50ResponseTime ?? computePercentile(responseTimes, 50));
@@ -394,8 +391,6 @@ export default function PerformanceTesting({
     refetchOnWindowFocus: false,
   });
 
-  // console.log(editingConfigData, "editingConfigData");
-
   const handleEditClick = async (row: PerformanceTestConfigApi) => {
     try {
       const data = await getPerformanceTestConfig(row.Id);
@@ -515,7 +510,7 @@ export default function PerformanceTesting({
       try {
         const data = JSON.parse(localStorage.getItem(key) || '{}');
         if (data.requestName) return data.requestName;
-      } catch { }
+      } catch {}
     }
 
     const collection = collections.find((c) => c.id === activeCollection?.id);
@@ -540,9 +535,7 @@ export default function PerformanceTesting({
     refetchInterval: (query) => {
       const data = query.state.data as any;
       if (!data) return 1500;
-      // console.log(runDetails, "runDetails");
       const status = runDetails?.status;
-      // console.log(status, "status");
       if (
         status === 'COMPLETED' ||
         status === 'FAILED' ||
@@ -566,8 +559,6 @@ export default function PerformanceTesting({
     refetchOnWindowFocus: false,
   });
 
-  // console.log(runResultsResponse, "runResultsResponse");
-
   const isRunFinished =
     runDetails?.status === 'COMPLETED' ||
     runDetails?.status === 'FAILED' ||
@@ -578,16 +569,16 @@ export default function PerformanceTesting({
     <div className='bg-white dark:bg-gray-900 w-full h-full flex flex-col overflow-auto'>
       <div className='border-b border-gray-200 dark:border-gray-800 pt-4 px-4 flex-shrink-0'>
         <div className='block md:flex items-center justify-between mb-3'>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              <Rocket className="hidden md:flex w-5 h-5 text-blue-500" />
+          <div className='flex items-start justify-between'>
+            <div className='flex items-center gap-2'>
+              <Rocket className='hidden md:flex w-5 h-5 text-blue-500' />
 
-              <div className="flex flex-col">
-                <h2 className="text-md md:text-lg font-semibold text-gray-900 dark:text-white">
+              <div className='flex flex-col'>
+                <h2 className='text-md md:text-lg font-semibold text-gray-900 dark:text-white'>
                   Rate Limit Test
                 </h2>
 
-                <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                <p className='text-xs md:text-sm text-gray-600 dark:text-gray-400'>
                   Request : {request?.name} ({request?.url})
                 </p>
               </div>
@@ -595,9 +586,9 @@ export default function PerformanceTesting({
 
             <button
               onClick={onClose}
-              className="flex md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+              className='flex md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors'
             >
-              <X className="w-5 h-5 text-gray-500" />
+              <X className='w-5 h-5 text-gray-500' />
             </button>
           </div>
 
@@ -675,7 +666,9 @@ export default function PerformanceTesting({
             <>
               <Card className='hidden md:flex justify-between p-3 mb-2'>
                 <div>
-                  <CardTitle className='text-sm md:text-lg'>Rate Limit Configurations</CardTitle>
+                  <CardTitle className='text-sm md:text-lg'>
+                    Rate Limit Configurations
+                  </CardTitle>
                   <CardDescription className='text-xs md:text-md'>
                     Manage your performance test configurations
                   </CardDescription>
@@ -701,7 +694,9 @@ export default function PerformanceTesting({
 
               <Card className='flex md:hidden flex-col justify-between p-3 mb-2'>
                 <div>
-                  <CardTitle className='text-sm md:text-lg'>Rate Limit Configurations</CardTitle>
+                  <CardTitle className='text-sm md:text-lg'>
+                    Rate Limit Configurations
+                  </CardTitle>
                   <CardDescription className='text-xs md:text-md'>
                     Manage your performance test configurations
                   </CardDescription>

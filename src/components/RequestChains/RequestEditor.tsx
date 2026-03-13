@@ -232,9 +232,6 @@ export function RequestEditor({
   >('params');
 
   const [assertions, setAssertions] = useState<any[]>([]);
-
-  console.log('assertions111:', assertions);
-
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null,
@@ -301,8 +298,6 @@ export function RequestEditor({
     },
   );
 
-  console.log('selectedVariable:', selectedVariable);
-
   const [headers, setHeaders] = useState<KeyValuePair[]>(
     initialRequest.headers || [],
   );
@@ -315,8 +310,6 @@ export function RequestEditor({
     token:
       initialRequest.authToken || initialRequest.authorization?.token || '',
   });
-
-  console.log('auth999:', auth);
 
   const [bodyType, setBodyType] = useState<any>(
     initialRequest.bodyType || 'none',
@@ -1251,9 +1244,6 @@ export function RequestEditor({
         });
 
       payload.assertions = processedAssertions;
-
-      console.log('payload999:', payload);
-
       const backendData = await executeRequest(payload);
 
       const assertionResult = backendData?.data?.assertionResults || [];
@@ -3306,7 +3296,6 @@ export function RequestEditor({
                   );
                 }
                 const expiry = getTokenExpiryDisplay(resolvedToken);
-                console.log('Authentication123:', expiry);
 
                 if (!expiry) return null;
                 const isExpired = expiry === 'Expired';

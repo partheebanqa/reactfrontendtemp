@@ -1,74 +1,71 @@
-import RequestCard from "./RequestCard";
+import RequestCard from './RequestCard';
 
 export interface VariableSubstitution {
-    name: string;
-    value: string;
-    usedIn: string;
+  name: string;
+  value: string;
+  usedIn: string;
 }
 
 export interface ExtractedVarMapped {
-    name: string;
-    value: string;
-    usedIn?: string;
-    source?: string;
-    path?: string;
+  name: string;
+  value: string;
+  usedIn?: string;
+  source?: string;
+  path?: string;
 }
 
 export interface AssertionResultsMapped {
-    actualValue: string;
-    category: string;
-    description: string;
-    field: string;
-    responseSize: number;
-    responseStatus: number;
-    responseTime: number;
-    type: string;
-    operator: string;
-    status: string;
-    expectedValue: string;
+  actualValue: string;
+  category: string;
+  description: string;
+  field: string;
+  responseSize: number;
+  responseStatus: number;
+  responseTime: number;
+  type: string;
+  operator: string;
+  status: string;
+  expectedValue: string;
 }
 
 export interface RequestTimelineItem {
-    id: string;
-    order: number;
-    method: string;
-    name: string;
-    url: string;
-    status: "passed" | "failed" | "skipped" | string;
-    duration: number; // ms
-    responseStatusCode: number;
-    responseSize: number; // bytes
-    requestCurl: string;
-    response: string;
-    substitutedVariables?: VariableSubstitution[];
-    extractedVariables?: ExtractedVarMapped[];
-    assertionResults?: AssertionResultsMapped[]
+  id: string;
+  order: number;
+  method: string;
+  name: string;
+  url: string;
+  status: 'passed' | 'failed' | 'skipped' | string;
+  duration: number; // ms
+  responseStatusCode: number;
+  responseSize: number; // bytes
+  requestCurl: string;
+  response: string;
+  substitutedVariables?: VariableSubstitution[];
+  extractedVariables?: ExtractedVarMapped[];
+  assertionResults?: AssertionResultsMapped[];
 }
 
 interface RequestTimelineProps {
-    requests: RequestTimelineItem[];
+  requests: RequestTimelineItem[];
 }
 
 export default function RequestTimeline({ requests }: RequestTimelineProps) {
-    const sortedRequests = [...requests].sort((a, b) => a.order - b.order);
+  const sortedRequests = [...requests].sort((a, b) => a.order - b.order);
 
-    // console.log(sortedRequests, "requests")
-
-    return (
-        <>
-            <div className="mt-3 ">
-                <h2 className="text-lg font-semibold text-foreground mb-3">
-                    Request Chain Execution
-                </h2>
-            </div>
-            <div className="max-w-7xl mx-auto px-6 py-8 bg-white rounded-lg shadow-sm border border-gray-200">
-
-                <div className="space-y-0">
-                    {sortedRequests.map((request, index) => (
-                        <RequestCard key={request.id} request={request} index={index} />
-                    ))}
-                </div>
-            </div>
-        </>
-    );
+  return (
+    <>
+      <div className='mt-3 '>
+        <h2 className='text-lg font-semibold text-foreground mb-3'>
+          Request Chain Execution
+        </h2>
+      </div>
+      <div className='max-w-7xl mx-auto px-6 py-8 bg-white rounded-lg shadow-sm border border-gray-200'>
+        <div className='space-y-0'>
+          {sortedRequests.map((request, index) => (
+            <RequestCard key={request.id} request={request} index={index} />
+          ))}
+        </div>
+      </div>
+    </>
+  );
 }

@@ -37,7 +37,7 @@ interface RequestStep {
     value: string;
     usedIn: string;
   }[];
-  assertionResults: AssertionResultsMapped[]
+  assertionResults: AssertionResultsMapped[];
 }
 
 interface Props {
@@ -80,7 +80,7 @@ const parseSizeBytes = (value: string | number): number => {
 };
 
 const mapStatus = (
-  status: RequestStep['status']
+  status: RequestStep['status'],
 ): 'passed' | 'failed' | 'skipped' => {
   if (status === 'success') return 'passed';
   if (status === 'fail') return 'failed';
@@ -88,8 +88,6 @@ const mapStatus = (
 };
 
 export default function RequestChainExecutionFlow({ steps }: Props) {
-
-  // console.log(steps, "requests");
   const requests = steps.map((step, index) => {
     return {
       id: String(step.step ?? index + 1),
@@ -110,20 +108,20 @@ export default function RequestChainExecutionFlow({ steps }: Props) {
           value: String(v.value),
           usedIn: 'response',
         })) ?? [],
-      assertionResults: step?.assertionResults?.map((v) => ({
-        status: v.status,
-        category: v.category,
-        description: v.description,
-        field: v.field,
-        responseSize: v.responseSize,
-        responseStatus: v.responseStatus,
-        responseTime: v.responseTime,
-        type: v.type,
-        actualValue: v.actualValue,
-        operator: v.operator,
-        expectedValue: v.expectedValue
-
-      })) ?? [],
+      assertionResults:
+        step?.assertionResults?.map((v) => ({
+          status: v.status,
+          category: v.category,
+          description: v.description,
+          field: v.field,
+          responseSize: v.responseSize,
+          responseStatus: v.responseStatus,
+          responseTime: v.responseTime,
+          type: v.type,
+          actualValue: v.actualValue,
+          operator: v.operator,
+          expectedValue: v.expectedValue,
+        })) ?? [],
     };
   });
 

@@ -60,13 +60,10 @@ export const OPERATORS_BY_TYPE: Record<FieldType, Operator[]> = {
 };
 
 export const getOperatorsForFieldType = (fieldType: FieldType): Operator[] => {
-  console.log('fieldType123:', fieldType);
   return OPERATORS_BY_TYPE[fieldType] || OPERATORS_BY_TYPE.string;
 };
 
 export const getFieldType = (value: any): FieldType => {
-  console.log('value123:', value);
-
   if (value === null) return 'null';
   if (typeof value === 'string') return 'string';
   if (typeof value === 'number') return 'number';

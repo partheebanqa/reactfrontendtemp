@@ -83,10 +83,8 @@ export interface SaveAssertionsResponse {
 }
 
 export const validateAssertions = async (
-  payload: ValidationPayload
+  payload: ValidationPayload,
 ): Promise<ValidationApiResponse> => {
-  console.log('payload090', payload);
-
   const response = await apiRequest(
     'POST',
     `${API_EXECUTOR}/validate-assertions`,
@@ -95,13 +93,13 @@ export const validateAssertions = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(payload),
-    }
+    },
   );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
     throw new Error(
-      `Failed to validate assertions (${response.status}): ${errorText}`
+      `Failed to validate assertions (${response.status}): ${errorText}`,
     );
   }
 
@@ -110,10 +108,8 @@ export const validateAssertions = async (
 
 export const saveAssertions = async (
   requestId: string,
-  payload: SaveAssertionsPayload
+  payload: SaveAssertionsPayload,
 ): Promise<SaveAssertionsResponse> => {
-  console.log('Saving assertions for request:', requestId, payload);
-
   const response = await apiRequest(
     'PUT',
     `${API_REQUEST}/${requestId}/assertions`,
@@ -123,13 +119,13 @@ export const saveAssertions = async (
         accept: 'application/json',
       },
       body: JSON.stringify(payload),
-    }
+    },
   );
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
     throw new Error(
-      `Failed to save assertions (${response.status}): ${errorText}`
+      `Failed to save assertions (${response.status}): ${errorText}`,
     );
   }
 

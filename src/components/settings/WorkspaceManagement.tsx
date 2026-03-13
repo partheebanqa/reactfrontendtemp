@@ -73,7 +73,7 @@ export function WorkspaceManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
   const [selectedWorkspace, setSelectedWorkspace] = useState<Workspace | null>(
-    null
+    null,
   );
 
   const { currentWorkspace } = useWorkspace();
@@ -127,7 +127,7 @@ export function WorkspaceManagement() {
             variant: 'destructive',
           });
         },
-      }
+      },
     );
   };
 
@@ -224,7 +224,7 @@ export function WorkspaceManagement() {
 
   const handleDeleteWorkspace = (
     workspaceId: string,
-    workspaceName: string
+    workspaceName: string,
   ) => {
     try {
       deleteWorkspaceMutation.mutate(workspaceId, {
@@ -379,8 +379,6 @@ export function WorkspaceManagement() {
       {/* Workspaces List */}
       <div className='space-y-4'>
         {(workspaces || []).map((workspace) => {
-          console.log('workspaces');
-
           const enrichedWorkspace: Workspace = {
             ...workspace,
             role: (workspace as any).role || 'member',
@@ -432,7 +430,7 @@ export function WorkspaceManagement() {
                             Created{' '}
                             {enrichedWorkspace.createdAt
                               ? new Date(
-                                  enrichedWorkspace.createdAt
+                                  enrichedWorkspace.createdAt,
                                 ).toLocaleDateString()
                               : 'N/A'}
                           </div>
@@ -542,7 +540,7 @@ export function WorkspaceManagement() {
                                       onClick={() =>
                                         handleDeleteWorkspace(
                                           enrichedWorkspace.id,
-                                          enrichedWorkspace.name
+                                          enrichedWorkspace.name,
                                         )
                                       }
                                     >

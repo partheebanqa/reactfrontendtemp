@@ -148,7 +148,7 @@ export function ExternalTools() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [integrationToDelete, setIntegrationToDelete] = useState<string | null>(
-    null
+    null,
   );
 
   // console.log(editingIntegration, "editingIntegration");
@@ -165,10 +165,10 @@ export function ExternalTools() {
       api_token: '',
       webhook_url: '',
       channel: '#general',
-      email: "",
-      jira_url: "",
-      project_key: "",
-      issue_type: ""
+      email: '',
+      jira_url: '',
+      project_key: '',
+      issue_type: '',
     },
     events: [] as string[],
   });
@@ -176,7 +176,7 @@ export function ExternalTools() {
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     const { name, value } = e.target;
 
@@ -214,9 +214,7 @@ export function ExternalTools() {
     { value: 'workspace_updated', label: 'Workspace Updated' },
   ];
 
-  const jiraEvents = [
-    { value: 'test_failed', label: 'Test Failed' },
-  ];
+  const jiraEvents = [{ value: 'test_failed', label: 'Test Failed' }];
 
   const getIntegrationIcon = (type: string) => {
     switch (type) {
@@ -294,46 +292,47 @@ export function ExternalTools() {
   const handleToggleStatus = async (integrationId: string) => {
     try {
       const currentIntegration = integrations.find(
-        (i) => i.id === integrationId
+        (i) => i.id === integrationId,
       );
       if (!currentIntegration) return;
 
       setIntegrations((prev) =>
         prev.map((i) =>
-          i.id === integrationId ? { ...i, isActive: !i.isActive } : i
-        )
+          i.id === integrationId ? { ...i, isActive: !i.isActive } : i,
+        ),
       );
 
       const updated = await toggleWorkSpaceIntegrationStatus(
         integrationId,
         workspaceId || '',
-        !currentIntegration.isActive
+        !currentIntegration.isActive,
       );
 
       setIntegrations((prev) =>
         prev.map((i) =>
-          i.id === integrationId ? { ...i, isActive: updated.isActive } : i
-        )
+          i.id === integrationId ? { ...i, isActive: updated.isActive } : i,
+        ),
       );
 
       toast({
         variant: 'success',
         title: `Integration ${updated.isActive ? 'Activated' : 'Deactivated'}`,
-        description: `${currentIntegration.name} has been ${updated.isActive ? 'activated' : 'deactivated'
-          }.`,
+        description: `${currentIntegration.name} has been ${
+          updated.isActive ? 'activated' : 'deactivated'
+        }.`,
       });
       // getIntegrations();
     } catch (error: any) {
       console.error('Failed to toggle integration status:', error.message);
       const originalIntegration = integrations.find(
-        (x) => x.id === integrationId
+        (x) => x.id === integrationId,
       );
       setIntegrations((prev) =>
         prev.map((i) =>
           i.id === integrationId
             ? { ...i, isActive: originalIntegration?.isActive || false }
-            : i
-        )
+            : i,
+        ),
       );
 
       toast({
@@ -370,7 +369,7 @@ export function ExternalTools() {
         await updateWorkSpaceIntegration(
           editingIntegration.id,
           workspaceId || '',
-          integrationForm
+          integrationForm,
         );
 
         toast({
@@ -393,7 +392,15 @@ export function ExternalTools() {
         name: '',
         type: 'slack',
         description: '',
-        config: { webhook_url: '', channel: '#general', api_token: "", email: "", jira_url: "", project_key: "", issue_type: '' },
+        config: {
+          webhook_url: '',
+          channel: '#general',
+          api_token: '',
+          email: '',
+          jira_url: '',
+          project_key: '',
+          issue_type: '',
+        },
         events: [],
       });
       getIntegrations();
@@ -417,11 +424,11 @@ export function ExternalTools() {
       config: {
         webhook_url: integration.config?.webhook_url || '',
         channel: integration.config?.channel || '#general',
-        api_token: integration?.config?.api_token || "",
-        project_key: integration?.config?.project_key || "",
-        jira_url: integration?.config?.jira_url || "",
-        email: integration?.config?.email || "",
-        issue_type: integrationForm?.config?.issue_type || ""
+        api_token: integration?.config?.api_token || '',
+        project_key: integration?.config?.project_key || '',
+        jira_url: integration?.config?.jira_url || '',
+        email: integration?.config?.email || '',
+        issue_type: integrationForm?.config?.issue_type || '',
       },
       events: integration.events || [],
     });
@@ -434,9 +441,6 @@ export function ExternalTools() {
   const usedIntegrationTypes = integrations
     .filter((i) => i.id !== editingIntegration?.id)
     .map((i) => i.type);
-
-  console.log(usedIntegrationTypes, "usedIntegrationTypes")
-
   const integrationOptions = [
     { value: 'slack', label: 'Slack' },
     { value: 'teams', label: 'Microsoft Teams' },
@@ -445,11 +449,10 @@ export function ExternalTools() {
   ];
 
   const { data: userRole, isLoading } = useQuery<UserRoleData>({
-    queryKey: ["workspace-role", currentWorkspace?.id],
+    queryKey: ['workspace-role', currentWorkspace?.id],
     enabled: !!currentWorkspace?.id,
     queryFn: () => getWorkSpaceRole(currentWorkspace!.id),
   });
-
 
   return (
     <Card>
@@ -470,8 +473,13 @@ export function ExternalTools() {
           >
             <DialogTrigger asChild>
               <Button
-                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
-                onClick={() => setIsCreateDialogOpen(true)}>
+                disabled={
+                  !(
+                    userRole?.role === 'Org Admin' || userRole?.role === 'Admin'
+                  )
+                }
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
                 <Plus className='h-4 w-4 mr-2' />
                 Add Integration
               </Button>
@@ -517,17 +525,31 @@ export function ExternalTools() {
                       <SelectValue placeholder='Select Integration Type' />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem disabled={
-                        !editingIntegration && usedIntegrationTypes.includes("slack")
-                      } value='slack'>Slack </SelectItem>
-                      <SelectItem value='teams' disabled={
-                        !editingIntegration && usedIntegrationTypes.includes("teams")
-                      }  >Microsoft Teams</SelectItem>
+                      <SelectItem
+                        disabled={
+                          !editingIntegration &&
+                          usedIntegrationTypes.includes('slack')
+                        }
+                        value='slack'
+                      >
+                        Slack{' '}
+                      </SelectItem>
+                      <SelectItem
+                        value='teams'
+                        disabled={
+                          !editingIntegration &&
+                          usedIntegrationTypes.includes('teams')
+                        }
+                      >
+                        Microsoft Teams
+                      </SelectItem>
                       <SelectItem
                         value='jira'
                         disabled={
-                          !editingIntegration && usedIntegrationTypes.includes("jira") || currentPlan?.PlanName !== 'Enterprise' &&
-                          currentPlan?.IsTrial !== true
+                          (!editingIntegration &&
+                            usedIntegrationTypes.includes('jira')) ||
+                          (currentPlan?.PlanName !== 'Enterprise' &&
+                            currentPlan?.IsTrial !== true)
                         }
                       >
                         Jira
@@ -567,7 +589,7 @@ export function ExternalTools() {
                       ))}
                   </SelectContent> */}
                 </div>
-                {integrationForm?.type !== "jira" && (
+                {integrationForm?.type !== 'jira' && (
                   <div>
                     <label className='block text-sm font-medium mb-2'>
                       Webhook URL
@@ -583,7 +605,7 @@ export function ExternalTools() {
                   </div>
                 )}
 
-                {integrationForm?.type === "jira" && (
+                {integrationForm?.type === 'jira' && (
                   <>
                     <div>
                       <label className='block text-sm font-medium mb-2'>
@@ -652,7 +674,7 @@ export function ExternalTools() {
                     </div>
                   </>
                 )}
-                {integrationForm?.type !== "jira" && (
+                {integrationForm?.type !== 'jira' && (
                   <>
                     <div>
                       <label className='block text-sm font-medium mb-2'>
@@ -667,10 +689,9 @@ export function ExternalTools() {
                       />
                     </div>
                   </>
-
                 )}
 
-                {integrationForm?.type !== "jira" && (
+                {integrationForm?.type !== 'jira' && (
                   <div>
                     <label className='block text-sm font-medium mb-2'>
                       Notification Events
@@ -683,7 +704,9 @@ export function ExternalTools() {
                         >
                           <input
                             type='checkbox'
-                            checked={integrationForm.events.includes(event.value)}
+                            checked={integrationForm.events.includes(
+                              event.value,
+                            )}
                             onChange={(e) =>
                               handleEventChange(event.value, e.target.checked)
                             }
@@ -695,8 +718,7 @@ export function ExternalTools() {
                   </div>
                 )}
 
-
-                {integrationForm?.type === "jira" && (
+                {integrationForm?.type === 'jira' && (
                   <div>
                     <label className='block text-sm font-medium mb-2'>
                       Notification Events
@@ -709,7 +731,9 @@ export function ExternalTools() {
                         >
                           <input
                             type='checkbox'
-                            checked={integrationForm.events.includes(event.value)}
+                            checked={integrationForm.events.includes(
+                              event.value,
+                            )}
                             onChange={(e) =>
                               handleEventChange(event.value, e.target.checked)
                             }
@@ -731,7 +755,15 @@ export function ExternalTools() {
                         name: '',
                         type: 'slack',
                         description: '',
-                        config: { webhook_url: '', channel: '#general', api_token: "", email: '', project_key: '', jira_url: "", issue_type: "" },
+                        config: {
+                          webhook_url: '',
+                          channel: '#general',
+                          api_token: '',
+                          email: '',
+                          project_key: '',
+                          jira_url: '',
+                          issue_type: '',
+                        },
                         events: [],
                       });
                     }}
@@ -762,8 +794,13 @@ export function ExternalTools() {
                 Connect external tools to receive notifications.
               </p>
               <Button
-                disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
-                onClick={() => setIsCreateDialogOpen(true)}>
+                disabled={
+                  !(
+                    userRole?.role === 'Org Admin' || userRole?.role === 'Admin'
+                  )
+                }
+                onClick={() => setIsCreateDialogOpen(true)}
+              >
                 <Plus className='h-4 w-4 mr-2' /> Add Integration
               </Button>
             </div>
@@ -802,16 +839,18 @@ export function ExternalTools() {
                           onCheckedChange={() =>
                             handleToggleStatus(integration.id)
                           }
-                          className={`${integration.isActive
-                            ? 'bg-green-500'
-                            : 'bg-gray-300'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                          className={`${
+                            integration.isActive
+                              ? 'bg-green-500'
+                              : 'bg-gray-300'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                         >
                           <span
-                            className={`${integration.isActive
-                              ? 'translate-x-6'
-                              : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            className={`${
+                              integration.isActive
+                                ? 'translate-x-6'
+                                : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                           />
                         </Switch>
                         <span className='text-xs text-gray-600'>
@@ -823,7 +862,12 @@ export function ExternalTools() {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                              disabled={
+                                !(
+                                  userRole?.role === 'Org Admin' ||
+                                  userRole?.role === 'Admin'
+                                )
+                              }
                               variant='outline'
                               size='sm'
                               className='px-2 py-1'
@@ -841,7 +885,12 @@ export function ExternalTools() {
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
-                            disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                            disabled={
+                              !(
+                                userRole?.role === 'Org Admin' ||
+                                userRole?.role === 'Admin'
+                              )
+                            }
                             variant='outline'
                             size='sm'
                             className='text-red-600 hover:text-red-700'
@@ -882,16 +931,18 @@ export function ExternalTools() {
                           onCheckedChange={() =>
                             handleToggleStatus(integration.id)
                           }
-                          className={`${integration.isActive
-                            ? 'bg-green-500'
-                            : 'bg-gray-300'
-                            } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                          className={`${
+                            integration.isActive
+                              ? 'bg-green-500'
+                              : 'bg-gray-300'
+                          } relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
                         >
                           <span
-                            className={`${integration.isActive
-                              ? 'translate-x-6'
-                              : 'translate-x-1'
-                              } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
+                            className={`${
+                              integration.isActive
+                                ? 'translate-x-6'
+                                : 'translate-x-1'
+                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
                           />
                         </Switch>
                         <span className='text-xs text-gray-600'>
@@ -907,7 +958,12 @@ export function ExternalTools() {
                               onClick={() =>
                                 handleEdit(integration as WorkSpaceIntegration)
                               }
-                              disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                              disabled={
+                                !(
+                                  userRole?.role === 'Org Admin' ||
+                                  userRole?.role === 'Admin'
+                                )
+                              }
                             >
                               <Edit className='h-4 w-4' />
                             </Button>
@@ -921,7 +977,12 @@ export function ExternalTools() {
                             variant='outline'
                             size='sm'
                             className='text-red-600 hover:text-red-700'
-                            disabled={!(userRole?.role === "Org Admin" || userRole?.role === "Admin")}
+                            disabled={
+                              !(
+                                userRole?.role === 'Org Admin' ||
+                                userRole?.role === 'Admin'
+                              )
+                            }
                           >
                             <Trash2 className='w-4 h-4' />
                           </Button>

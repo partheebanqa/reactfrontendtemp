@@ -597,8 +597,14 @@ function AssertionModal({
           selectedOperator === 'contains' ||
           selectedOperator === 'field_not_contains'
         ) {
+          const mappedOperator =
+            selectedOperator === 'contains'
+              ? 'field_contains'
+              : 'field_not_contains';
+          config.type = mappedOperator;
+          config.displayType = mappedOperator;
           config.expectedValue = manualValue;
-          config.operator = selectedOperator;
+          config.operator = mappedOperator;
           config.description = `${fieldPath} ${
             selectedOperator === 'contains' ? 'contains' : 'does not contain'
           } "${manualValue}"`;
@@ -779,8 +785,14 @@ function AssertionModal({
             selectedOperator === 'contains' ||
             selectedOperator === 'field_not_contains'
           ) {
+            const mappedOperator =
+              selectedOperator === 'contains'
+                ? 'field_contains'
+                : 'field_not_contains';
+            config.type = mappedOperator;
+            config.displayType = mappedOperator;
             config.expectedValue = manualValue;
-            config.operator = selectedOperator;
+            config.operator = mappedOperator;
             config.description = `${fieldPath} ${
               selectedOperator === 'contains' ? 'contains' : 'does not contain'
             } "${manualValue}"`;

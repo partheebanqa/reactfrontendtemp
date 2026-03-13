@@ -146,8 +146,6 @@ export function RequestChainEditor({
     return initial;
   });
 
-  console.log('assertionsByRequest123:', assertionsByRequest);
-
   const [selectedEnvironment, setSelectedEnvironment] = useState<string>(
     chain?.environmentId || activeEnvironment?.id || '',
   );
@@ -452,8 +450,6 @@ export function RequestChainEditor({
   );
   const [editingRequestId, setEditingRequestId] = useState<string | null>(null);
   const [executionLogs, setExecutionLogs] = useState<ExecutionLog[]>([]);
-
-  console.log('executionLogs123:', executionLogs);
 
   const [extractedVariables, setExtractedVariables] = useState<
     Record<string, any>
@@ -1518,8 +1514,6 @@ export function RequestChainEditor({
                 originalIndex,
                 allExtractedVarsInCurrentExecution,
               );
-
-            console.log('request:', request);
 
             log = await executeSingleRequest(
               request,

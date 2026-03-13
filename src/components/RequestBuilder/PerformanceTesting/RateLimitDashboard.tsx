@@ -1,115 +1,119 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 import {
-    ColumnDef,
-    ExpandedState,
-    SortingState,
-    flexRender,
-    getCoreRowModel,
-    getExpandedRowModel,
-    getFilteredRowModel,
-    getSortedRowModel,
-    useReactTable,
-} from "@tanstack/react-table";
+  ColumnDef,
+  ExpandedState,
+  SortingState,
+  flexRender,
+  getCoreRowModel,
+  getExpandedRowModel,
+  getFilteredRowModel,
+  getSortedRowModel,
+  useReactTable,
+} from '@tanstack/react-table';
 import {
-    Bar,
-    BarChart,
-    CartesianGrid,
-    Cell,
-    Legend,
-    Line,
-    LineChart,
-    Pie,
-    PieChart,
-    ReferenceLine,
-    ResponsiveContainer,
-    Tooltip,
-    XAxis,
-    YAxis,
-} from "recharts";
-import * as Dialog from "@radix-ui/react-dialog";
-import { Button } from "@/components/ui/button";
-import jsPDF from "jspdf";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts';
+import * as Dialog from '@radix-ui/react-dialog';
+import { Button } from '@/components/ui/button';
+import jsPDF from 'jspdf';
 
-
-
-type TestStatus = "COMPLETED" | "FAILED" | "RUNNING" | "CANCELLED" | "STOPPED" | string;
+type TestStatus =
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'RUNNING'
+  | 'CANCELLED'
+  | 'STOPPED'
+  | string;
 
 type RequestHeaders = Record<string, string | number | boolean | undefined>;
 type ResponseHeaders = Record<string, string | number | boolean | undefined>;
 
 export type RateLimitSummary = {
-    id: string;
-    status: TestStatus;
-    startTime: string;
-    endTime: string;
-    totalRequests: number;
-    successfulRequests: number;
-    failedRequests: number;
-    rateLimitDetected: boolean;
-    rateLimitThreshold: number;
-    avgResponseTime: number;
-    maxResponseTime: number;
-    minResponseTime: number;
-    p50ResponseTime: number;
-    p90ResponseTime: number;
-    p95ResponseTime: number;
-    p99ResponseTime: number;
-    avgTtfb: number;
-    avgDownloadSize: number;
-    requestsPerSecond: number;
-    throughput: number;
-    totalDuration: number;
+  id: string;
+  status: TestStatus;
+  startTime: string;
+  endTime: string;
+  totalRequests: number;
+  successfulRequests: number;
+  failedRequests: number;
+  rateLimitDetected: boolean;
+  rateLimitThreshold: number;
+  avgResponseTime: number;
+  maxResponseTime: number;
+  minResponseTime: number;
+  p50ResponseTime: number;
+  p90ResponseTime: number;
+  p95ResponseTime: number;
+  p99ResponseTime: number;
+  avgTtfb: number;
+  avgDownloadSize: number;
+  requestsPerSecond: number;
+  throughput: number;
+  totalDuration: number;
 };
 export type typeColors = {
-    critical: string;
-    warning: string;
-    info: string;
-    success: string;
-}
-
-export type RateLimitRequest = {
-    id: string;
-    url: string;
-    method: string;
-    statusCode: number;
-    responseTime: number;
-    size: number;
-    success: boolean;
-    requestHeaders: RequestHeaders;
-    responseHeaders: ResponseHeaders;
-    responseBody: string;
-    requestCurl: string;
-    dnsTime: number;
-    tcpTime: number;
-    tlsTime: number;
-    ttfbTime: number;
-    timestamp: string;
+  critical: string;
+  warning: string;
+  info: string;
+  success: string;
 };
 
-type StatusFilter = "all" | "success" | "failure" | string;
+export type RateLimitRequest = {
+  id: string;
+  url: string;
+  method: string;
+  statusCode: number;
+  responseTime: number;
+  size: number;
+  success: boolean;
+  requestHeaders: RequestHeaders;
+  responseHeaders: ResponseHeaders;
+  responseBody: string;
+  requestCurl: string;
+  dnsTime: number;
+  tcpTime: number;
+  tlsTime: number;
+  ttfbTime: number;
+  timestamp: string;
+};
+
+type StatusFilter = 'all' | 'success' | 'failure' | string;
 type RangeFilter = { min: string; max: string };
 
 type TimelinePoint = {
-    index: number;
-    responseTime: number;
-    ttfb: number;
-    timestamp: string;
+  index: number;
+  responseTime: number;
+  ttfb: number;
+  timestamp: string;
 };
 
 type StatusSlice = {
-    name: string;
-    value: number;
-    color: string;
+  name: string;
+  value: number;
+  color: string;
 };
 
 type TimingSlice = {
-    name: string;
-    value: number;
+  name: string;
+  value: number;
 };
 
 export type RateLimitDashboardProps = {
-    summary: RateLimitSummary;
-    requests: RateLimitRequest[];
+  summary: RateLimitSummary;
+  requests: RateLimitRequest[];
 };
 
 /* =========================
@@ -117,112 +121,120 @@ export type RateLimitDashboardProps = {
 ========================= */
 
 function exportToExcel(data: RateLimitRequest[]) {
-    const headers = ["No.", "Method", "URL", "Timestamp", "TTFB (ms)", "Response Time (ms)", "Size (bytes)", "Status"];
+  const headers = [
+    'No.',
+    'Method',
+    'URL',
+    'Timestamp',
+    'TTFB (ms)',
+    'Response Time (ms)',
+    'Size (bytes)',
+    'Status',
+  ];
 
-    const rows = data.map((req, idx) => [
-        String(idx + 1),
-        req.method,
-        req.url,
-        new Date(req.timestamp).toLocaleString(),
-        String(req.ttfbTime),
-        String(req.responseTime),
-        String(req.size),
-        String(req.statusCode),
-        String(req.requestCurl),
-        String(req.dnsTime),
-        String(req.tcpTime),
-        String(req.tlsTime),
-        String(req.ttfbTime),
-    ]);
+  const rows = data.map((req, idx) => [
+    String(idx + 1),
+    req.method,
+    req.url,
+    new Date(req.timestamp).toLocaleString(),
+    String(req.ttfbTime),
+    String(req.responseTime),
+    String(req.size),
+    String(req.statusCode),
+    String(req.requestCurl),
+    String(req.dnsTime),
+    String(req.tcpTime),
+    String(req.tlsTime),
+    String(req.ttfbTime),
+  ]);
 
-    const csvContent = [headers, ...rows]
-        .map((row) =>
-            row
-                .map((cell) => {
-                    const s = String(cell ?? "");
-                    if (/[,"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-                    return s;
-                })
-                .join(",")
-        )
-        .join("\n");
+  const csvContent = [headers, ...rows]
+    .map((row) =>
+      row
+        .map((cell) => {
+          const s = String(cell ?? '');
+          if (/[,"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+          return s;
+        })
+        .join(','),
+    )
+    .join('\n');
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `rate-limit-test-${Date.now()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rate-limit-test-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function exportToPDF(data: RateLimitRequest[], summary: RateLimitSummary) {
-    const doc = new jsPDF({
-        orientation: "portrait",
-        unit: "pt",
-        format: "a4",
-    });
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'pt',
+    format: 'a4',
+  });
 
-    const marginX = 40;
-    let y = 40;
+  const marginX = 40;
+  let y = 40;
 
-    const lineHeight = 16;
-    const pageHeight = doc.internal.pageSize.height;
+  const lineHeight = 16;
+  const pageHeight = doc.internal.pageSize.height;
 
-    const addLine = (text: string, bold = false) => {
-        if (y > pageHeight - 40) {
-            doc.addPage();
-            y = 40;
-        }
+  const addLine = (text: string, bold = false) => {
+    if (y > pageHeight - 40) {
+      doc.addPage();
+      y = 40;
+    }
 
-        doc.setFont("helvetica", bold ? "bold" : "normal");
-        const split = doc.splitTextToSize(text, 520);
-        doc.text(split, marginX, y);
-        y += split.length * lineHeight;
-    };
+    doc.setFont('helvetica', bold ? 'bold' : 'normal');
+    const split = doc.splitTextToSize(text, 520);
+    doc.text(split, marginX, y);
+    y += split.length * lineHeight;
+  };
 
-    // ===== HEADER =====
-    doc.setFontSize(18);
-    addLine("RATE LIMIT TEST REPORT", true);
-    y += 10;
+  doc.setFontSize(18);
+  addLine('RATE LIMIT TEST REPORT', true);
+  y += 10;
 
-    doc.setFontSize(11);
+  doc.setFontSize(11);
 
-    addLine(`Test ID: ${summary.id}`);
-    addLine(`Status: ${summary.status}`);
-    addLine(
-        `Duration: ${new Date(summary.startTime).toLocaleString()} - ${new Date(
-            summary.endTime
-        ).toLocaleString()}`
-    );
+  addLine(`Test ID: ${summary.id}`);
+  addLine(`Status: ${summary.status}`);
+  addLine(
+    `Duration: ${new Date(summary.startTime).toLocaleString()} - ${new Date(
+      summary.endTime,
+    ).toLocaleString()}`,
+  );
 
-    y += 10;
+  y += 10;
 
-    // ===== SUMMARY =====
-    addLine("SUMMARY", true);
-    addLine(`Total Requests: ${summary.totalRequests}`);
-    addLine(`Successful: ${summary.successfulRequests}`);
-    addLine(`Rate Limit Detected: ${summary.rateLimitDetected ? "YES" : "NO"}`);
-    addLine(`Threshold: ${summary.rateLimitThreshold}`);
-    addLine(`Avg Response Time: ${summary.avgResponseTime}ms`);
-    addLine(`Requests/Second: ${summary.requestsPerSecond}`);
+  // ===== SUMMARY =====
+  addLine('SUMMARY', true);
+  addLine(`Total Requests: ${summary.totalRequests}`);
+  addLine(`Successful: ${summary.successfulRequests}`);
+  addLine(`Rate Limit Detected: ${summary.rateLimitDetected ? 'YES' : 'NO'}`);
+  addLine(`Threshold: ${summary.rateLimitThreshold}`);
+  addLine(`Avg Response Time: ${summary.avgResponseTime}ms`);
+  addLine(`Requests/Second: ${summary.requestsPerSecond}`);
 
-    y += 10;
+  y += 10;
 
-    // ===== DETAILS =====
-    addLine("DETAILED REQUESTS", true);
+  // ===== DETAILS =====
+  addLine('DETAILED REQUESTS', true);
 
-    data.forEach((req, idx) => {
-        addLine(`${idx + 1}. ${req.method} ${req.url}`, true);
-        addLine(`Status: ${req.statusCode}`);
-        addLine(`Response Time: ${req.responseTime}ms`);
-        addLine(`TTFB: ${req.ttfbTime}ms`);
-        addLine(`Size: ${req.size} bytes`);
-        addLine(`Time: ${new Date(req.timestamp).toLocaleString()}`);
-        y += 6;
-    });
+  data.forEach((req, idx) => {
+    addLine(`${idx + 1}. ${req.method} ${req.url}`, true);
+    addLine(`Status: ${req.statusCode}`);
+    addLine(`Response Time: ${req.responseTime}ms`);
+    addLine(`TTFB: ${req.ttfbTime}ms`);
+    addLine(`Size: ${req.size} bytes`);
+    addLine(`Time: ${new Date(req.timestamp).toLocaleString()}`);
+    y += 6;
+  });
 
-    doc.save(`rate-limit-test-report-${Date.now()}.pdf`);
+  doc.save(`rate-limit-test-report-${Date.now()}.pdf`);
 }
 
 /* =========================
@@ -230,214 +242,268 @@ function exportToPDF(data: RateLimitRequest[], summary: RateLimitSummary) {
 ========================= */
 
 function safeParseJson(text: string): unknown {
-    try {
-        return JSON.parse(text);
-    } catch {
-        return text;
-    }
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
-// IMPORTANT: avoid dynamic tailwind classes like bg-${color}-...
 function getStatusBadgeClasses(status: number) {
-    if (status === 200) return "bg-green-500/10 text-green-400";
-    if (status >= 400 && status < 500) return "bg-yellow-500/10 text-yellow-400";
-    return "bg-red-500/10 text-red-400";
+  if (status === 200) return 'bg-green-500/10 text-green-400';
+  if (status >= 400 && status < 500) return 'bg-yellow-500/10 text-yellow-400';
+  return 'bg-red-500/10 text-red-400';
 }
 
 /* =========================
    Component
 ========================= */
 
-export default function RateLimitDashboard({ summary, requests }: RateLimitDashboardProps): JSX.Element {
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-    const [searchQuery, setSearchQuery] = useState<string>("");
-    const [ttfbFilter, setTtfbFilter] = useState<RangeFilter>({ min: "", max: "" });
-    const [responseTimeFilter, setResponseTimeFilter] = useState<RangeFilter>({ min: "", max: "" });
-    const [selectedRequest, setSelectedRequest] = useState<RateLimitRequest | null>(null);
+export default function RateLimitDashboard({
+  summary,
+  requests,
+}: RateLimitDashboardProps): JSX.Element {
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [ttfbFilter, setTtfbFilter] = useState<RangeFilter>({
+    min: '',
+    max: '',
+  });
+  const [responseTimeFilter, setResponseTimeFilter] = useState<RangeFilter>({
+    min: '',
+    max: '',
+  });
+  const [selectedRequest, setSelectedRequest] =
+    useState<RateLimitRequest | null>(null);
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [expanded, setExpanded] = useState<ExpandedState>({});
 
+  const [openSmartInsights, setOpenSmartInsights] = useState(false);
 
-    // console.log(selectedRequest, "selectedRequest");
+  const handleSmartInsightsToggle = () => {
+    setOpenSmartInsights((prev) => !prev);
+  };
 
-    const [sorting, setSorting] = useState<SortingState>([]);
-    const [expanded, setExpanded] = useState<ExpandedState>({});
+  const filteredData = useMemo<RateLimitRequest[]>(() => {
+    return requests.filter((req) => {
+      const matchesStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'success' && req.success) ||
+        (statusFilter === 'failure' && !req.success) ||
+        statusFilter === String(req.statusCode);
 
-    const [openSmartInsights, setOpenSmartInsights] = useState(false);
+      const q = searchQuery.trim().toLowerCase();
+      const matchesSearch =
+        q === '' ||
+        req.url.toLowerCase().includes(q) ||
+        req.method.toLowerCase().includes(q);
 
-    const handleSmartInsightsToggle = () => {
-        setOpenSmartInsights((prev) => !prev);
-    };
+      const tMin = ttfbFilter.min ? Number(ttfbFilter.min) : null;
+      const tMax = ttfbFilter.max ? Number(ttfbFilter.max) : null;
+      const matchesTtfb =
+        (tMin === null || req.ttfbTime >= tMin) &&
+        (tMax === null || req.ttfbTime <= tMax);
 
-    const filteredData = useMemo<RateLimitRequest[]>(() => {
-        return requests.filter((req) => {
-            const matchesStatus =
-                statusFilter === "all" ||
-                (statusFilter === "success" && req.success) ||
-                (statusFilter === "failure" && !req.success) ||
-                statusFilter === String(req.statusCode);
+      const rMin = responseTimeFilter.min
+        ? Number(responseTimeFilter.min)
+        : null;
+      const rMax = responseTimeFilter.max
+        ? Number(responseTimeFilter.max)
+        : null;
+      const matchesResponse =
+        (rMin === null || req.responseTime >= rMin) &&
+        (rMax === null || req.responseTime <= rMax);
 
-            const q = searchQuery.trim().toLowerCase();
-            const matchesSearch = q === "" || req.url.toLowerCase().includes(q) || req.method.toLowerCase().includes(q);
+      return matchesStatus && matchesSearch && matchesTtfb && matchesResponse;
+    });
+  }, [requests, statusFilter, searchQuery, ttfbFilter, responseTimeFilter]);
 
-            const tMin = ttfbFilter.min ? Number(ttfbFilter.min) : null;
-            const tMax = ttfbFilter.max ? Number(ttfbFilter.max) : null;
-            const matchesTtfb = (tMin === null || req.ttfbTime >= tMin) && (tMax === null || req.ttfbTime <= tMax);
+  const timelineData = useMemo<TimelinePoint[]>(
+    () =>
+      requests.map((req, idx) => ({
+        index: idx + 1,
+        responseTime: req.responseTime,
+        ttfb: req.ttfbTime,
+        timestamp: new Date(req.timestamp).toLocaleTimeString(),
+      })),
+    [requests],
+  );
 
-            const rMin = responseTimeFilter.min ? Number(responseTimeFilter.min) : null;
-            const rMax = responseTimeFilter.max ? Number(responseTimeFilter.max) : null;
-            const matchesResponse = (rMin === null || req.responseTime >= rMin) && (rMax === null || req.responseTime <= rMax);
+  const statusDistribution = useMemo<StatusSlice[]>(() => {
+    const slices: StatusSlice[] = [
+      {
+        name: '200 OK',
+        value: requests.filter((r) => r.statusCode === 200).length,
+        color: '#10b981',
+      },
+      {
+        name: '4xx Errors',
+        value: requests.filter((r) => r.statusCode >= 400 && r.statusCode < 500)
+          .length,
+        color: '#f59e0b',
+      },
+      {
+        name: '5xx Errors',
+        value: requests.filter((r) => r.statusCode >= 500).length,
+        color: '#ef4444',
+      },
+    ];
+    return slices.filter((s) => s.value > 0);
+  }, [requests]);
 
-            return matchesStatus && matchesSearch && matchesTtfb && matchesResponse;
-        });
-    }, [requests, statusFilter, searchQuery, ttfbFilter, responseTimeFilter]);
+  const timingBreakdown = useMemo<TimingSlice[]>(() => {
+    const avg = (get: (r: RateLimitRequest) => number) =>
+      requests.reduce((acc, r) => acc + get(r), 0) / (requests.length || 1);
 
-    const timelineData = useMemo<TimelinePoint[]>(
-        () =>
-            requests.map((req, idx) => ({
-                index: idx + 1,
-                responseTime: req.responseTime,
-                ttfb: req.ttfbTime,
-                timestamp: new Date(req.timestamp).toLocaleTimeString(),
-            })),
-        [requests]
-    );
+    const avgDns = avg((r) => r.dnsTime);
+    const avgTcp = avg((r) => r.tcpTime);
+    const avgTls = avg((r) => r.tlsTime);
+    const avgTtfb = avg((r) => r.ttfbTime);
+    const avgResp = avg((r) => r.responseTime);
 
-    const statusDistribution = useMemo<StatusSlice[]>(() => {
-        const slices: StatusSlice[] = [
-            { name: "200 OK", value: requests.filter((r) => r.statusCode === 200).length, color: "#10b981" },
-            { name: "4xx Errors", value: requests.filter((r) => r.statusCode >= 400 && r.statusCode < 500).length, color: "#f59e0b" },
-            { name: "5xx Errors", value: requests.filter((r) => r.statusCode >= 500).length, color: "#ef4444" },
-        ];
-        return slices.filter((s) => s.value > 0);
-    }, [requests]);
+    return [
+      { name: 'DNS', value: avgDns },
+      { name: 'TCP', value: avgTcp },
+      { name: 'TLS', value: avgTls },
+      { name: 'TTFB', value: avgTtfb },
+      { name: 'Transfer', value: Math.max(0, avgResp - avgTtfb) },
+    ];
+  }, [requests]);
 
-    const timingBreakdown = useMemo<TimingSlice[]>(() => {
-        const avg = (get: (r: RateLimitRequest) => number) => requests.reduce((acc, r) => acc + get(r), 0) / (requests.length || 1);
+  const columns = useMemo<ColumnDef<RateLimitRequest>[]>(() => {
+    return [
+      {
+        id: 'index',
+        header: 'No.',
+        cell: ({ row }) => (
+          <span className='font-mono text-xs'>{row.index + 1}</span>
+        ),
+        size: 50,
+      },
+      {
+        accessorKey: 'method',
+        header: 'Method',
+        cell: ({ getValue }) => (
+          <span className='px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded font-mono text-xs font-bold'>
+            {String(getValue())}
+          </span>
+        ),
+        size: 80,
+      },
+      {
+        accessorKey: 'url',
+        header: 'URL',
+        cell: ({ getValue }) => {
+          const v = String(getValue() ?? '');
+          return (
+            <span
+              className='text-xs font-mono truncate block max-w-[200px] md:max-w-[400px]'
+              title={v}
+            >
+              {v.length > 25 ? v.substring(0, 25) + '...' : v}
+            </span>
+          );
+        },
+      },
+      {
+        accessorKey: 'timestamp',
+        header: 'Timestamp',
+        cell: ({ getValue }) => (
+          <span className='text-xs font-mono'>
+            {new Date(String(getValue())).toLocaleTimeString()}
+          </span>
+        ),
+        size: 100,
+      },
+      {
+        accessorKey: 'ttfbTime',
+        header: 'TTFB',
+        cell: ({ getValue }) => {
+          const n = Number(getValue());
+          const cls =
+            n > 300
+              ? 'text-red-400'
+              : n > 200
+                ? 'text-yellow-400'
+                : 'text-green-400';
+          return <span className={`text-xs font-mono ${cls}`}>{n}ms</span>;
+        },
+        size: 80,
+      },
+      {
+        accessorKey: 'responseTime',
+        header: 'Response',
+        cell: ({ getValue }) => {
+          const n = Number(getValue());
+          const cls =
+            n > 300
+              ? 'text-red-400'
+              : n > 200
+                ? 'text-yellow-400'
+                : 'text-green-400';
+          return <span className={`text-xs font-mono ${cls}`}>{n}ms</span>;
+        },
+        size: 80,
+      },
+      {
+        accessorKey: 'size',
+        header: 'Size',
+        cell: ({ getValue }) => {
+          const n = Number(getValue());
+          return (
+            <span className='text-xs font-mono'>{(n / 1024).toFixed(2)}KB</span>
+          );
+        },
+        size: 80,
+      },
+      {
+        accessorKey: 'statusCode',
+        header: 'Status',
+        cell: ({ getValue }) => {
+          const status = Number(getValue());
+          return (
+            <span
+              className={`px-2 py-0.5 rounded font-mono text-xs font-bold ${getStatusBadgeClasses(status)}`}
+            >
+              {status}
+            </span>
+          );
+        },
+        size: 80,
+      },
+    ];
+  }, []);
 
-        const avgDns = avg((r) => r.dnsTime);
-        const avgTcp = avg((r) => r.tcpTime);
-        const avgTls = avg((r) => r.tlsTime);
-        const avgTtfb = avg((r) => r.ttfbTime);
-        const avgResp = avg((r) => r.responseTime);
+  const table = useReactTable({
+    data: filteredData,
+    columns,
+    state: { sorting, expanded },
+    onSortingChange: setSorting,
+    onExpandedChange: setExpanded,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+  });
 
-        return [
-            { name: "DNS", value: avgDns },
-            { name: "TCP", value: avgTcp },
-            { name: "TLS", value: avgTls },
-            { name: "TTFB", value: avgTtfb },
-            { name: "Transfer", value: Math.max(0, avgResp - avgTtfb) },
-        ];
-    }, [requests]);
+  const formatCurl = (curl?: string) => {
+    if (!curl) return '';
 
-    const columns = useMemo<ColumnDef<RateLimitRequest>[]>(() => {
-        return [
-            { id: "index", header: "No.", cell: ({ row }) => <span className="font-mono text-xs">{row.index + 1}</span>, size: 50 },
-            {
-                accessorKey: "method",
-                header: "Method",
-                cell: ({ getValue }) => (
-                    <span className="px-2 py-0.5 bg-cyan-500/10 text-cyan-400 rounded font-mono text-xs font-bold">
-                        {String(getValue())}
-                    </span>
-                ),
-                size: 80,
-            },
-            {
-                accessorKey: "url",
-                header: "URL",
-                cell: ({ getValue }) => {
-                    const v = String(getValue() ?? "");
-                    return (
-                        <span className="text-xs font-mono truncate block max-w-[200px] md:max-w-[400px]" title={v}>
-                            {v.length > 25 ? v.substring(0, 25) + "..." : v}
-                        </span>
-                    );
-                },
-            },
-            {
-                accessorKey: "timestamp",
-                header: "Timestamp",
-                cell: ({ getValue }) => <span className="text-xs font-mono">{new Date(String(getValue())).toLocaleTimeString()}</span>,
-                size: 100,
-            },
-            {
-                accessorKey: "ttfbTime",
-                header: "TTFB",
-                cell: ({ getValue }) => {
-                    const n = Number(getValue());
-                    const cls = n > 300 ? "text-red-400" : n > 200 ? "text-yellow-400" : "text-green-400";
-                    return <span className={`text-xs font-mono ${cls}`}>{n}ms</span>;
-                },
-                size: 80,
-            },
-            {
-                accessorKey: "responseTime",
-                header: "Response",
-                cell: ({ getValue }) => {
-                    const n = Number(getValue());
-                    const cls = n > 300 ? "text-red-400" : n > 200 ? "text-yellow-400" : "text-green-400";
-                    return <span className={`text-xs font-mono ${cls}`}>{n}ms</span>;
-                },
-                size: 80,
-            },
-            {
-                accessorKey: "size",
-                header: "Size",
-                cell: ({ getValue }) => {
-                    const n = Number(getValue());
-                    return <span className="text-xs font-mono">{(n / 1024).toFixed(2)}KB</span>;
-                },
-                size: 80,
-            },
-            {
-                accessorKey: "statusCode",
-                header: "Status",
-                cell: ({ getValue }) => {
-                    const status = Number(getValue());
-                    return (
-                        <span className={`px-2 py-0.5 rounded font-mono text-xs font-bold ${getStatusBadgeClasses(status)}`}>
-                            {status}
-                        </span>
-                    );
-                },
-                size: 80,
-            },
-        ];
-    }, []);
+    const parts = curl
+      .replace(/\s+-/g, '\n  -')
+      .replace(/^curl\s+/, 'curl \\\n  ');
 
-    const table = useReactTable({
-        data: filteredData,
-        columns,
-        state: { sorting, expanded },
-        onSortingChange: setSorting,
-        onExpandedChange: setExpanded,
-        getCoreRowModel: getCoreRowModel(),
-        getSortedRowModel: getSortedRowModel(),
-        getFilteredRowModel: getFilteredRowModel(),
-        getExpandedRowModel: getExpandedRowModel(),
+    const lines = parts.split('\n').map((line, i, arr) => {
+      if (i === arr.length - 1) return line;
+      return line + ' \\';
     });
 
+    return lines.join('\n');
+  };
 
-    const formatCurl = (curl?: string) => {
-        if (!curl) return "";
-
-        // Split by - flags while keeping them
-        const parts = curl
-            .replace(/\s+-/g, "\n  -") // break before each flag
-            .replace(/^curl\s+/, "curl \\\n  "); // first line
-
-        // Add backslash continuation
-        const lines = parts.split("\n").map((line, i, arr) => {
-            if (i === arr.length - 1) return line; // last line no \
-            return line + " \\";
-        });
-
-        return lines.join("\n");
-    };
-
-
-    return (
-        <div className="min-h-screen bg-[#0a0a0a] text-gray-100 rounded-lg overflow-hidden">
-            <style>{`
+  return (
+    <div className='min-h-screen bg-[#0a0a0a] text-gray-100 rounded-lg overflow-hidden'>
+      <style>{`
         body{font-family:'Outfit',}
         .font-mono{font-family:'JetBrains Mono',monospace}
         .card{background:linear-gradient(135deg,rgba(20,20,20,.95),rgba(30,30,30,.9));border:1px solid rgba(255,255,255,.05);border-radius:12px;padding:1.5rem;backdrop-filter:blur(10px);box-shadow:0 8px 32px rgba(0,0,0,.4);transition:all .3s ease}
@@ -465,825 +531,1359 @@ export default function RateLimitDashboard({ summary, requests }: RateLimitDashb
         .scrollbar-thin::-webkit-scrollbar-thumb:hover{background:rgba(6,182,212,.5)}
       `}</style>
 
-            {/* Header */}
-            <div className="border-b border-gray-800 bg-gradient-to-r from-gray-900 via-gray-900 to-cyan-900/20">
-                <div className="container mx-auto px-4 py-6">
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-                                Rate Limit Performance Test
-                            </h1>
-                            <p className="text-sm text-gray-400 font-mono">Test ID: {summary.id}</p>
-                        </div>
-                        <div className="flex flex-col text-center flex-wrap gap-5">
-                            <span
-                                className={`status-badge ${summary.status === "COMPLETED" ? "status-completed" : "status-warning"
-                                    }`}
-                            >
-                                {summary.status}
-                            </span>
-                            <button
-                                onClick={handleSmartInsightsToggle}
-                                className={`status-badge ${summary.status === "COMPLETED" ? "status-completed" : "status-warning"
-                                    }`}
-                            >
-                                Smart insights
-                            </button>
-
-                            {summary.rateLimitDetected && <span className="status-badge status-warning">Rate Limit Hit</span>}
-
-                        </div>
-
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-4 text-xs font-mono text-gray-400">
-                        <span>Start: {new Date(summary.startTime).toLocaleString()}</span>
-                        <span>•</span>
-                        <span>End: {new Date(summary.endTime).toLocaleString()}</span>
-                        <span>•</span>
-                        <span>
-                            Duration:{" "}
-                            {((new Date(summary.endTime).getTime() - new Date(summary.startTime).getTime()) / 1000).toFixed(2)}s
-                        </span>
-                    </div>
-                </div>
+      {/* Header */}
+      <div className='border-b border-gray-800 bg-gradient-to-r from-gray-900 via-gray-900 to-cyan-900/20'>
+        <div className='container mx-auto px-4 py-6'>
+          <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
+            <div>
+              <h1 className='text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent'>
+                Rate Limit Performance Test
+              </h1>
+              <p className='text-sm text-gray-400 font-mono'>
+                Test ID: {summary.id}
+              </p>
             </div>
+            <div className='flex flex-col text-center flex-wrap gap-5'>
+              <span
+                className={`status-badge ${
+                  summary.status === 'COMPLETED'
+                    ? 'status-completed'
+                    : 'status-warning'
+                }`}
+              >
+                {summary.status}
+              </span>
+              <button
+                onClick={handleSmartInsightsToggle}
+                className={`status-badge ${
+                  summary.status === 'COMPLETED'
+                    ? 'status-completed'
+                    : 'status-warning'
+                }`}
+              >
+                Smart insights
+              </button>
 
-            <div className="container mx-auto px-4 py-8 grid-pattern">
-                {/* KPI Cards */}
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 animate-fadeInUp">
-                    <div className="kpi-card">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-2">Total Requests</div>
-                        <div className="text-3xl font-bold text-cyan-400">{summary.totalRequests}</div>
-                        <div className="text-xs text-gray-500 mt-1">{summary.requestsPerSecond.toFixed(2)}/sec</div>
-                    </div>
-
-                    <div className="kpi-card">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-2">Success Rate</div>
-                        <div className="text-3xl font-bold text-green-400">
-                            {((summary.successfulRequests / summary.totalRequests) * 100).toFixed(1)}%
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                            {summary.successfulRequests}/{summary.totalRequests}
-                        </div>
-                    </div>
-
-                    <div className="kpi-card">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-2">Failed Requests</div>
-                        <div className={`text-3xl font-bold ${summary.failedRequests > 0 ? "text-red-400" : "text-gray-400"}`}>
-                            {summary.failedRequests}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                            {summary.failedRequests > 0
-                                ? `${((summary.failedRequests / summary.totalRequests) * 100).toFixed(1)}%`
-                                : "None"}
-                        </div>
-                    </div>
-
-                    <div className="kpi-card">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-2">Avg Response</div>
-                        <div className="text-3xl font-bold text-blue-400">{summary.avgResponseTime.toFixed(0)}ms</div>
-                        <div className="text-xs text-gray-500 mt-1">TTFB: {summary.avgTtfb}ms</div>
-                    </div>
-
-                    <div className="kpi-card">
-                        <div className="text-xs font-bold text-gray-400 uppercase mb-2">Data Transfer</div>
-                        <div className="text-3xl font-bold text-purple-400">{(summary.avgDownloadSize / 1024).toFixed(1)}KB</div>
-                        <div className="text-xs text-gray-500 mt-1">Total transferred</div>
-                    </div>
-                </div>
-
-                {/* Charts Row 1 */}
-                <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8">
-                    {/* Timeline Chart */}
-                    <div className="lg:col-span-2 card animate-fadeInUp" style={{ animationDelay: "0.1s" }}>
-                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Response Time Timeline</h3>
-                        <div className="chart-container">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <LineChart data={timelineData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis
-                                        dataKey="index"
-                                        stroke="#6b7280"
-                                        style={{ fontSize: "11px" }}
-                                        label={{ value: "Request #", position: "insideBottom", offset: -5, fill: "#9ca3af" }}
-                                    />
-                                    <YAxis
-                                        stroke="#6b7280"
-                                        style={{ fontSize: "11px" }}
-                                        label={{ value: "Time (ms)", angle: -90, position: "insideLeft", fill: "#9ca3af" }}
-                                    />
-                                    <Tooltip
-                                        contentStyle={{
-                                            background: "rgba(20, 20, 20, 0.95)",
-                                            border: "1px solid rgba(6, 182, 212, 0.3)",
-                                            borderRadius: "8px",
-                                            fontSize: "12px",
-                                        }}
-                                    />
-                                    <Legend wrapperStyle={{ fontSize: "12px" }} />
-                                    <ReferenceLine
-                                        y={summary.avgResponseTime}
-                                        stroke="#f59e0b"
-                                        strokeDasharray="3 3"
-                                        label={{ value: "Avg", fill: "#f59e0b", fontSize: 10 }}
-                                    />
-                                    <Line type="monotone" dataKey="responseTime" stroke="#06b6d4" strokeWidth={2} dot={{ r: 3 }} name="Response Time" />
-                                    <Line type="monotone" dataKey="ttfb" stroke="#8b5cf6" strokeWidth={2} dot={{ r: 3 }} name="TTFB" />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
-                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.3s" }}>
-                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Timing Breakdown (Avg)</h3>
-                        <div className="chart-container">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <BarChart data={timingBreakdown} layout="horizontal">
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis type="number" stroke="#6b7280" style={{ fontSize: "11px" }} />
-                                    <YAxis dataKey="name" type="category" stroke="#6b7280" style={{ fontSize: "11px" }} width={80} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            background: "rgba(20, 20, 20, 0.95)",
-                                            border: "1px solid rgba(6, 182, 212, 0.3)",
-                                            borderRadius: "8px",
-                                            fontSize: "12px",
-                                        }}
-                                    />
-                                    <Bar dataKey="value" fill="#06b6d4" radius={[0, 4, 4, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-                    {/* Status Distribution */}
-                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.2s" }}>
-                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Status Distribution</h3>
-                        <div className="chart-container">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={statusDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {statusDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip
-                                        contentStyle={{
-                                            background: "rgba(20, 20, 20, 0.95)",
-                                            border: "1px solid rgba(6, 182, 212, 0.3)",
-                                            borderRadius: "8px",
-                                            fontSize: "12px",
-                                        }}
-                                    />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-                </div>
-                {/* Charts Row 2 */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
-                    {/* Response Time Analysis */}
-                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.4s" }}>
-                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Response Time Analysis</h3>
-
-                        <div className="grid grid-cols-2 gap-3 mb-4">
-                            <div className="bg-green-500/10 border border-green-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">Min Response</div>
-                                <div className="text-xl font-bold text-green-400">{summary.minResponseTime}ms</div>
-                            </div>
-                            <div className="bg-red-500/10 border border-red-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">Max Response</div>
-                                <div className="text-xl font-bold text-red-400">{summary.maxResponseTime}ms</div>
-                            </div>
-                            <div className="bg-blue-500/10 border border-blue-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">P50 (Median)</div>
-                                <div className="text-xl font-bold text-blue-400">{summary.p50ResponseTime}ms</div>
-                            </div>
-                            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">P90</div>
-                                <div className="text-xl font-bold text-yellow-400">{summary.p90ResponseTime}ms</div>
-                            </div>
-                            <div className="bg-orange-500/10 border border-orange-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">P95</div>
-                                <div className="text-xl font-bold text-orange-400">{summary.p95ResponseTime}ms</div>
-                            </div>
-                            <div className="bg-pink-500/10 border border-pink-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">P99</div>
-                                <div className="text-xl font-bold text-pink-400">{summary.p99ResponseTime.toFixed(2)}ms</div>
-                            </div>
-                            <div className="bg-pink-500/10 border border-pink-500/30 rounded p-2">
-                                <div className="text-xs text-gray-400 mb-1">Throughput</div>
-                                <div className="text-xl font-bold text-pink-400">{summary.throughput.toFixed(2)}ms</div>
-                            </div>
-                        </div>
-                    </div>
-                    {/* Timing Breakdown */}
-                    <div className="card animate-fadeInUp" style={{ animationDelay: "0.3s" }}>
-                        <h3 className="text-lg font-bold mb-4 text-cyan-400">Distribution</h3>
-                        <div className="chart-container">
-                            <ResponsiveContainer width="100%" height={140}>
-                                <BarChart
-                                    data={[
-                                        { range: "<200ms", count: requests.filter((r) => r.responseTime < 200).length },
-                                        { range: "200-250ms", count: requests.filter((r) => r.responseTime >= 200 && r.responseTime < 250).length },
-                                        { range: "250-300ms", count: requests.filter((r) => r.responseTime >= 250 && r.responseTime < 300).length },
-                                        { range: ">300ms", count: requests.filter((r) => r.responseTime >= 300).length },
-                                    ]}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                                    <XAxis dataKey="range" stroke="#6b7280" style={{ fontSize: "11px" }} />
-                                    <YAxis stroke="#6b7280" style={{ fontSize: "11px" }} />
-                                    <Tooltip
-                                        contentStyle={{
-                                            background: "rgba(20, 20, 20, 0.95)",
-                                            border: "1px solid rgba(6, 182, 212, 0.3)",
-                                            borderRadius: "8px",
-                                            fontSize: "12px",
-                                        }}
-                                    />
-                                    <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </div>
-
-
-                </div>
-
-                {/* Table */}
-                <div className="card animate-fadeInUp" style={{ animationDelay: "0.5s" }}>
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-                        <h3 className="text-lg font-bold text-cyan-400">Request Details</h3>
-                        <div className="flex flex-wrap gap-2">
-                            <button onClick={() => exportToExcel(filteredData)} className="text-xs">
-                                Export Excel
-                            </button>
-                            <button onClick={() => exportToPDF(filteredData, summary)} className="text-xs">
-                                Export PDF
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 mb-2">Search</label>
-                            <input
-                                type="text"
-                                placeholder="URL or method..."
-                                value={searchQuery}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                                className="w-full"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 mb-2">Status</label>
-                            <select
-                                value={statusFilter}
-                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value)}
-                                className="w-full"
-                            >
-                                <option value="all">All</option>
-                                <option value="success">Success</option>
-                                <option value="failure">Failure</option>
-                                <option value="200">200</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 mb-2">TTFB Range (ms)</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    placeholder="Min"
-                                    value={ttfbFilter.min}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setTtfbFilter((p) => ({ ...p, min: e.target.value }))
-                                    }
-                                    className="w-full"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="Max"
-                                    value={ttfbFilter.max}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setTtfbFilter((p) => ({ ...p, max: e.target.value }))
-                                    }
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-gray-400 mb-2">Response Time (ms)</label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="number"
-                                    placeholder="Min"
-                                    value={responseTimeFilter.min}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setResponseTimeFilter((p) => ({ ...p, min: e.target.value }))
-                                    }
-                                    className="w-full"
-                                />
-                                <input
-                                    type="number"
-                                    placeholder="Max"
-                                    value={responseTimeFilter.max}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                        setResponseTimeFilter((p) => ({ ...p, max: e.target.value }))
-                                    }
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="overflow-x-auto scrollbar-thin">
-                        <table>
-                            <thead>
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <tr key={headerGroup.id}>
-                                        {headerGroup.headers.map((header) => (
-                                            <th
-                                                key={header.id}
-                                                onClick={header.column.getToggleSortingHandler()}
-                                                className="cursor-pointer select-none"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    {flexRender(header.column.columnDef.header, header.getContext())}
-                                                    {{
-                                                        asc: " ↑",
-                                                        desc: " ↓",
-                                                    }[header.column.getIsSorted() as "asc" | "desc"] ?? null}
-                                                </div>
-                                            </th>
-                                        ))}
-                                        <th>Actions</th>
-                                    </tr>
-                                ))}
-                            </thead>
-
-                            <tbody>
-                                {table.getRowModel().rows.map((row) => (
-                                    <tr key={row.id}>
-                                        {row.getVisibleCells().map((cell) => (
-                                            <td key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                                        ))}
-                                        <td>
-                                            <button onClick={() => setSelectedRequest(row.original)} className="text-xs px-2 py-1">
-                                                View
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="mt-4 text-xs text-gray-400">
-                        Showing {filteredData.length} of {requests.length} requests
-                    </div>
-                </div>
+              {summary.rateLimitDetected && (
+                <span className='status-badge status-warning'>
+                  Rate Limit Hit
+                </span>
+              )}
             </div>
+          </div>
 
-            <Dialog.Root open={openSmartInsights} onOpenChange={setOpenSmartInsights}>
-                <Dialog.Portal>
-
-                    <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
-                    <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-5xl max-h-[80vh] overflow-y-auto scrollbar-thin">
-                        <Dialog.Close asChild>
-                            <button className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
-                                ✕
-                            </button>
-                        </Dialog.Close>
-                        <div className="container mx-auto px-4 py-8 grid-pattern">
-                            {/* Smart Insights Section */}
-                            <div className="card mb-8 animate-fadeInUp border-2 border-cyan-500/30">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
-                                        <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-cyan-400">Smart Insights</h2>
-                                        <p className="text-xs text-gray-400">AI-powered analysis for QA and Development teams</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {/* Performance Health */}
-                                    {(() => {
-                                        const avgResponseTime = summary.avgResponseTime;
-                                        const p95 = summary.p95ResponseTime;
-                                        const performanceStatus = avgResponseTime < 200 ? 'excellent' : avgResponseTime < 300 ? 'good' : avgResponseTime < 500 ? 'warning' : 'critical';
-                                        const statusColors = {
-                                            excellent: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' },
-                                            good: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' },
-                                            warning: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' },
-                                            critical: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' }
-                                        };
-                                        const colors = statusColors[performanceStatus];
-
-                                        return (
-                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                                                <div className="flex items-start gap-3">
-                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
-                                                    <div className="flex-1">
-                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Performance Health</h3>
-                                                        <p className="text-xs text-gray-300 mb-2">
-                                                            {performanceStatus === 'excellent' && 'Excellent response times! API is performing optimally.'}
-                                                            {performanceStatus === 'good' && 'Good response times. API is performing within acceptable range.'}
-                                                            {performanceStatus === 'warning' && 'Response times are elevated. Consider optimization.'}
-                                                            {performanceStatus === 'critical' && 'Critical: Response times are too high. Immediate attention needed.'}
-                                                        </p>
-                                                        <div className="text-xs text-gray-400">
-                                                            <div>Avg: <span className={`font-mono ${colors.text}`}>{avgResponseTime.toFixed(0)}ms</span></div>
-                                                            <div>P95: <span className={`font-mono ${colors.text}`}>{p95}ms</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Rate Limit Status */}
-                                    {(() => {
-                                        const rateLimitStatus = !summary.rateLimitDetected ? 'safe' : 'triggered';
-                                        const utilizationPercent = (summary.totalRequests / summary.rateLimitThreshold) * 100;
-                                        const colors = rateLimitStatus === 'safe'
-                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
-                                            : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
-
-                                        return (
-                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                                                <div className="flex items-start gap-3">
-                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
-                                                    <div className="flex-1">
-                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Rate Limit Status</h3>
-                                                        <p className="text-xs text-gray-300 mb-2">
-                                                            {rateLimitStatus === 'safe'
-                                                                ? `No rate limiting detected. Using ${utilizationPercent.toFixed(0)}% of threshold capacity.`
-                                                                : 'Rate limit was triggered during test. Requests were throttled.'}
-                                                        </p>
-                                                        <div className="text-xs text-gray-400">
-                                                            <div>Threshold: <span className={`font-mono ${colors.text}`}>{summary.rateLimitThreshold} req/window</span></div>
-                                                            <div>Actual: <span className={`font-mono ${colors.text}`}>{summary.totalRequests} requests</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Reliability Score */}
-                                    {(() => {
-                                        const successRate = (summary.successfulRequests / summary.totalRequests) * 100;
-                                        const reliabilityStatus = successRate === 100 ? 'perfect' : successRate >= 99 ? 'excellent' : successRate >= 95 ? 'good' : 'poor';
-                                        const colors = reliabilityStatus === 'perfect' || reliabilityStatus === 'excellent'
-                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
-                                            : reliabilityStatus === 'good'
-                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '⚠' }
-                                                : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
-
-                                        return (
-                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                                                <div className="flex items-start gap-3">
-                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
-                                                    <div className="flex-1">
-                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Reliability Score</h3>
-                                                        <p className="text-xs text-gray-300 mb-2">
-                                                            {reliabilityStatus === 'perfect' && 'Perfect! All requests succeeded without errors.'}
-                                                            {reliabilityStatus === 'excellent' && 'Excellent reliability. Minimal failures detected.'}
-                                                            {reliabilityStatus === 'good' && 'Good reliability but some failures occurred.'}
-                                                            {reliabilityStatus === 'poor' && 'Poor reliability. High failure rate needs investigation.'}
-                                                        </p>
-                                                        <div className="text-xs text-gray-400">
-                                                            <div>Success: <span className={`font-mono ${colors.text}`}>{successRate.toFixed(2)}%</span></div>
-                                                            <div>Failed: <span className={`font-mono ${colors.text}`}>{summary.failedRequests} requests</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Response Time Consistency */}
-                                    {(() => {
-                                        const variance = summary.maxResponseTime - summary.minResponseTime;
-                                        const variancePercent = (variance / summary.avgResponseTime) * 100;
-                                        const consistencyStatus = variancePercent < 20 ? 'excellent' : variancePercent < 50 ? 'good' : variancePercent < 100 ? 'moderate' : 'poor';
-                                        const colors = consistencyStatus === 'excellent'
-                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
-                                            : consistencyStatus === 'good'
-                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' }
-                                                : consistencyStatus === 'moderate'
-                                                    ? { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' }
-                                                    : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
-
-                                        return (
-                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                                                <div className="flex items-start gap-3">
-                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
-                                                    <div className="flex-1">
-                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Response Consistency</h3>
-                                                        <p className="text-xs text-gray-300 mb-2">
-                                                            {consistencyStatus === 'excellent' && 'Excellent consistency! Minimal variance in response times.'}
-                                                            {consistencyStatus === 'good' && 'Good consistency with acceptable variance.'}
-                                                            {consistencyStatus === 'moderate' && 'Moderate variance detected. May indicate inconsistent backend performance.'}
-                                                            {consistencyStatus === 'poor' && 'High variance! Investigate performance bottlenecks and caching issues.'}
-                                                        </p>
-                                                        <div className="text-xs text-gray-400">
-                                                            <div>Variance: <span className={`font-mono ${colors.text}`}>{variance}ms ({variancePercent.toFixed(0)}%)</span></div>
-                                                            <div>Range: <span className={`font-mono ${colors.text}`}>{summary.minResponseTime}-{summary.maxResponseTime}ms</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* Throughput Analysis */}
-                                    {(() => {
-                                        const throughput = summary.throughput;
-                                        const throughputStatus = throughput >= 10 ? 'excellent' : throughput >= 5 ? 'good' : throughput >= 2 ? 'moderate' : 'low';
-                                        const colors = throughputStatus === 'excellent'
-                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
-                                            : throughputStatus === 'good'
-                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' }
-                                                : throughputStatus === 'moderate'
-                                                    ? { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' }
-                                                    : { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400', icon: '!' };
-
-                                        return (
-                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                                                <div className="flex items-start gap-3">
-                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
-                                                    <div className="flex-1">
-                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Throughput Analysis</h3>
-                                                        <p className="text-xs text-gray-300 mb-2">
-                                                            {throughputStatus === 'excellent' && 'Excellent throughput! API can handle high concurrent loads.'}
-                                                            {throughputStatus === 'good' && 'Good throughput for moderate traffic patterns.'}
-                                                            {throughputStatus === 'moderate' && 'Moderate throughput. Consider load testing at higher rates.'}
-                                                            {throughputStatus === 'low' && 'Low throughput detected. May indicate rate limiting or client-side delays.'}
-                                                        </p>
-                                                        <div className="text-xs text-gray-400">
-                                                            <div>Rate: <span className={`font-mono ${colors.text}`}>{throughput.toFixed(2)} req/sec</span></div>
-                                                            <div>Duration: <span className={`font-mono ${colors.text}`}>{summary.totalDuration.toFixed(2)}s</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-
-                                    {/* P95/P99 Tail Latency */}
-                                    {(() => {
-                                        const p95Gap = summary.p95ResponseTime - summary.p50ResponseTime;
-                                        const p99Gap = summary.p99ResponseTime - summary.p50ResponseTime;
-                                        const tailLatencyStatus = p95Gap < 50 ? 'excellent' : p95Gap < 100 ? 'good' : p95Gap < 200 ? 'moderate' : 'poor';
-                                        const colors = tailLatencyStatus === 'excellent'
-                                            ? { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', icon: '✓' }
-                                            : tailLatencyStatus === 'good'
-                                                ? { bg: 'bg-blue-500/10', border: 'border-blue-500/30', text: 'text-blue-400', icon: '✓' }
-                                                : tailLatencyStatus === 'moderate'
-                                                    ? { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', icon: '⚠' }
-                                                    : { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', icon: '✕' };
-
-                                        return (
-                                            <div className={`${colors.bg} border ${colors.border} rounded-lg p-4`}>
-                                                <div className="flex items-start gap-3">
-                                                    <span className={`text-2xl ${colors.text}`}>{colors.icon}</span>
-                                                    <div className="flex-1">
-                                                        <h3 className={`font-bold text-sm mb-2 ${colors.text}`}>Tail Latency (P95/P99)</h3>
-                                                        <p className="text-xs text-gray-300 mb-2">
-                                                            {tailLatencyStatus === 'excellent' && 'Excellent! Minimal tail latency. Consistent performance for all users.'}
-                                                            {tailLatencyStatus === 'good' && 'Good tail latency. Most users experience consistent performance.'}
-                                                            {tailLatencyStatus === 'moderate' && 'Moderate tail latency. Some users may experience delays.'}
-                                                            {tailLatencyStatus === 'poor' && 'High tail latency! Worst-case scenarios significantly slower than median.'}
-                                                        </p>
-                                                        <div className="text-xs text-gray-400">
-                                                            <div>P95-P50: <span className={`font-mono ${colors.text}`}>+{p95Gap}ms</span></div>
-                                                            <div>P99-P50: <span className={`font-mono ${colors.text}`}>+{p99Gap}ms</span></div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
-                                </div>
-
-                                {/* Key Recommendations */}
-                                <div className="mt-6 pt-6 border-t border-gray-700">
-                                    <h3 className="text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Key Recommendations for QA/Development
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {(() => {
-                                            const recommendations = [];
-
-                                            // Performance recommendations
-                                            if (summary.avgResponseTime > 300) {
-                                                recommendations.push({
-                                                    type: 'critical',
-                                                    title: 'Optimize Response Time',
-                                                    message: 'Average response time exceeds 300ms. Check database queries, API calls, and add caching.',
-                                                    icon: '🔥'
-                                                });
-                                            } else if (summary.avgResponseTime > 200) {
-                                                recommendations.push({
-                                                    type: 'warning',
-                                                    title: 'Monitor Performance',
-                                                    message: 'Response times are acceptable but could be optimized. Consider adding CDN or edge caching.',
-                                                    icon: '⚡'
-                                                });
-                                            }
-
-                                            // Consistency recommendations
-                                            const variance = summary.maxResponseTime - summary.minResponseTime;
-                                            const variancePercent = (variance / summary.avgResponseTime) * 100;
-                                            if (variancePercent > 100) {
-                                                recommendations.push({
-                                                    type: 'warning',
-                                                    title: 'High Response Variance',
-                                                    message: `${variance}ms variance detected. Investigate cold starts, database connection pooling, and resource contention.`,
-                                                    icon: '📊'
-                                                });
-                                            }
-
-                                            // Rate limit recommendations
-                                            if (summary.rateLimitDetected) {
-                                                recommendations.push({
-                                                    type: 'critical',
-                                                    title: 'Rate Limit Triggered',
-                                                    message: 'Rate limiting was hit during test. Implement exponential backoff and request queueing in production.',
-                                                    icon: '🚦'
-                                                });
-                                            } else if ((summary.totalRequests / summary.rateLimitThreshold) > 0.8) {
-                                                recommendations.push({
-                                                    type: 'warning',
-                                                    title: 'Approaching Rate Limit',
-                                                    message: `Using ${((summary.totalRequests / summary.rateLimitThreshold) * 100).toFixed(0)}% of rate limit. Monitor usage and implement client-side throttling.`,
-                                                    icon: '⚠️'
-                                                });
-                                            }
-
-                                            // Reliability recommendations
-                                            if (summary.failedRequests > 0) {
-                                                recommendations.push({
-                                                    type: 'critical',
-                                                    title: 'Request Failures Detected',
-                                                    message: `${summary.failedRequests} requests failed. Check error logs, implement retry logic, and add circuit breakers.`,
-                                                    icon: '❌'
-                                                });
-                                            }
-
-                                            // Tail latency recommendations
-                                            const p95Gap = summary.p95ResponseTime - summary.p50ResponseTime;
-                                            if (p95Gap > 100) {
-                                                recommendations.push({
-                                                    type: 'warning',
-                                                    title: 'High Tail Latency',
-                                                    message: `P95 is ${p95Gap}ms slower than median. This affects 5% of users. Look for resource exhaustion or GC pauses.`,
-                                                    icon: '📈'
-                                                });
-                                            }
-
-                                            // Throughput recommendations
-                                            if (summary.throughput < 2) {
-                                                recommendations.push({
-                                                    type: 'info',
-                                                    title: 'Low Test Throughput',
-                                                    message: 'Test throughput is low. Consider load testing at higher rates to validate production readiness.',
-                                                    icon: '🔄'
-                                                });
-                                            }
-
-                                            // Good news if everything is fine
-                                            if (recommendations.length === 0) {
-                                                recommendations.push({
-                                                    type: 'success',
-                                                    title: 'All Checks Passed',
-                                                    message: 'API is performing optimally with no critical issues detected. Continue monitoring in production.',
-                                                    icon: '✅'
-                                                });
-                                                recommendations.push({
-                                                    type: 'info',
-                                                    title: 'Next Steps',
-                                                    message: 'Consider testing with: 1) Higher load, 2) Different payload sizes, 3) Various network conditions, 4) Concurrent users.',
-                                                    icon: '📋'
-                                                });
-                                            }
-
-                                            const typeColors = {
-                                                critical: 'bg-red-500/10 border-red-500/30 text-red-400',
-                                                warning: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
-                                                info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
-                                                success: 'bg-green-500/10 border-green-500/30 text-green-400'
-                                            };
-
-                                            return recommendations.map((rec, idx) => (
-                                                <div key={idx} className={`${typeColors[rec.type as keyof typeof typeColors]} border rounded-lg p-3`}>
-                                                    <div className="flex items-start gap-2">
-                                                        <span className="text-lg">{rec.icon}</span>
-                                                        <div className="flex-1">
-                                                            <h4 className="font-bold text-sm mb-1">{rec.title}</h4>
-                                                            <p className="text-xs text-gray-300">{rec.message}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ));
-                                        })()}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-
-                    </Dialog.Content>
-                </Dialog.Portal>
-            </Dialog.Root>
-
-
-            {/* Radix Dialog */}
-            <Dialog.Root open={!!selectedRequest} onOpenChange={(open) => !open && setSelectedRequest(null)}>
-                <Dialog.Portal>
-                    <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm" />
-                    <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-4xl max-h-[80vh] overflow-y-auto scrollbar-thin">
-                        <Dialog.Close asChild>
-                            <button className="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
-                                ✕
-                            </button>
-                        </Dialog.Close>
-                        <Dialog.Title className="text-2xl font-bold mb-4 text-cyan-400">Request Details</Dialog.Title>
-                        {selectedRequest && (
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-400 mb-1">Method</div>
-                                        <div className="font-mono text-cyan-400">{selectedRequest.method}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-400 mb-1">Status</div>
-                                        <div className="font-mono text-green-400">{selectedRequest.statusCode}</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-400 mb-1">Response Time</div>
-                                        <div className="font-mono text-blue-400">{selectedRequest.responseTime}ms</div>
-                                    </div>
-                                    <div>
-                                        <div className="text-xs font-bold text-gray-400 mb-1">TTFB</div>
-                                        <div className="font-mono text-purple-400">{selectedRequest.ttfbTime}ms</div>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div className="text-xs font-bold text-gray-400 mb-1">URL</div>
-                                    <div className="font-mono text-sm bg-gray-800/50 p-2 rounded break-all">{selectedRequest.url}</div>
-                                </div>
-
-                                <div>
-                                    <div className="text-xs font-bold text-gray-400 mb-2">cURL Command</div>
-                                    <div className="bg-gray-800/50 p-3 rounded">
-                                        <pre className="text-xs font-mono text-gray-300 whitespace-pre-wrap break-all">
-                                            {formatCurl(selectedRequest?.requestCurl)}
-                                        </pre>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div className="text-xs font-bold text-gray-400 mb-2">Response Body</div>
-                                    <div className="bg-gray-800/50 p-3 rounded max-h-48 overflow-y-auto scrollbar-thin">
-                                        <pre className="text-xs font-mono text-gray-300">
-                                            {JSON.stringify(safeParseJson(selectedRequest.responseBody), null, 2)}
-                                        </pre>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                    </Dialog.Content>
-                </Dialog.Portal>
-            </Dialog.Root>
+          <div className='mt-4 flex flex-wrap gap-4 text-xs font-mono text-gray-400'>
+            <span>Start: {new Date(summary.startTime).toLocaleString()}</span>
+            <span>•</span>
+            <span>End: {new Date(summary.endTime).toLocaleString()}</span>
+            <span>•</span>
+            <span>
+              Duration:{' '}
+              {(
+                (new Date(summary.endTime).getTime() -
+                  new Date(summary.startTime).getTime()) /
+                1000
+              ).toFixed(2)}
+              s
+            </span>
+          </div>
         </div>
-    );
+      </div>
+
+      <div className='container mx-auto px-4 py-8 grid-pattern'>
+        {/* KPI Cards */}
+        <div className='grid grid-cols-2 md:grid-cols-5 gap-4 mb-8 animate-fadeInUp'>
+          <div className='kpi-card'>
+            <div className='text-xs font-bold text-gray-400 uppercase mb-2'>
+              Total Requests
+            </div>
+            <div className='text-3xl font-bold text-cyan-400'>
+              {summary.totalRequests}
+            </div>
+            <div className='text-xs text-gray-500 mt-1'>
+              {summary.requestsPerSecond.toFixed(2)}/sec
+            </div>
+          </div>
+
+          <div className='kpi-card'>
+            <div className='text-xs font-bold text-gray-400 uppercase mb-2'>
+              Success Rate
+            </div>
+            <div className='text-3xl font-bold text-green-400'>
+              {(
+                (summary.successfulRequests / summary.totalRequests) *
+                100
+              ).toFixed(1)}
+              %
+            </div>
+            <div className='text-xs text-gray-500 mt-1'>
+              {summary.successfulRequests}/{summary.totalRequests}
+            </div>
+          </div>
+
+          <div className='kpi-card'>
+            <div className='text-xs font-bold text-gray-400 uppercase mb-2'>
+              Failed Requests
+            </div>
+            <div
+              className={`text-3xl font-bold ${summary.failedRequests > 0 ? 'text-red-400' : 'text-gray-400'}`}
+            >
+              {summary.failedRequests}
+            </div>
+            <div className='text-xs text-gray-500 mt-1'>
+              {summary.failedRequests > 0
+                ? `${((summary.failedRequests / summary.totalRequests) * 100).toFixed(1)}%`
+                : 'None'}
+            </div>
+          </div>
+
+          <div className='kpi-card'>
+            <div className='text-xs font-bold text-gray-400 uppercase mb-2'>
+              Avg Response
+            </div>
+            <div className='text-3xl font-bold text-blue-400'>
+              {summary.avgResponseTime.toFixed(0)}ms
+            </div>
+            <div className='text-xs text-gray-500 mt-1'>
+              TTFB: {summary.avgTtfb}ms
+            </div>
+          </div>
+
+          <div className='kpi-card'>
+            <div className='text-xs font-bold text-gray-400 uppercase mb-2'>
+              Data Transfer
+            </div>
+            <div className='text-3xl font-bold text-purple-400'>
+              {(summary.avgDownloadSize / 1024).toFixed(1)}KB
+            </div>
+            <div className='text-xs text-gray-500 mt-1'>Total transferred</div>
+          </div>
+        </div>
+
+        {/* Charts Row 1 */}
+        <div className='grid grid-cols-1 lg:grid-cols-1 gap-6 mb-8'>
+          {/* Timeline Chart */}
+          <div
+            className='lg:col-span-2 card animate-fadeInUp'
+            style={{ animationDelay: '0.1s' }}
+          >
+            <h3 className='text-lg font-bold mb-4 text-cyan-400'>
+              Response Time Timeline
+            </h3>
+            <div className='chart-container'>
+              <ResponsiveContainer width='100%' height={300}>
+                <LineChart data={timelineData}>
+                  <CartesianGrid
+                    strokeDasharray='3 3'
+                    stroke='rgba(255,255,255,0.05)'
+                  />
+                  <XAxis
+                    dataKey='index'
+                    stroke='#6b7280'
+                    style={{ fontSize: '11px' }}
+                    label={{
+                      value: 'Request #',
+                      position: 'insideBottom',
+                      offset: -5,
+                      fill: '#9ca3af',
+                    }}
+                  />
+                  <YAxis
+                    stroke='#6b7280'
+                    style={{ fontSize: '11px' }}
+                    label={{
+                      value: 'Time (ms)',
+                      angle: -90,
+                      position: 'insideLeft',
+                      fill: '#9ca3af',
+                    }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(20, 20, 20, 0.95)',
+                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  <ReferenceLine
+                    y={summary.avgResponseTime}
+                    stroke='#f59e0b'
+                    strokeDasharray='3 3'
+                    label={{ value: 'Avg', fill: '#f59e0b', fontSize: 10 }}
+                  />
+                  <Line
+                    type='monotone'
+                    dataKey='responseTime'
+                    stroke='#06b6d4'
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    name='Response Time'
+                  />
+                  <Line
+                    type='monotone'
+                    dataKey='ttfb'
+                    stroke='#8b5cf6'
+                    strokeWidth={2}
+                    dot={{ r: 3 }}
+                    name='TTFB'
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
+          <div
+            className='card animate-fadeInUp'
+            style={{ animationDelay: '0.3s' }}
+          >
+            <h3 className='text-lg font-bold mb-4 text-cyan-400'>
+              Timing Breakdown (Avg)
+            </h3>
+            <div className='chart-container'>
+              <ResponsiveContainer width='100%' height={300}>
+                <BarChart data={timingBreakdown} layout='horizontal'>
+                  <CartesianGrid
+                    strokeDasharray='3 3'
+                    stroke='rgba(255,255,255,0.05)'
+                  />
+                  <XAxis
+                    type='number'
+                    stroke='#6b7280'
+                    style={{ fontSize: '11px' }}
+                  />
+                  <YAxis
+                    dataKey='name'
+                    type='category'
+                    stroke='#6b7280'
+                    style={{ fontSize: '11px' }}
+                    width={80}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(20, 20, 20, 0.95)',
+                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Bar dataKey='value' fill='#06b6d4' radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Status Distribution */}
+          <div
+            className='card animate-fadeInUp'
+            style={{ animationDelay: '0.2s' }}
+          >
+            <h3 className='text-lg font-bold mb-4 text-cyan-400'>
+              Status Distribution
+            </h3>
+            <div className='chart-container'>
+              <ResponsiveContainer width='100%' height={300}>
+                <PieChart>
+                  <Pie
+                    data={statusDistribution}
+                    cx='50%'
+                    cy='50%'
+                    labelLine={false}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
+                    outerRadius={80}
+                    fill='#8884d8'
+                    dataKey='value'
+                  >
+                    {statusDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(20, 20, 20, 0.95)',
+                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+        {/* Charts Row 2 */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8'>
+          {/* Response Time Analysis */}
+          <div
+            className='card animate-fadeInUp'
+            style={{ animationDelay: '0.4s' }}
+          >
+            <h3 className='text-lg font-bold mb-4 text-cyan-400'>
+              Response Time Analysis
+            </h3>
+
+            <div className='grid grid-cols-2 gap-3 mb-4'>
+              <div className='bg-green-500/10 border border-green-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>Min Response</div>
+                <div className='text-xl font-bold text-green-400'>
+                  {summary.minResponseTime}ms
+                </div>
+              </div>
+              <div className='bg-red-500/10 border border-red-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>Max Response</div>
+                <div className='text-xl font-bold text-red-400'>
+                  {summary.maxResponseTime}ms
+                </div>
+              </div>
+              <div className='bg-blue-500/10 border border-blue-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>P50 (Median)</div>
+                <div className='text-xl font-bold text-blue-400'>
+                  {summary.p50ResponseTime}ms
+                </div>
+              </div>
+              <div className='bg-yellow-500/10 border border-yellow-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>P90</div>
+                <div className='text-xl font-bold text-yellow-400'>
+                  {summary.p90ResponseTime}ms
+                </div>
+              </div>
+              <div className='bg-orange-500/10 border border-orange-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>P95</div>
+                <div className='text-xl font-bold text-orange-400'>
+                  {summary.p95ResponseTime}ms
+                </div>
+              </div>
+              <div className='bg-pink-500/10 border border-pink-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>P99</div>
+                <div className='text-xl font-bold text-pink-400'>
+                  {summary.p99ResponseTime.toFixed(2)}ms
+                </div>
+              </div>
+              <div className='bg-pink-500/10 border border-pink-500/30 rounded p-2'>
+                <div className='text-xs text-gray-400 mb-1'>Throughput</div>
+                <div className='text-xl font-bold text-pink-400'>
+                  {summary.throughput.toFixed(2)}ms
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Timing Breakdown */}
+          <div
+            className='card animate-fadeInUp'
+            style={{ animationDelay: '0.3s' }}
+          >
+            <h3 className='text-lg font-bold mb-4 text-cyan-400'>
+              Distribution
+            </h3>
+            <div className='chart-container'>
+              <ResponsiveContainer width='100%' height={140}>
+                <BarChart
+                  data={[
+                    {
+                      range: '<200ms',
+                      count: requests.filter((r) => r.responseTime < 200)
+                        .length,
+                    },
+                    {
+                      range: '200-250ms',
+                      count: requests.filter(
+                        (r) => r.responseTime >= 200 && r.responseTime < 250,
+                      ).length,
+                    },
+                    {
+                      range: '250-300ms',
+                      count: requests.filter(
+                        (r) => r.responseTime >= 250 && r.responseTime < 300,
+                      ).length,
+                    },
+                    {
+                      range: '>300ms',
+                      count: requests.filter((r) => r.responseTime >= 300)
+                        .length,
+                    },
+                  ]}
+                >
+                  <CartesianGrid
+                    strokeDasharray='3 3'
+                    stroke='rgba(255,255,255,0.05)'
+                  />
+                  <XAxis
+                    dataKey='range'
+                    stroke='#6b7280'
+                    style={{ fontSize: '11px' }}
+                  />
+                  <YAxis stroke='#6b7280' style={{ fontSize: '11px' }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'rgba(20, 20, 20, 0.95)',
+                      border: '1px solid rgba(6, 182, 212, 0.3)',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Bar dataKey='count' fill='#8b5cf6' radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div
+          className='card animate-fadeInUp'
+          style={{ animationDelay: '0.5s' }}
+        >
+          <div className='flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4'>
+            <h3 className='text-lg font-bold text-cyan-400'>Request Details</h3>
+            <div className='flex flex-wrap gap-2'>
+              <button
+                onClick={() => exportToExcel(filteredData)}
+                className='text-xs'
+              >
+                Export Excel
+              </button>
+              <button
+                onClick={() => exportToPDF(filteredData, summary)}
+                className='text-xs'
+              >
+                Export PDF
+              </button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className='grid grid-cols-1 md:grid-cols-4 gap-4 mb-6'>
+            <div>
+              <label className='block text-xs font-bold text-gray-400 mb-2'>
+                Search
+              </label>
+              <input
+                type='text'
+                placeholder='URL or method...'
+                value={searchQuery}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setSearchQuery(e.target.value)
+                }
+                className='w-full'
+              />
+            </div>
+
+            <div>
+              <label className='block text-xs font-bold text-gray-400 mb-2'>
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setStatusFilter(e.target.value)
+                }
+                className='w-full'
+              >
+                <option value='all'>All</option>
+                <option value='success'>Success</option>
+                <option value='failure'>Failure</option>
+                <option value='200'>200</option>
+              </select>
+            </div>
+
+            <div>
+              <label className='block text-xs font-bold text-gray-400 mb-2'>
+                TTFB Range (ms)
+              </label>
+              <div className='flex gap-2'>
+                <input
+                  type='number'
+                  placeholder='Min'
+                  value={ttfbFilter.min}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setTtfbFilter((p) => ({ ...p, min: e.target.value }))
+                  }
+                  className='w-full'
+                />
+                <input
+                  type='number'
+                  placeholder='Max'
+                  value={ttfbFilter.max}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setTtfbFilter((p) => ({ ...p, max: e.target.value }))
+                  }
+                  className='w-full'
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className='block text-xs font-bold text-gray-400 mb-2'>
+                Response Time (ms)
+              </label>
+              <div className='flex gap-2'>
+                <input
+                  type='number'
+                  placeholder='Min'
+                  value={responseTimeFilter.min}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setResponseTimeFilter((p) => ({
+                      ...p,
+                      min: e.target.value,
+                    }))
+                  }
+                  className='w-full'
+                />
+                <input
+                  type='number'
+                  placeholder='Max'
+                  value={responseTimeFilter.max}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setResponseTimeFilter((p) => ({
+                      ...p,
+                      max: e.target.value,
+                    }))
+                  }
+                  className='w-full'
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className='overflow-x-auto scrollbar-thin'>
+            <table>
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        onClick={header.column.getToggleSortingHandler()}
+                        className='cursor-pointer select-none'
+                      >
+                        <div className='flex items-center gap-2'>
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                          {{
+                            asc: ' ↑',
+                            desc: ' ↓',
+                          }[header.column.getIsSorted() as 'asc' | 'desc'] ??
+                            null}
+                        </div>
+                      </th>
+                    ))}
+                    <th>Actions</th>
+                  </tr>
+                ))}
+              </thead>
+
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
+                    <td>
+                      <button
+                        onClick={() => setSelectedRequest(row.original)}
+                        className='text-xs px-2 py-1'
+                      >
+                        View
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className='mt-4 text-xs text-gray-400'>
+            Showing {filteredData.length} of {requests.length} requests
+          </div>
+        </div>
+      </div>
+
+      <Dialog.Root open={openSmartInsights} onOpenChange={setOpenSmartInsights}>
+        <Dialog.Portal>
+          <Dialog.Overlay className='fixed inset-0 bg-black/80 backdrop-blur-sm' />
+          <Dialog.Content className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-5xl max-h-[80vh] overflow-y-auto scrollbar-thin'>
+            <Dialog.Close asChild>
+              <button className='absolute top-4 right-4 text-gray-400 hover:text-white text-xl'>
+                ✕
+              </button>
+            </Dialog.Close>
+            <div className='container mx-auto px-4 py-8 grid-pattern'>
+              {/* Smart Insights Section */}
+              <div className='card mb-8 animate-fadeInUp border-2 border-cyan-500/30'>
+                <div className='flex items-center gap-3 mb-4'>
+                  <div className='w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center'>
+                    <svg
+                      className='w-6 h-6 text-white'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      stroke='currentColor'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z'
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h2 className='text-2xl font-bold text-cyan-400'>
+                      Smart Insights
+                    </h2>
+                    <p className='text-xs text-gray-400'>
+                      AI-powered analysis for QA and Development teams
+                    </p>
+                  </div>
+                </div>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                  {/* Performance Health */}
+                  {(() => {
+                    const avgResponseTime = summary.avgResponseTime;
+                    const p95 = summary.p95ResponseTime;
+                    const performanceStatus =
+                      avgResponseTime < 200
+                        ? 'excellent'
+                        : avgResponseTime < 300
+                          ? 'good'
+                          : avgResponseTime < 500
+                            ? 'warning'
+                            : 'critical';
+                    const statusColors = {
+                      excellent: {
+                        bg: 'bg-green-500/10',
+                        border: 'border-green-500/30',
+                        text: 'text-green-400',
+                        icon: '✓',
+                      },
+                      good: {
+                        bg: 'bg-blue-500/10',
+                        border: 'border-blue-500/30',
+                        text: 'text-blue-400',
+                        icon: '✓',
+                      },
+                      warning: {
+                        bg: 'bg-yellow-500/10',
+                        border: 'border-yellow-500/30',
+                        text: 'text-yellow-400',
+                        icon: '⚠',
+                      },
+                      critical: {
+                        bg: 'bg-red-500/10',
+                        border: 'border-red-500/30',
+                        text: 'text-red-400',
+                        icon: '✕',
+                      },
+                    };
+                    const colors = statusColors[performanceStatus];
+
+                    return (
+                      <div
+                        className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span className={`text-2xl ${colors.text}`}>
+                            {colors.icon}
+                          </span>
+                          <div className='flex-1'>
+                            <h3
+                              className={`font-bold text-sm mb-2 ${colors.text}`}
+                            >
+                              Performance Health
+                            </h3>
+                            <p className='text-xs text-gray-300 mb-2'>
+                              {performanceStatus === 'excellent' &&
+                                'Excellent response times! API is performing optimally.'}
+                              {performanceStatus === 'good' &&
+                                'Good response times. API is performing within acceptable range.'}
+                              {performanceStatus === 'warning' &&
+                                'Response times are elevated. Consider optimization.'}
+                              {performanceStatus === 'critical' &&
+                                'Critical: Response times are too high. Immediate attention needed.'}
+                            </p>
+                            <div className='text-xs text-gray-400'>
+                              <div>
+                                Avg:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {avgResponseTime.toFixed(0)}ms
+                                </span>
+                              </div>
+                              <div>
+                                P95:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {p95}ms
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Rate Limit Status */}
+                  {(() => {
+                    const rateLimitStatus = !summary.rateLimitDetected
+                      ? 'safe'
+                      : 'triggered';
+                    const utilizationPercent =
+                      (summary.totalRequests / summary.rateLimitThreshold) *
+                      100;
+                    const colors =
+                      rateLimitStatus === 'safe'
+                        ? {
+                            bg: 'bg-green-500/10',
+                            border: 'border-green-500/30',
+                            text: 'text-green-400',
+                            icon: '✓',
+                          }
+                        : {
+                            bg: 'bg-red-500/10',
+                            border: 'border-red-500/30',
+                            text: 'text-red-400',
+                            icon: '✕',
+                          };
+
+                    return (
+                      <div
+                        className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span className={`text-2xl ${colors.text}`}>
+                            {colors.icon}
+                          </span>
+                          <div className='flex-1'>
+                            <h3
+                              className={`font-bold text-sm mb-2 ${colors.text}`}
+                            >
+                              Rate Limit Status
+                            </h3>
+                            <p className='text-xs text-gray-300 mb-2'>
+                              {rateLimitStatus === 'safe'
+                                ? `No rate limiting detected. Using ${utilizationPercent.toFixed(0)}% of threshold capacity.`
+                                : 'Rate limit was triggered during test. Requests were throttled.'}
+                            </p>
+                            <div className='text-xs text-gray-400'>
+                              <div>
+                                Threshold:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {summary.rateLimitThreshold} req/window
+                                </span>
+                              </div>
+                              <div>
+                                Actual:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {summary.totalRequests} requests
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Reliability Score */}
+                  {(() => {
+                    const successRate =
+                      (summary.successfulRequests / summary.totalRequests) *
+                      100;
+                    const reliabilityStatus =
+                      successRate === 100
+                        ? 'perfect'
+                        : successRate >= 99
+                          ? 'excellent'
+                          : successRate >= 95
+                            ? 'good'
+                            : 'poor';
+                    const colors =
+                      reliabilityStatus === 'perfect' ||
+                      reliabilityStatus === 'excellent'
+                        ? {
+                            bg: 'bg-green-500/10',
+                            border: 'border-green-500/30',
+                            text: 'text-green-400',
+                            icon: '✓',
+                          }
+                        : reliabilityStatus === 'good'
+                          ? {
+                              bg: 'bg-blue-500/10',
+                              border: 'border-blue-500/30',
+                              text: 'text-blue-400',
+                              icon: '⚠',
+                            }
+                          : {
+                              bg: 'bg-red-500/10',
+                              border: 'border-red-500/30',
+                              text: 'text-red-400',
+                              icon: '✕',
+                            };
+
+                    return (
+                      <div
+                        className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span className={`text-2xl ${colors.text}`}>
+                            {colors.icon}
+                          </span>
+                          <div className='flex-1'>
+                            <h3
+                              className={`font-bold text-sm mb-2 ${colors.text}`}
+                            >
+                              Reliability Score
+                            </h3>
+                            <p className='text-xs text-gray-300 mb-2'>
+                              {reliabilityStatus === 'perfect' &&
+                                'Perfect! All requests succeeded without errors.'}
+                              {reliabilityStatus === 'excellent' &&
+                                'Excellent reliability. Minimal failures detected.'}
+                              {reliabilityStatus === 'good' &&
+                                'Good reliability but some failures occurred.'}
+                              {reliabilityStatus === 'poor' &&
+                                'Poor reliability. High failure rate needs investigation.'}
+                            </p>
+                            <div className='text-xs text-gray-400'>
+                              <div>
+                                Success:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {successRate.toFixed(2)}%
+                                </span>
+                              </div>
+                              <div>
+                                Failed:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {summary.failedRequests} requests
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Response Time Consistency */}
+                  {(() => {
+                    const variance =
+                      summary.maxResponseTime - summary.minResponseTime;
+                    const variancePercent =
+                      (variance / summary.avgResponseTime) * 100;
+                    const consistencyStatus =
+                      variancePercent < 20
+                        ? 'excellent'
+                        : variancePercent < 50
+                          ? 'good'
+                          : variancePercent < 100
+                            ? 'moderate'
+                            : 'poor';
+                    const colors =
+                      consistencyStatus === 'excellent'
+                        ? {
+                            bg: 'bg-green-500/10',
+                            border: 'border-green-500/30',
+                            text: 'text-green-400',
+                            icon: '✓',
+                          }
+                        : consistencyStatus === 'good'
+                          ? {
+                              bg: 'bg-blue-500/10',
+                              border: 'border-blue-500/30',
+                              text: 'text-blue-400',
+                              icon: '✓',
+                            }
+                          : consistencyStatus === 'moderate'
+                            ? {
+                                bg: 'bg-yellow-500/10',
+                                border: 'border-yellow-500/30',
+                                text: 'text-yellow-400',
+                                icon: '⚠',
+                              }
+                            : {
+                                bg: 'bg-red-500/10',
+                                border: 'border-red-500/30',
+                                text: 'text-red-400',
+                                icon: '✕',
+                              };
+
+                    return (
+                      <div
+                        className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span className={`text-2xl ${colors.text}`}>
+                            {colors.icon}
+                          </span>
+                          <div className='flex-1'>
+                            <h3
+                              className={`font-bold text-sm mb-2 ${colors.text}`}
+                            >
+                              Response Consistency
+                            </h3>
+                            <p className='text-xs text-gray-300 mb-2'>
+                              {consistencyStatus === 'excellent' &&
+                                'Excellent consistency! Minimal variance in response times.'}
+                              {consistencyStatus === 'good' &&
+                                'Good consistency with acceptable variance.'}
+                              {consistencyStatus === 'moderate' &&
+                                'Moderate variance detected. May indicate inconsistent backend performance.'}
+                              {consistencyStatus === 'poor' &&
+                                'High variance! Investigate performance bottlenecks and caching issues.'}
+                            </p>
+                            <div className='text-xs text-gray-400'>
+                              <div>
+                                Variance:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {variance}ms ({variancePercent.toFixed(0)}%)
+                                </span>
+                              </div>
+                              <div>
+                                Range:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {summary.minResponseTime}-
+                                  {summary.maxResponseTime}ms
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Throughput Analysis */}
+                  {(() => {
+                    const throughput = summary.throughput;
+                    const throughputStatus =
+                      throughput >= 10
+                        ? 'excellent'
+                        : throughput >= 5
+                          ? 'good'
+                          : throughput >= 2
+                            ? 'moderate'
+                            : 'low';
+                    const colors =
+                      throughputStatus === 'excellent'
+                        ? {
+                            bg: 'bg-green-500/10',
+                            border: 'border-green-500/30',
+                            text: 'text-green-400',
+                            icon: '✓',
+                          }
+                        : throughputStatus === 'good'
+                          ? {
+                              bg: 'bg-blue-500/10',
+                              border: 'border-blue-500/30',
+                              text: 'text-blue-400',
+                              icon: '✓',
+                            }
+                          : throughputStatus === 'moderate'
+                            ? {
+                                bg: 'bg-yellow-500/10',
+                                border: 'border-yellow-500/30',
+                                text: 'text-yellow-400',
+                                icon: '⚠',
+                              }
+                            : {
+                                bg: 'bg-orange-500/10',
+                                border: 'border-orange-500/30',
+                                text: 'text-orange-400',
+                                icon: '!',
+                              };
+
+                    return (
+                      <div
+                        className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span className={`text-2xl ${colors.text}`}>
+                            {colors.icon}
+                          </span>
+                          <div className='flex-1'>
+                            <h3
+                              className={`font-bold text-sm mb-2 ${colors.text}`}
+                            >
+                              Throughput Analysis
+                            </h3>
+                            <p className='text-xs text-gray-300 mb-2'>
+                              {throughputStatus === 'excellent' &&
+                                'Excellent throughput! API can handle high concurrent loads.'}
+                              {throughputStatus === 'good' &&
+                                'Good throughput for moderate traffic patterns.'}
+                              {throughputStatus === 'moderate' &&
+                                'Moderate throughput. Consider load testing at higher rates.'}
+                              {throughputStatus === 'low' &&
+                                'Low throughput detected. May indicate rate limiting or client-side delays.'}
+                            </p>
+                            <div className='text-xs text-gray-400'>
+                              <div>
+                                Rate:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {throughput.toFixed(2)} req/sec
+                                </span>
+                              </div>
+                              <div>
+                                Duration:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  {summary.totalDuration.toFixed(2)}s
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* P95/P99 Tail Latency */}
+                  {(() => {
+                    const p95Gap =
+                      summary.p95ResponseTime - summary.p50ResponseTime;
+                    const p99Gap =
+                      summary.p99ResponseTime - summary.p50ResponseTime;
+                    const tailLatencyStatus =
+                      p95Gap < 50
+                        ? 'excellent'
+                        : p95Gap < 100
+                          ? 'good'
+                          : p95Gap < 200
+                            ? 'moderate'
+                            : 'poor';
+                    const colors =
+                      tailLatencyStatus === 'excellent'
+                        ? {
+                            bg: 'bg-green-500/10',
+                            border: 'border-green-500/30',
+                            text: 'text-green-400',
+                            icon: '✓',
+                          }
+                        : tailLatencyStatus === 'good'
+                          ? {
+                              bg: 'bg-blue-500/10',
+                              border: 'border-blue-500/30',
+                              text: 'text-blue-400',
+                              icon: '✓',
+                            }
+                          : tailLatencyStatus === 'moderate'
+                            ? {
+                                bg: 'bg-yellow-500/10',
+                                border: 'border-yellow-500/30',
+                                text: 'text-yellow-400',
+                                icon: '⚠',
+                              }
+                            : {
+                                bg: 'bg-red-500/10',
+                                border: 'border-red-500/30',
+                                text: 'text-red-400',
+                                icon: '✕',
+                              };
+
+                    return (
+                      <div
+                        className={`${colors.bg} border ${colors.border} rounded-lg p-4`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span className={`text-2xl ${colors.text}`}>
+                            {colors.icon}
+                          </span>
+                          <div className='flex-1'>
+                            <h3
+                              className={`font-bold text-sm mb-2 ${colors.text}`}
+                            >
+                              Tail Latency (P95/P99)
+                            </h3>
+                            <p className='text-xs text-gray-300 mb-2'>
+                              {tailLatencyStatus === 'excellent' &&
+                                'Excellent! Minimal tail latency. Consistent performance for all users.'}
+                              {tailLatencyStatus === 'good' &&
+                                'Good tail latency. Most users experience consistent performance.'}
+                              {tailLatencyStatus === 'moderate' &&
+                                'Moderate tail latency. Some users may experience delays.'}
+                              {tailLatencyStatus === 'poor' &&
+                                'High tail latency! Worst-case scenarios significantly slower than median.'}
+                            </p>
+                            <div className='text-xs text-gray-400'>
+                              <div>
+                                P95-P50:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  +{p95Gap}ms
+                                </span>
+                              </div>
+                              <div>
+                                P99-P50:{' '}
+                                <span className={`font-mono ${colors.text}`}>
+                                  +{p99Gap}ms
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Key Recommendations */}
+                <div className='mt-6 pt-6 border-t border-gray-700'>
+                  <h3 className='text-lg font-bold text-cyan-400 mb-4 flex items-center gap-2'>
+                    <svg
+                      className='w-5 h-5'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                      stroke='currentColor'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+                      />
+                    </svg>
+                    Key Recommendations for QA/Development
+                  </h3>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                    {(() => {
+                      const recommendations = [];
+
+                      if (summary.avgResponseTime > 300) {
+                        recommendations.push({
+                          type: 'critical',
+                          title: 'Optimize Response Time',
+                          message:
+                            'Average response time exceeds 300ms. Check database queries, API calls, and add caching.',
+                          icon: '🔥',
+                        });
+                      } else if (summary.avgResponseTime > 200) {
+                        recommendations.push({
+                          type: 'warning',
+                          title: 'Monitor Performance',
+                          message:
+                            'Response times are acceptable but could be optimized. Consider adding CDN or edge caching.',
+                          icon: '⚡',
+                        });
+                      }
+
+                      const variance =
+                        summary.maxResponseTime - summary.minResponseTime;
+                      const variancePercent =
+                        (variance / summary.avgResponseTime) * 100;
+                      if (variancePercent > 100) {
+                        recommendations.push({
+                          type: 'warning',
+                          title: 'High Response Variance',
+                          message: `${variance}ms variance detected. Investigate cold starts, database connection pooling, and resource contention.`,
+                          icon: '📊',
+                        });
+                      }
+
+                      if (summary.rateLimitDetected) {
+                        recommendations.push({
+                          type: 'critical',
+                          title: 'Rate Limit Triggered',
+                          message:
+                            'Rate limiting was hit during test. Implement exponential backoff and request queueing in production.',
+                          icon: '🚦',
+                        });
+                      } else if (
+                        summary.totalRequests / summary.rateLimitThreshold >
+                        0.8
+                      ) {
+                        recommendations.push({
+                          type: 'warning',
+                          title: 'Approaching Rate Limit',
+                          message: `Using ${((summary.totalRequests / summary.rateLimitThreshold) * 100).toFixed(0)}% of rate limit. Monitor usage and implement client-side throttling.`,
+                          icon: '⚠️',
+                        });
+                      }
+
+                      if (summary.failedRequests > 0) {
+                        recommendations.push({
+                          type: 'critical',
+                          title: 'Request Failures Detected',
+                          message: `${summary.failedRequests} requests failed. Check error logs, implement retry logic, and add circuit breakers.`,
+                          icon: '❌',
+                        });
+                      }
+
+                      const p95Gap =
+                        summary.p95ResponseTime - summary.p50ResponseTime;
+                      if (p95Gap > 100) {
+                        recommendations.push({
+                          type: 'warning',
+                          title: 'High Tail Latency',
+                          message: `P95 is ${p95Gap}ms slower than median. This affects 5% of users. Look for resource exhaustion or GC pauses.`,
+                          icon: '📈',
+                        });
+                      }
+
+                      if (summary.throughput < 2) {
+                        recommendations.push({
+                          type: 'info',
+                          title: 'Low Test Throughput',
+                          message:
+                            'Test throughput is low. Consider load testing at higher rates to validate production readiness.',
+                          icon: '🔄',
+                        });
+                      }
+
+                      if (recommendations.length === 0) {
+                        recommendations.push({
+                          type: 'success',
+                          title: 'All Checks Passed',
+                          message:
+                            'API is performing optimally with no critical issues detected. Continue monitoring in production.',
+                          icon: '✅',
+                        });
+                        recommendations.push({
+                          type: 'info',
+                          title: 'Next Steps',
+                          message:
+                            'Consider testing with: 1) Higher load, 2) Different payload sizes, 3) Various network conditions, 4) Concurrent users.',
+                          icon: '📋',
+                        });
+                      }
+
+                      const typeColors = {
+                        critical:
+                          'bg-red-500/10 border-red-500/30 text-red-400',
+                        warning:
+                          'bg-yellow-500/10 border-yellow-500/30 text-yellow-400',
+                        info: 'bg-blue-500/10 border-blue-500/30 text-blue-400',
+                        success:
+                          'bg-green-500/10 border-green-500/30 text-green-400',
+                      };
+
+                      return recommendations.map((rec, idx) => (
+                        <div
+                          key={idx}
+                          className={`${typeColors[rec.type as keyof typeof typeColors]} border rounded-lg p-3`}
+                        >
+                          <div className='flex items-start gap-2'>
+                            <span className='text-lg'>{rec.icon}</span>
+                            <div className='flex-1'>
+                              <h4 className='font-bold text-sm mb-1'>
+                                {rec.title}
+                              </h4>
+                              <p className='text-xs text-gray-300'>
+                                {rec.message}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+
+      {/* Radix Dialog */}
+      <Dialog.Root
+        open={!!selectedRequest}
+        onOpenChange={(open) => !open && setSelectedRequest(null)}
+      >
+        <Dialog.Portal>
+          <Dialog.Overlay className='fixed inset-0 bg-black/80 backdrop-blur-sm' />
+          <Dialog.Content className='fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-lg p-6 w-[90vw] max-w-4xl max-h-[80vh] overflow-y-auto scrollbar-thin'>
+            <Dialog.Close asChild>
+              <button className='absolute top-4 right-4 text-gray-400 hover:text-white text-xl'>
+                ✕
+              </button>
+            </Dialog.Close>
+            <Dialog.Title className='text-2xl font-bold mb-4 text-cyan-400'>
+              Request Details
+            </Dialog.Title>
+            {selectedRequest && (
+              <div className='space-y-4'>
+                <div className='grid grid-cols-2 gap-4'>
+                  <div>
+                    <div className='text-xs font-bold text-gray-400 mb-1'>
+                      Method
+                    </div>
+                    <div className='font-mono text-cyan-400'>
+                      {selectedRequest.method}
+                    </div>
+                  </div>
+                  <div>
+                    <div className='text-xs font-bold text-gray-400 mb-1'>
+                      Status
+                    </div>
+                    <div className='font-mono text-green-400'>
+                      {selectedRequest.statusCode}
+                    </div>
+                  </div>
+                  <div>
+                    <div className='text-xs font-bold text-gray-400 mb-1'>
+                      Response Time
+                    </div>
+                    <div className='font-mono text-blue-400'>
+                      {selectedRequest.responseTime}ms
+                    </div>
+                  </div>
+                  <div>
+                    <div className='text-xs font-bold text-gray-400 mb-1'>
+                      TTFB
+                    </div>
+                    <div className='font-mono text-purple-400'>
+                      {selectedRequest.ttfbTime}ms
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <div className='text-xs font-bold text-gray-400 mb-1'>
+                    URL
+                  </div>
+                  <div className='font-mono text-sm bg-gray-800/50 p-2 rounded break-all'>
+                    {selectedRequest.url}
+                  </div>
+                </div>
+
+                <div>
+                  <div className='text-xs font-bold text-gray-400 mb-2'>
+                    cURL Command
+                  </div>
+                  <div className='bg-gray-800/50 p-3 rounded'>
+                    <pre className='text-xs font-mono text-gray-300 whitespace-pre-wrap break-all'>
+                      {formatCurl(selectedRequest?.requestCurl)}
+                    </pre>
+                  </div>
+                </div>
+
+                <div>
+                  <div className='text-xs font-bold text-gray-400 mb-2'>
+                    Response Body
+                  </div>
+                  <div className='bg-gray-800/50 p-3 rounded max-h-48 overflow-y-auto scrollbar-thin'>
+                    <pre className='text-xs font-mono text-gray-300'>
+                      {JSON.stringify(
+                        safeParseJson(selectedRequest.responseBody),
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Dialog.Content>
+        </Dialog.Portal>
+      </Dialog.Root>
+    </div>
+  );
 }

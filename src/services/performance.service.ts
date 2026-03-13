@@ -95,8 +95,6 @@ export const getPerformanceConfigsByRequestId = async (
     { headers: { 'Content-Type': 'application/json' } },
   );
 
-  // console.log(res, "res");
-
   if (!res.ok) {
     let msg = 'Failed to fetch performance configs';
     try {
@@ -229,8 +227,6 @@ export const getPerformanceRunResults = async (
   }
 
   const data = await response.json();
-
-  console.log('Raw Run Results:', data);
 
   return {
     summary: mapPerformanceRunSummary(data.summary),

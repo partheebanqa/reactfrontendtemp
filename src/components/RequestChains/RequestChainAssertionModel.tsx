@@ -85,8 +85,6 @@ function AssertionModal({
     Map<string, { value: string; comparison?: string }>
   >(new Map());
 
-  console.log('allAssertions123:', allAssertions);
-
   const isDateValue = (value: any): boolean => {
     if (typeof value !== 'string') return false;
 
@@ -611,6 +609,13 @@ function AssertionModal({
           selectedOperator === 'contains' ||
           selectedOperator === 'field_not_contains'
         ) {
+          const mappedOperator =
+            selectedOperator === 'contains'
+              ? 'field_contains'
+              : 'field_not_contains';
+          config.type = mappedOperator;
+          config.displayType = mappedOperator;
+          config.operator = mappedOperator;
           config.expectedValue = manualValue;
           config.description = `${normalizedFieldPath} ${
             selectedOperator === 'contains' ? 'contains' : 'does not contain'
@@ -776,11 +781,17 @@ function AssertionModal({
             source: 'manual',
             operator: selectedOperator,
           };
-
           if (
             selectedOperator === 'contains' ||
             selectedOperator === 'field_not_contains'
           ) {
+            const mappedOperator =
+              selectedOperator === 'contains'
+                ? 'field_contains'
+                : 'field_not_contains';
+            config.type = mappedOperator;
+            config.displayType = mappedOperator;
+            config.operator = mappedOperator;
             config.expectedValue = manualValue;
             config.description = `${normalizedFieldPath} ${
               selectedOperator === 'contains' ? 'contains' : 'does not contain'
