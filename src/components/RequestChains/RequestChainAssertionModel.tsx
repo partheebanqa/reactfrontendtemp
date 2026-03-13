@@ -112,7 +112,6 @@ function AssertionModal({
   const displayFieldValue =
     initialValue !== undefined ? initialValue : fieldValue;
   const hasChanges =
-    selectedSuggestedAssertions.size > 0 ||
     assertionsToRemove.size > 0 ||
     pendingAssertions.length > 0 ||
     selectedGeneralAssertions.size > 0;
@@ -538,6 +537,27 @@ function AssertionModal({
   };
 
   const handleAddAssertion = () => {
+    if (activeTab === 'suggested' && selectedSuggestedAssertions.size > 0) {
+      // Move selected suggestions into pendingAssertions, then clear selection
+      const newPending: any[] = [];
+      selectedSuggestedAssertions.forEach((assertionId) => {
+        const assertionItem = suggestedAssertionsList.find(
+          (a) => a.id === assertionId,
+        );
+        if (assertionItem) {
+          newPending.push({
+            ...assertionItem.assertion,
+            _isSuggested: true,
+            _suggestedId: assertionItem.id,
+            _label: assertionItem.label,
+          });
+        }
+      });
+      setPendingAssertions([...pendingAssertions, ...newPending]);
+      setSelectedSuggestedAssertions(new Set());
+      return;
+    }
+
     if (
       activeTab === 'manual' &&
       manualValue &&
@@ -647,22 +667,17 @@ function AssertionModal({
       setGeneralComparison('less');
       return;
     }
-
-    // if (activeTab === 'suggested' && hasChanges) {
-    //   handleFinalSave();
-    // }
   };
 
   const handleFinalSave = () => {
     if (!onSelect) return;
 
-    const suggestedToAdd: any[] = [];
-    selectedSuggestedAssertions.forEach((assertionId) => {
-      const assertionItem = suggestedAssertionsList.find(
-        (a) => a.id === assertionId,
-      );
-      if (assertionItem) suggestedToAdd.push(assertionItem.assertion);
-    });
+    // Split pending into suggested vs manual
+    const suggestedToAdd = pendingAssertions
+      .filter((a) => a._isSuggested)
+      .map(({ _isSuggested, _suggestedId, _label, ...rest }) => rest);
+
+    const manualToAdd = pendingAssertions.filter((a) => !a._isSuggested);
 
     const toRemove = Array.from(assertionsToRemove);
 
@@ -693,11 +708,10 @@ function AssertionModal({
       onSelect(generalType, config);
     });
 
-    pendingAssertions.forEach((assertion) => {
+    manualToAdd.forEach((assertion) => {
       onSelect('manual-direct', { assertion });
     });
 
-    // 4. Clear all pending states
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
     setPendingAssertions([]);
@@ -826,6 +840,9 @@ function AssertionModal({
   };
 
   const canAddAssertion = () => {
+    if (activeTab === 'suggested') {
+      return selectedSuggestedAssertions.size > 0;
+    }
     if (activeTab === 'manual') {
       return (
         manualValue &&
@@ -842,7 +859,7 @@ function AssertionModal({
     if (activeTab === 'general') {
       return generalType && generalValue;
     }
-    return hasChanges;
+    return false;
   };
 
   const staticVariables = variables.filter((v) => v.name.startsWith('S_'));
@@ -1460,19 +1477,15 @@ function AssertionModal({
 
             {/* Pending Assertions List */}
             {(pendingAssertions.length > 0 ||
-              selectedSuggestedAssertions.size > 0 ||
               selectedGeneralAssertions.size > 0) && (
               <div className='border-t border-gray-200 mt-4 pt-4'>
                 <h3 className='text-sm font-semibold text-gray-900 mb-3'>
                   Added Assertions (
-                  {pendingAssertions.length +
-                    selectedSuggestedAssertions.size +
-                    selectedGeneralAssertions.size}
-                  )
+                  {pendingAssertions.length + selectedGeneralAssertions.size})
                 </h3>
                 <div className='space-y-2 max-h-48 overflow-y-auto scrollbar-thin pr-2'>
                   {/* Suggested Assertions */}
-                  {Array.from(selectedSuggestedAssertions).map(
+                  {/* {Array.from(selectedSuggestedAssertions).map(
                     (assertionId) => {
                       const assertionItem = suggestedAssertionsList.find(
                         (a) => a.id === assertionId,
@@ -1508,7 +1521,7 @@ function AssertionModal({
                         </div>
                       );
                     },
-                  )}
+                  )} */}
 
                   {/* General Assertions */}
                   {Array.from(selectedGeneralAssertions.entries()).map(
@@ -1561,24 +1574,39 @@ function AssertionModal({
                   )}
 
                   {/* Manual Assertions */}
+                  {/* Pending Assertions (manual + staged suggested) */}
                   {pendingAssertions.map((assertion) => (
                     <div
-                      key={assertion.id}
-                      className='flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg'
+                      key={assertion.id || assertion._suggestedId}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        assertion._isSuggested
+                          ? 'bg-blue-50 border-blue-200'
+                          : 'bg-green-50 border-green-200'
+                      }`}
                     >
                       <div className='flex-1 min-w-0'>
-                        <p className='text-sm font-medium text-green-900'>
-                          {assertion.description || assertion.type}
+                        <p
+                          className={`text-sm font-medium ${assertion._isSuggested ? 'text-blue-900' : 'text-green-900'}`}
+                        >
+                          {assertion._label ||
+                            assertion.description ||
+                            assertion.type}
                         </p>
-                        <p className='text-xs text-green-600 mt-0.5'>
-                          Manual assertion
+                        <p
+                          className={`text-xs mt-0.5 ${assertion._isSuggested ? 'text-blue-600' : 'text-green-600'}`}
+                        >
+                          {assertion._isSuggested
+                            ? 'Suggested assertion'
+                            : 'Manual assertion'}
                         </p>
                       </div>
                       <button
                         onClick={() =>
-                          handleRemovePendingAssertion(assertion.id)
+                          handleRemovePendingAssertion(
+                            assertion.id || assertion._suggestedId,
+                          )
                         }
-                        className='p-1.5 text-green-600 hover:text-red-600 hover:bg-red-50 rounded transition-all'
+                        className={`p-1.5 hover:text-red-600 hover:bg-red-50 rounded transition-all ${assertion._isSuggested ? 'text-blue-600' : 'text-green-600'}`}
                         title='Remove'
                       >
                         <Trash2 className='w-4 h-4' />
