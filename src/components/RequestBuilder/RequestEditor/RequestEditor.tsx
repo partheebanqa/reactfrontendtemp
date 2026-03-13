@@ -171,21 +171,17 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     setActiveRequest,
     setCollection,
     expandedCollections,
-    setActiveCollection,
     setIsCreatingCollection,
     collections,
     isCreatingCollection,
     addCollectionMutation,
     addRequestMutation,
-    renameRequestMutation,
     handleCreateRequest: onCreateRequest,
     fetchCollectionRequests,
     replaceRequest,
   } = useCollection();
 
   const isExtractingRef = useRef(false);
-
-  const { unsavedChanges } = useCollectionStore();
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
     useDataManagement();

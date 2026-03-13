@@ -2,17 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   ChevronLeft,
   ChevronRight,
-  Users,
-  BookOpen,
-  CalendarDays,
-  User,
-  ClipboardList,
-  Video,
-  // FileText,
-  Megaphone,
   MoveRight,
-  Bug,
-  TestTubeDiagonal,
   LockKeyhole,
   StepForward,
 } from 'lucide-react';

@@ -48,6 +48,7 @@ const TestSuites = lazy(() => import('@/pages/TestSuites'));
 const TestSuiteList = lazy(
   () => import('@/components/TestSuit/TestSuiteListNew'),
 );
+
 const CreateTestSuit = lazy(
   () => import('@/components/TestSuitNew/CreateTestSuit'),
 );
