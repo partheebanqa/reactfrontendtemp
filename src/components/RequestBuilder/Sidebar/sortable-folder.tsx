@@ -23,7 +23,7 @@ export default function SortableFolder({
         collectionId, // Include collectionId in data for drag operations
       },
       animateLayoutChanges: () => false,
-    }
+    },
   );
 
   const style = {
