@@ -35,7 +35,7 @@ interface PrePostRequestProps {
   onRemoveExtraction?: (name: string) => void;
 }
 
-export function PrePostRequest({
+export default function PrePostRequest({
   type = 'pre-request',
   assertions = [],
   setAssertions,
@@ -194,10 +194,11 @@ export function PrePostRequest({
           <div className='border-b border-gray-200 mb-4 flex space-x-4 px-4'>
             <button
               onClick={() => setActiveSubTab('assertions')}
-              className={`pb-2 text-xs md:text-sm font-medium ${activeSubTab === 'assertions'
-                ? 'border-b-2 border-blue-600 text-blue-700'
-                : 'text-gray-500 hover:text-gray-700'
-                }`}
+              className={`pb-2 text-xs md:text-sm font-medium ${
+                activeSubTab === 'assertions'
+                  ? 'border-b-2 border-blue-600 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
             >
               Assertions
               <span className='ml-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-full px-2 py-0.5 text-xs'>
@@ -207,10 +208,11 @@ export function PrePostRequest({
 
             <button
               onClick={() => setActiveSubTab('extracted')}
-              className={`pb-2 text-xs md:text-sm font-medium ${activeSubTab === 'extracted'
-                ? 'border-b-2 border-blue-600 text-blue-700'
-                : 'text-gray-500 hover:text-gray-700'
-                }`}
+              className={`pb-2 text-xs md:text-sm font-medium ${
+                activeSubTab === 'extracted'
+                  ? 'border-b-2 border-blue-600 text-blue-700'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
             >
               Extracted Variables
               {extractedVariables &&
@@ -268,8 +270,8 @@ export function PrePostRequest({
                 <table className='w-full text-sm'>
                   <tbody>
                     {extractedVariables &&
-                      typeof extractedVariables === 'object' &&
-                      Object.keys(extractedVariables).length > 0 ? (
+                    typeof extractedVariables === 'object' &&
+                    Object.keys(extractedVariables).length > 0 ? (
                       <tr>
                         <td className='px-2 py-3 font-semibold text-gray-900 dark:text-gray-200 w-40 bg-gray-50 dark:bg-gray-800 align-top'>
                           Extracted Variables

@@ -206,10 +206,11 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                   onClick={() => handleTabClick(request)}
                   className={`group relative flex items-center gap-2 px-3 py-2
               transition-all border-b-2 whitespace-nowrap
-              ${isActive
-                      ? 'border-blue-600 bg-white'
-                      : 'border-transparent hover:bg-gray-50'
-                    }`}
+              ${
+                isActive
+                  ? 'border-blue-600 bg-white'
+                  : 'border-transparent hover:bg-gray-50'
+              }`}
                 >
                   <span
                     className={`text-xs font-semibold ${methodColor(
@@ -227,10 +228,11 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <span
-                          className={`text-xs md:text-sm flex items-center gap-1.5 max-w-[130px] truncate ${isActive
-                            ? 'text-blue-600 font-medium'
-                            : 'text-gray-700'
-                            }`}
+                          className={`text-xs md:text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
+                            isActive
+                              ? 'text-blue-600 font-medium'
+                              : 'text-gray-700'
+                          }`}
                         >
                           {request.name
                             ? request.name.slice(0, 15)

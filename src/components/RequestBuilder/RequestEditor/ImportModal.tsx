@@ -28,7 +28,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [importType, setImportType] = useState<'file' | 'swagger' | 'curl'>(
-    'curl'
+    'curl',
   );
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);

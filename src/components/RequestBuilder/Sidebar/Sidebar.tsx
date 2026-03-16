@@ -63,6 +63,7 @@ import {
 import SortableRequest from './sortable-request';
 import SortableFolder from './sortable-folder';
 import SortableCollection from './sortable-collection';
+import VirtualizedRequestList from './VirtualizedRequestList';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -1498,142 +1499,189 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                           </div>
 
                           <div
-                            className={`ml-4 sm:ml-6 overflow-hidden ${
+                            className={`ml-4 sm:ml-6 ${
                               expanded
-                                ? isSearching
-                                  ? 'max-h-none'
-                                  : 'max-h-[1000px]'
-                                : 'max-h-0'
+                                ? 'overflow-visible'
+                                : 'max-h-0 overflow-hidden'
                             }`}
                           >
                             {expanded && (
-                              <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
-                                <SortableContext
-                                  items={collectionSortableIds}
-                                  strategy={verticalListSortingStrategy}
-                                >
-                                  {collection.requests
-                                    .filter((r: any) => !r.folderId)
-                                    .map((request, index) => (
-                                      <SortableRequest
-                                        key={request.id || `root-${index}`}
-                                        request={request}
-                                        depth={0}
-                                        collectionId={collection.id}
-                                      >
-                                        <div
-                                          className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                                            activeRequest?.id === request.id
-                                              ? 'bg-blue-50 dark:bg-blue-900/20'
-                                              : ''
-                                          } ${
-                                            isAuthRequest(
-                                              request.id,
-                                              collection.id,
-                                            )
-                                              ? 'border-2 border-blue-500 rounded-lg'
-                                              : ''
-                                          }`}
-                                        >
-                                          <div
-                                            className='flex items-center space-x-2 flex-1 min-w-0'
-                                            onClick={() => {
-                                              selectRequest(
-                                                request,
-                                                collection,
-                                              );
-
-                                              if (isMobile) {
-                                                toggleSidebar();
-                                              }
-                                            }}
+                              <div>
+                                {/* Use VirtualizedRequestList for requests */}
+                                {collection.requests.filter(
+                                  (r: any) => !r.folderId,
+                                ).length > 10 ? (
+                                  <VirtualizedRequestList
+                                    requests={collection.requests}
+                                    collectionId={collection.id}
+                                    activeRequestId={activeRequest?.id}
+                                    isAuthRequest={isAuthRequest}
+                                    selectRequest={selectRequest}
+                                    getMethodColor={getMethodColor}
+                                    setMenuPosition={setMenuPosition}
+                                    setSelectedRequest={setSelectedRequest}
+                                    setSelectedCollection={
+                                      setSelectedCollection
+                                    }
+                                    setRequestId={setRequestId}
+                                    setShowMenu={setShowMenu}
+                                    collection={collection}
+                                    isMobile={isMobile}
+                                    toggleSidebar={toggleSidebar}
+                                    depth={0}
+                                  />
+                                ) : (
+                                  <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
+                                    <SortableContext
+                                      items={collectionSortableIds}
+                                      strategy={verticalListSortingStrategy}
+                                    >
+                                      {collection.requests
+                                        .filter((r: any) => !r.folderId)
+                                        .map((request, index) => (
+                                          <SortableRequest
+                                            key={request.id || `root-${index}`}
+                                            request={request}
+                                            depth={0}
+                                            collectionId={collection.id}
                                           >
-                                            {isAuthRequest(
-                                              request.id,
-                                              collection.id,
-                                            ) && (
-                                              <TooltipProvider>
-                                                <Tooltip>
-                                                  <TooltipTrigger asChild>
-                                                    <Key className='h-3 w-3 text-blue-600 flex-shrink-0' />
-                                                  </TooltipTrigger>
-                                                  <TooltipContent side='top'>
-                                                    Auto Auth
-                                                  </TooltipContent>
-                                                </Tooltip>
-                                              </TooltipProvider>
-                                            )}
-                                            <span
-                                              className={`text-xs font-medium ${getMethodColor(
-                                                request.method,
-                                              )} flex-shrink-0`}
+                                            <div
+                                              className={`flex items-center justify-between p-[6px] rounded-md cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                                                activeRequest?.id === request.id
+                                                  ? 'bg-blue-50 dark:bg-blue-900/20'
+                                                  : ''
+                                              } ${
+                                                isAuthRequest(
+                                                  request.id,
+                                                  collection.id,
+                                                )
+                                                  ? 'border-2 border-blue-500 rounded-lg'
+                                                  : ''
+                                              }`}
                                             >
-                                              {request.method}
-                                            </span>
-                                            <TooltipProvider>
-                                              <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                  <span className='text-xs md:text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
-                                                    {request.name}
-                                                  </span>
-                                                </TooltipTrigger>
-                                                <TooltipContent side='top'>
-                                                  {request.name}
-                                                </TooltipContent>
-                                              </Tooltip>
-                                            </TooltipProvider>
-                                          </div>
-                                          <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
-                                            <TooltipContainer text='Request Actions'>
-                                              <button
-                                                draggable={false}
-                                                onMouseDown={(e) =>
-                                                  e.stopPropagation()
-                                                }
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  const rect = (
-                                                    e.currentTarget as HTMLButtonElement
-                                                  ).getBoundingClientRect();
-                                                  setMenuPosition({
-                                                    top: rect.bottom,
-                                                    left: rect.left,
-                                                    anchorTop: rect.top,
-                                                  });
-                                                  setSelectedRequest(request);
-                                                  setSelectedCollection(
+                                              <div
+                                                className='flex items-center space-x-2 flex-1 min-w-0'
+                                                onClick={() => {
+                                                  selectRequest(
+                                                    request,
                                                     collection,
                                                   );
-                                                  setRequestId(
-                                                    request.id || '',
-                                                  );
-                                                  setShowMenu(
-                                                    `request-${request.id}`,
-                                                  );
-                                                }}
-                                                className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
-                                              >
-                                                <MoreVertical className='h-3 w-3' />
-                                              </button>
-                                            </TooltipContainer>
-                                          </div>
-                                        </div>
-                                      </SortableRequest>
-                                    ))}
 
-                                  {(collection as any).folders?.map(
-                                    (folder: any) => (
-                                      <FolderNodeView
-                                        key={folder.id}
-                                        folder={folder}
-                                        parentCollection={collection}
-                                        onClickRequest={(req, parentCol) =>
-                                          selectRequest(req, parentCol)
-                                        }
-                                      />
-                                    ),
-                                  )}
-                                </SortableContext>
+                                                  if (isMobile) {
+                                                    toggleSidebar();
+                                                  }
+                                                }}
+                                              >
+                                                {isAuthRequest(
+                                                  request.id,
+                                                  collection.id,
+                                                ) && (
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <Key className='h-3 w-3 text-blue-600 flex-shrink-0' />
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side='top'>
+                                                        Auto Auth
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                )}
+                                                <span
+                                                  className={`text-xs font-medium ${getMethodColor(
+                                                    request.method,
+                                                  )} flex-shrink-0`}
+                                                >
+                                                  {request.method}
+                                                </span>
+                                                <TooltipProvider>
+                                                  <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                      <span className='text-xs md:text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                                        {request.name}
+                                                      </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side='top'>
+                                                      {request.name}
+                                                    </TooltipContent>
+                                                  </Tooltip>
+                                                </TooltipProvider>
+                                              </div>
+                                              <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
+                                                <TooltipContainer text='Request Actions'>
+                                                  <button
+                                                    draggable={false}
+                                                    onMouseDown={(e) =>
+                                                      e.stopPropagation()
+                                                    }
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const rect = (
+                                                        e.currentTarget as HTMLButtonElement
+                                                      ).getBoundingClientRect();
+                                                      setMenuPosition({
+                                                        top: rect.bottom,
+                                                        left: rect.left,
+                                                        anchorTop: rect.top,
+                                                      });
+                                                      setSelectedRequest(
+                                                        request,
+                                                      );
+                                                      setSelectedCollection(
+                                                        collection,
+                                                      );
+                                                      setRequestId(
+                                                        request.id || '',
+                                                      );
+                                                      setShowMenu(
+                                                        `request-${request.id}`,
+                                                      );
+                                                    }}
+                                                    className='p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                  >
+                                                    <MoreVertical className='h-3 w-3' />
+                                                  </button>
+                                                </TooltipContainer>
+                                              </div>
+                                            </div>
+                                          </SortableRequest>
+                                        ))}
+
+                                      {(collection as any).folders?.map(
+                                        (folder: any) => (
+                                          <FolderNodeView
+                                            key={folder.id}
+                                            folder={folder}
+                                            parentCollection={collection}
+                                            onClickRequest={(req, parentCol) =>
+                                              selectRequest(req, parentCol)
+                                            }
+                                          />
+                                        ),
+                                      )}
+                                    </SortableContext>
+                                  </div>
+                                )}
+
+                                {/* Render folders separately (outside virtualization) */}
+                                {collection.requests.filter(
+                                  (r: any) => !r.folderId,
+                                ).length > 10 && (
+                                  <div>
+                                    {(collection as any).folders?.map(
+                                      (folder: any) => (
+                                        <FolderNodeView
+                                          key={folder.id}
+                                          folder={folder}
+                                          parentCollection={collection}
+                                          onClickRequest={(req, parentCol) =>
+                                            selectRequest(req, parentCol)
+                                          }
+                                        />
+                                      ),
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
