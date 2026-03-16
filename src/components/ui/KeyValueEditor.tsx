@@ -8,11 +8,7 @@ import { KeyValuePair } from '@/shared/types/request';
 interface KeyValueEditorProps {
   items: KeyValuePair[];
   onAdd: () => void;
-  onUpdate: (
-    idOrIndex: string | number,
-    field: Partial<KeyValuePair> | keyof KeyValuePair,
-    value?: string | boolean
-  ) => void;
+  onUpdate: (idOrIndex: string | number, field: Partial<KeyValuePair>) => void;
   onRemove: (idOrIndex: string | number) => void;
   title: string;
   addButtonLabel?: string;
@@ -31,27 +27,13 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
   const handleFieldUpdate = (
     idOrIndex: string | number,
     fieldName: string,
-    fieldValue: string | boolean
+    fieldValue: string | boolean,
   ) => {
-    // Check if onUpdate expects the new signature (id-based with Partial)
-    const item =
-      items[
+    const index =
       typeof idOrIndex === 'number'
         ? idOrIndex
-        : items.findIndex((i) => i.id === idOrIndex)
-      ];
-
-    if (typeof idOrIndex === 'string' && item?.id) {
-      // New signature: (id, partial)
-      onUpdate(idOrIndex, { [fieldName]: fieldValue } as Partial<KeyValuePair>);
-    } else {
-      // Old signature: (index, field, value)
-      const index =
-        typeof idOrIndex === 'number'
-          ? idOrIndex
-          : items.findIndex((i) => i.id === idOrIndex);
-      onUpdate(index, fieldName as keyof KeyValuePair, fieldValue);
-    }
+        : items.findIndex((i) => i.id === idOrIndex);
+    onUpdate(index, { [fieldName]: fieldValue } as Partial<KeyValuePair>);
   };
 
   return (
@@ -85,7 +67,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
                     handleFieldUpdate(
                       item.id || index,
                       'enabled',
-                      e.target.checked
+                      e.target.checked,
                     )
                   }
                   className='text-xs md:text-sm h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded sm:flex-shrink-0'

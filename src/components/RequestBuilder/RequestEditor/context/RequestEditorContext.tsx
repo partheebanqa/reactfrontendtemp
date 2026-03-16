@@ -4,7 +4,6 @@ import React, {
   useState,
   useCallback,
   useMemo,
-  useEffect,
 } from 'react';
 import type {
   BodyType,
@@ -294,24 +293,6 @@ export const RequestEditorProvider: React.FC<RequestEditorProviderProps> = ({
     [onStateChange],
   );
 
-  // After all the useState declarations, add these sync effects:
-
-  useEffect(() => {
-    setUrl(initialUrl);
-    setMethod(initialMethod);
-    setParams(initialParams);
-    setHeaders(initialHeaders);
-    setBodyType(initialBodyType);
-    setBodyContent(initialBodyContent);
-    setAuthType(initialAuthType);
-    if (initialAuthData) {
-      setAuthData(initialAuthData);
-    }
-    if (initialSettings) {
-      setSettings(initialSettings);
-    }
-  }, [activeRequestId]); // Only re-sync when the active request changes
-
   const value = useMemo<RequestEditorContextType>(
     () => ({
       url,
@@ -380,12 +361,12 @@ export const RequestEditorProvider: React.FC<RequestEditorProviderProps> = ({
       pendingSubstitutions,
       dynamicVarTrigger,
       activeRequestId,
-      addParam,
-      updateParam,
-      removeParam,
-      addHeader,
-      updateHeader,
-      removeHeader,
+      // addParam,
+      // updateParam,
+      // removeParam,
+      // addHeader,
+      // updateHeader,
+      // removeHeader,
     ],
   );
 

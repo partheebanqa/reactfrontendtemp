@@ -17,7 +17,7 @@ const AuthTab = React.memo(
     const { authData, setAuthData, authType, activeRequestId } =
       useRequestEditor();
 
-    console.log('token123:', authData);
+    console.log('authData:', authData);
 
     const handleTokenChange = React.useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
