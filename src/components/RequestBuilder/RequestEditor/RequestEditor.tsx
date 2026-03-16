@@ -863,7 +863,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         setUrl(baseUrl);
       }
     }
-  }, [params, isSaving, url]);
+  }, [params, isSaving]);
 
   useEffect(() => {
     if (isSaving) return;
@@ -3246,6 +3246,7 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   activeRequestId={activeRequest?.id}
                 />
               )}
+
               {activeTab === 'headers' && (
                 <HeadersTab
                   headers={headers}
