@@ -24,6 +24,7 @@ import {
   Clock,
   TrendingUp,
   Settings,
+  StepBack,
 } from 'lucide-react';
 import {
   Select,
@@ -2959,7 +2960,7 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
                       : 'text-gray-500 hover:bg-transparent'
                   }`}
                 >
-                  <Settings className='w-4 h-4' />
+                  <StepBack className='w-4 h-4' />
                   Build
                 </Button>
 
