@@ -72,7 +72,6 @@ import {
 import { VariableHelpDialog } from './HelpTextDialougs/variablesUseDialogues';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
 import type { KeyValuePairWithFile } from '../ui/KeyValueEditorWithFileUpload';
-import { PrePostRequest } from '../Shared/RequestTabs/PrePostRequest';
 import {
   AutocompleteState,
   DynamicVariableOverride,
@@ -81,6 +80,7 @@ import {
   Variable,
 } from '@/shared/types/request';
 import VariablePicker from '../Shared/VariablePicker';
+import PrePostRequest from '../Shared/RequestTabs/PrePostRequest';
 
 type FormField = {
   id: string;
