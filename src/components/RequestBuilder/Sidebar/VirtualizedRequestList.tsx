@@ -47,8 +47,7 @@ const VirtualizedRequestList: React.FC<VirtualizedRequestListProps> = ({
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
 
-  console.log('coming to virtual request');
-
+  // Filter requests without folders
   const filteredRequests = useMemo(
     () => requests.filter((r: any) => !r.folderId),
     [requests],
@@ -79,6 +78,7 @@ const VirtualizedRequestList: React.FC<VirtualizedRequestListProps> = ({
       >
         {virtualizer.getVirtualItems().map((virtualItem) => {
           const request = filteredRequests[virtualItem.index];
+
           return (
             <div
               key={virtualItem.key}

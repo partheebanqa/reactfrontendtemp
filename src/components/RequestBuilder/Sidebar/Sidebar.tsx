@@ -710,6 +710,9 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedMethods, setSelectedMethods] = useState<Set<string>>(
+    new Set(),
+  );
 
   const hasExtractedVariables = (request: CollectionRequest) => {
     if (!request.id || !request.collectionId) return false;
@@ -1085,31 +1088,55 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
     }
   };
 
-  const isSearching = searchQuery.trim().length > 0;
+  const isSearching = searchQuery.trim().length > 0 || selectedMethods.size > 0;
   const isCollectionExpanded = (collectionId: string) =>
     isSearching ? true : expandedCollections.has(collectionId);
 
   const filteredCollections = useMemo(() => {
-    if (!searchQuery.trim()) return collections;
+    const hasSearchQuery = searchQuery.trim().length > 0;
+    const hasMethodFilter = selectedMethods.size > 0;
+
+    if (!hasSearchQuery && !hasMethodFilter) return collections;
+
     const query = searchQuery.toLowerCase();
+
     return collections
       .map((collection) => {
-        const collectionMatches = collection.name.toLowerCase().includes(query);
-        const matchingRequests = collection.requests.filter((req) =>
-          req.name?.toLowerCase().includes(query),
-        );
+        const collectionMatches = hasSearchQuery
+          ? collection.name.toLowerCase().includes(query)
+          : true;
+
+        let matchingRequests = collection.requests;
+
+        if (hasSearchQuery) {
+          matchingRequests = matchingRequests.filter((req) =>
+            req.name?.toLowerCase().includes(query),
+          );
+        }
+
+        if (hasMethodFilter) {
+          matchingRequests = matchingRequests.filter((req) =>
+            selectedMethods.has(req.method),
+          );
+        }
+
         if (collectionMatches || matchingRequests.length > 0) {
           return {
             ...collection,
-            requests: collectionMatches
-              ? collection.requests
-              : matchingRequests,
+            requests:
+              collectionMatches && !hasMethodFilter
+                ? hasMethodFilter
+                  ? collection.requests.filter((req) =>
+                      selectedMethods.has(req.method),
+                    )
+                  : collection.requests
+                : matchingRequests,
           };
         }
         return null;
       })
       .filter(Boolean) as typeof collections;
-  }, [collections, searchQuery]);
+  }, [collections, searchQuery, selectedMethods]);
 
   const toggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
@@ -1382,6 +1409,61 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className='pl-10 text-base'
                 />
+              </div>
+            </div>
+
+            {/* Quick Filters */}
+            <div className='mb-3 px-2'>
+              <div className='flex items-center gap-1 flex-wrap'>
+                {['GET', 'POST', 'PUT', 'DELETE', 'PATCH'].map((method) => {
+                  const isActive = selectedMethods.has(method);
+                  const methodColors: Record<string, string> = {
+                    GET: isActive
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-green-50 dark:hover:bg-green-900/20',
+                    POST: isActive
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-blue-900/20',
+                    PUT: isActive
+                      ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-orange-50 dark:hover:bg-orange-900/20',
+                    DELETE: isActive
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:hover:bg-red-900/20',
+                    PATCH: isActive
+                      ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-purple-50 dark:hover:bg-purple-900/20',
+                  };
+
+                  return (
+                    <button
+                      key={method}
+                      onClick={() => {
+                        const newMethods = new Set(selectedMethods);
+                        if (newMethods.has(method)) {
+                          newMethods.delete(method);
+                        } else {
+                          newMethods.add(method);
+                        }
+                        setSelectedMethods(newMethods);
+                      }}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors ${
+                        methodColors[method]
+                      }`}
+                    >
+                      {method}
+                    </button>
+                  );
+                })}
+
+                {selectedMethods.size > 0 && (
+                  <button
+                    onClick={() => setSelectedMethods(new Set())}
+                    className='ml-auto px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 underline'
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </div>
 

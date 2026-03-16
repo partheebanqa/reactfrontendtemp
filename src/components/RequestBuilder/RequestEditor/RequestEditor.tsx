@@ -80,6 +80,7 @@ import {
   RequestEditorProvider,
   useRequestEditor,
 } from './context/RequestEditorContext';
+import { isModifierPressed, shortcuts } from '@/utils/keyboardShortcuts';
 
 const TabLoader = () => (
   <div className='flex items-center justify-center p-8'>
@@ -1260,6 +1261,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
     activeRequest?.id,
     isCurrentRequestPreRequest,
   ]);
+
   const handlePreRequestToggle = (checked: boolean) => {
     if (isCurrentRequestPreRequest) {
       return;
@@ -2867,6 +2869,44 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
     }
   };
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + Enter - Send Request
+      if (e.key === 'Enter' && isModifierPressed(e)) {
+        e.preventDefault();
+        if (!isLoading && activeRequest) {
+          handleSendRequest();
+        }
+        return;
+      }
+
+      // Cmd/Ctrl + S - Save Request
+      if (e.key === 's' && isModifierPressed(e)) {
+        e.preventDefault();
+        if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
+          handleUpdateRequest();
+        }
+        return;
+      }
+
+      // Escape - Cancel Request
+      if (e.key === 'Escape' && isLoading) {
+        e.preventDefault();
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+          toast({
+            title: 'Request Cancelled',
+            description: 'The request was cancelled by keyboard shortcut',
+          });
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isLoading, activeRequest, handleSendRequest, handleUpdateRequest, toast]);
+
   const methods: RequestMethod[] = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
 
   const handleVariableSelect = (variables: SelectedVariable[]) => {
@@ -3075,78 +3115,102 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
 
             <div className='justify-end flex space-x-2'>
               {isLoading ? (
-                <Button
-                  variant='outline'
-                  onClick={() => {
-                    if (abortControllerRef.current) {
-                      abortControllerRef.current.abort();
-                      toast({
-                        title: 'Cancelling...',
-                        description: 'Request cancellation initiated',
-                      });
-                    }
-                  }}
-                  className='border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
-                  aria-label='Cancel request'
-                  title='Cancel request'
-                >
-                  <svg
-                    className='h-4 w-4'
-                    fill='none'
-                    stroke='currentColor'
-                    viewBox='0 0 24 24'
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth={2}
-                      d='M6 18L18 6M6 6l12 12'
-                    />
-                  </svg>
-                  <span className='hidden sm:inline'>Cancel</span>
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='outline'
+                        onClick={() => {
+                          if (abortControllerRef.current) {
+                            abortControllerRef.current.abort();
+                            toast({
+                              title: 'Cancelling...',
+                              description: 'Request cancellation initiated',
+                            });
+                          }
+                        }}
+                        className='border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                        aria-label='Cancel request'
+                      >
+                        <svg
+                          className='h-4 w-4'
+                          fill='none'
+                          stroke='currentColor'
+                          viewBox='0 0 24 24'
+                        >
+                          <path
+                            strokeLinecap='round'
+                            strokeLinejoin='round'
+                            strokeWidth={2}
+                            d='M6 18L18 6M6 6l12 12'
+                          />
+                        </svg>
+                        <span className='hidden sm:inline'>Cancel</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Cancel ({shortcuts.CANCEL_REQUEST.format()})
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
-                <Button
-                  variant='active'
-                  onClick={handleSendRequest}
-                  disabled={isLoading}
-                  className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
-                  aria-label='Send request'
-                  title='Send request'
-                >
-                  <Play className='h-4 w-4' />
-                  <span className='hidden sm:inline'>Send</span>
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant='active'
+                        onClick={handleSendRequest}
+                        disabled={isLoading}
+                        className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                        aria-label='Send request'
+                      >
+                        <Play className='h-4 w-4' />
+                        <span className='hidden sm:inline'>Send</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Send Request ({shortcuts.SEND_REQUEST.format()})
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-              <TooltipContainer text='Save request'>
-                {isNewRequest(activeRequest.id) ? (
-                  <button
-                    onClick={handleSaveRequest}
-                    disabled={isSaving} // ← ADD
-                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
-                    aria-label='Save request'
-                  >
-                    {isSaving ? ( // ← REPLACE static icon
-                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {isNewRequest(activeRequest.id) ? (
+                      <button
+                        onClick={handleSaveRequest}
+                        disabled={isSaving}
+                        className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
+                        aria-label='Save request'
+                      >
+                        {isSaving ? (
+                          <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                        ) : (
+                          <Save className='h-4 w-4 text-[#136fb0]' />
+                        )}
+                      </button>
                     ) : (
-                      <Save className='h-4 w-4 text-[#136fb0]' />
+                      <button
+                        onClick={handleUpdateContentRequest}
+                        disabled={isSaving}
+                        className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
+                        aria-label='Update request'
+                      >
+                        {isSaving ? (
+                          <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                        ) : (
+                          <Save className='h-4 w-4 text-[#136fb0]' />
+                        )}
+                      </button>
                     )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleUpdateContentRequest}
-                    disabled={isSaving} // ← ADD
-                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
-                    aria-label='Save request'
-                  >
-                    {isSaving ? ( // ← REPLACE static icon
-                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
-                    ) : (
-                      <Save className='h-4 w-4 text-[#136fb0]' />
-                    )}
-                  </button>
-                )}
-              </TooltipContainer>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isNewRequest(activeRequest.id) ? 'Save' : 'Update'} Request
+                    ({shortcuts.SAVE_REQUEST.format()})
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
 
               {/* <TooltipContainer text='Performance Test'>
                 // {isNewRequest(activeRequest.id) ? (
