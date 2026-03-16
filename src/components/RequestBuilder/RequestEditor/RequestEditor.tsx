@@ -1,16 +1,8 @@
 'use client';
 
-import type React from 'react';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  Play,
-  Save,
-  FolderPlus,
-  Info,
-  Rocket,
-  Key,
-  Loader2,
-} from 'lucide-react';
+import React from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { Play, Save, FolderPlus, Info, Key, Loader2 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
 import { useWorkspace } from '@/hooks/useWorkspace';
@@ -23,7 +15,14 @@ import type {
   RequestMethod,
   SelectedVariable,
 } from '@/shared/types/request';
-import SchemaPage from '../SchemaPage';
+// Lazy load heavy components
+const SchemaPage = lazy(() => import('../SchemaPage'));
+const ImportModal = lazy(() => import('./ImportModal'));
+const PerformanceTab = lazy(() => import('./Tabs/PerformanceTab'));
+const PrePostRequest = lazy(
+  () => import('@/components/Shared/RequestTabs/PrePostRequest'),
+);
+
 import { useToast } from '@/hooks/useToast';
 import TooltipContainer from '@/components/ui/tooltip-container';
 import KeyValueEditor from '@/components/ui/KeyValueEditor';
@@ -45,19 +44,15 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
-import ImportModal from './ImportModal';
 import { Input } from '@/components/ui/input';
-import 'codemirror/lib/codemirror.css';
-import 'codemirror/theme/material.css';
-import 'codemirror/mode/javascript/javascript';
-import './whiteorange.css';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
-import {
-  generateDynamicValueById,
-  getMethodColor,
-  getTokenExpiryDisplay,
-} from '@/lib/request-utils';
+import { generateDynamicValueById, getMethodColor } from '@/lib/request-utils';
 import RequestTabs from './RequestTabs';
+import ParamsTab from './Tabs/ParamsTab';
+import HeadersTab from './Tabs/HeadersTab';
+import AuthTab from './Tabs/AuthTab';
+import SettingsTab from './Tabs/SettingsTab';
+import { useDebounce } from '@/hooks/useDebounce';
 import {
   collectionActions,
   useCollectionStore,
@@ -66,13 +61,7 @@ import {
 import { useSchema } from '@/hooks/useSchema';
 import type { CollectionRequest } from '@/shared/types/collection';
 import RequestBody from '@/components/Shared/RequestTabs/RequestBody';
-import { PrePostRequest } from '@/components/Shared/RequestTabs/PrePostRequest';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Separator } from '@/components/ui/separator';
-import { Checkbox } from '@/components/ui/checkbox';
+
 import {
   PerformanceTestConfigApi,
   PerformanceTestConfigDTO,
@@ -86,6 +75,14 @@ import {
 } from '@/services/performance.service';
 import { Assertion } from '@/components/Shared/Assertion/ApiAssertionInterface';
 import { RequestSettings } from '@/lib/requestBreadCrumb';
+import { ErrorBoundary } from './ErrorBoundary';
+import { RequestEditorProvider } from './context/RequestEditorContext';
+
+const TabLoader = () => (
+  <div className='flex items-center justify-center p-8'>
+    <Loader2 className='h-6 w-6 animate-spin text-gray-400' />
+  </div>
+);
 
 interface RequestEditorProps {
   onUsedVariablesChange?: (variables: {
@@ -171,17 +168,24 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     setActiveRequest,
     setCollection,
     expandedCollections,
+    setActiveCollection,
     setIsCreatingCollection,
     collections,
     isCreatingCollection,
     addCollectionMutation,
     addRequestMutation,
+    renameRequestMutation,
     handleCreateRequest: onCreateRequest,
     fetchCollectionRequests,
     replaceRequest,
   } = useCollection();
 
   const isExtractingRef = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  console.log('activeRequest123:', activeRequest);
+
+  const { unsavedChanges } = useCollectionStore();
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
     useDataManagement();
@@ -262,6 +266,8 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       redirectUri: '',
     },
   });
+
+  console.log('authDataIneditor:', authData);
 
   const getAuthCount = () => {
     let count = 0;
@@ -445,16 +451,20 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     };
   };
 
+  const debouncedUrl = useDebounce(url, 500);
+  const debouncedBodyContent = useDebounce(bodyContent, 500);
+  const debouncedToken = useDebounce(authData.token, 500);
+
   const usedVariables = useMemo(
     () => getUsedVariables(),
     [
-      url,
+      debouncedUrl,
       params,
       headers,
-      bodyContent,
+      debouncedBodyContent,
       formattedVariables,
       selectedVariable,
-      authData.token,
+      debouncedToken,
     ],
   );
 
@@ -463,6 +473,17 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       onUsedVariablesChange(usedVariables);
     }
   }, [usedVariables, onUsedVariablesChange]);
+
+  // Cleanup: Cancel any pending requests when component unmounts or request changes
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+    };
+  }, [activeRequest?.id]);
+
   useEffect(() => {
     if (externalActiveTab) {
       setActiveTab(externalActiveTab as any);
@@ -804,7 +825,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         headers,
         bodyType,
         bodyRawContent: bodyContent,
-        assertions,
         bodyFormData:
           bodyType === 'form-data' ? activeRequest.bodyFormData : undefined,
         authorizationType: authType,
@@ -1485,6 +1505,13 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const handleSendRequest = async () => {
     if (!activeRequest) return;
+
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    abortControllerRef.current = new AbortController();
+
     setDynamicVarTrigger((prev) => prev + 1);
 
     clearError();
@@ -1641,7 +1668,10 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         payloadWithAssertions.schemaId = primarySchema.id;
       }
 
-      const backendData = await executeRequest(payloadWithAssertions);
+      const backendData = await executeRequest(
+        payloadWithAssertions,
+        abortControllerRef.current?.signal,
+      );
 
       let backendBody;
       let statusCode;
@@ -1818,24 +1848,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
           return { ...newA, enabled: false };
         });
 
-        // Preserve ALL existing assertions that are not regenerated:
-        // 1. Manual assertions (id starts with 'manual-')
-        // 2. Dynamic path assertions (id starts with 'dynamic-')
-        // 3. Custom/group assertions
-        // 4. Any enabled assertion not covered by the new generated set
         const preservedAssertions = assertions.filter((a) => {
-          // Already represented in mergedAssertions — skip
           if (mergedAssertions.some((m) => assertionsMatch(m, a))) return false;
 
           const isDynamic = a.id && String(a.id).startsWith('dynamic-');
           const isManual = a.id && String(a.id).startsWith('manual-');
           const isCustomGroup = a.isCustom === true || a.group === 'custom';
-
-          // Preserve dynamic index assertions (e.g. data[1].workspaceId)
           if (isDynamic) return true;
-          // Preserve manually created assertions
           if (isManual) return true;
-          // Preserve custom group assertions
           if (isCustomGroup) return true;
 
           return false;
@@ -1844,6 +1864,14 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
         setAssertions([...mergedAssertions, ...preservedAssertions]);
       }
     } catch (error: any) {
+      if (error.name === 'AbortError' || error.message?.includes('abort')) {
+        toast({
+          title: 'Request Cancelled',
+          description: 'The request was cancelled',
+        });
+        return;
+      }
+
       const backendErrorMessage =
         error?.response?.data?.errorDetails ||
         error?.response?.data?.error ||
@@ -1948,8 +1976,159 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     setShowSaveModal(true);
   };
 
+  // Memoized event handlers to prevent unnecessary re-renders
+  const handleTabClick = React.useCallback(
+    (tabId: string) => {
+      setActiveTab(tabId as any);
+      onTabChange?.(tabId);
+      if (tabId === 'schemas') {
+        fetchSchemas();
+      }
+    },
+    [onTabChange, fetchSchemas],
+  );
+
+  const handleCreateCollectionClick = React.useCallback(() => {
+    setIsCreatingCollection(true);
+  }, []);
+
+  const handleCollectionSelectChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const selectedId = e.target.value;
+      if (selectedId === 'new') {
+        setIsCreatingCollection(true);
+      } else {
+        const selectedColl = collections.find((c) => c.id === selectedId);
+        if (selectedColl) {
+          setSelectedCollectionId(selectedId);
+          setActiveCollection(selectedColl);
+          setIsCreatingCollection(false);
+          setFolderOptions(
+            selectedColl.folders?.map((f) => ({
+              id: f.id,
+              label: f.name,
+            })) || [],
+          );
+        }
+      }
+    },
+    [collections, setActiveCollection],
+  );
+
+  const handleFolderSelectChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      setSelectedFolderId(e.target.value);
+    },
+    [],
+  );
+
+  const handleNewCollectionNameChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setNewCollectionName(e.target.value);
+    },
+    [],
+  );
+
+  const handleMethodChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newMethod = e.target.value as RequestMethod;
+      setMethod(newMethod);
+
+      const hasContentTypeHeader = headers.some(
+        (h) => h.key === 'Content-Type',
+      );
+      if (methodsWithBody.includes(newMethod) && !hasContentTypeHeader) {
+        setHeaders([
+          {
+            key: 'Content-Type',
+            value: 'application/json',
+            enabled: true,
+          },
+          ...headers,
+        ]);
+        setBodyType('raw');
+        setBodyContent('{}');
+      } else if (!methodsWithBody.includes(newMethod) && hasContentTypeHeader) {
+        setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
+        setBodyType('raw');
+        setBodyContent('{}');
+      }
+
+      if (activeRequest?.id) {
+        collectionActions.updateOpenedRequest({
+          ...activeRequest,
+          method: newMethod,
+        });
+        collectionActions.markUnsaved(activeRequest.id);
+      }
+    },
+    [activeRequest, headers],
+  );
+
+  const handleUrlChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newUrl = e.target.value;
+
+      isExtractingRef.current = true;
+
+      setUrl(newUrl);
+
+      if (activeRequest?.id) {
+        collectionActions.markUnsaved(activeRequest.id);
+        collectionActions.updateOpenedRequest({
+          ...activeRequest,
+          url: newUrl,
+        });
+      }
+
+      setTimeout(() => {
+        try {
+          const urlObj = new URL(newUrl);
+          const searchParams = urlObj.searchParams;
+
+          const extractedParams: Param[] = [];
+          searchParams.forEach((value, key) => {
+            extractedParams.push({ key, value, enabled: true });
+          });
+
+          setParams(extractedParams);
+          if (activeRequest?.id) {
+            collectionActions.markUnsaved(activeRequest.id);
+          }
+        } catch (error) {
+          const queryIndex = newUrl.indexOf('?');
+          if (queryIndex !== -1) {
+            const queryString = newUrl.substring(queryIndex + 1);
+            const searchParams = new URLSearchParams(queryString);
+            const extractedParams: Param[] = [];
+
+            searchParams.forEach((value, key) => {
+              extractedParams.push({ key, value, enabled: true });
+            });
+
+            setParams(extractedParams);
+            if (activeRequest?.id) {
+              collectionActions.markUnsaved(activeRequest.id);
+            }
+          } else {
+            if (!newUrl.includes('?')) {
+              setParams([]);
+            }
+          }
+        }
+
+        setTimeout(() => {
+          isExtractingRef.current = false;
+        }, 150);
+      }, 0);
+    },
+    [activeRequest, setUrl, setParams],
+  );
+
   const handleUpdateRequest = async (overrideName?: string) => {
     try {
+      console.log('coming to handle update method');
+
       setIsSaving(true);
       if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
         showError(
@@ -2540,69 +2719,6 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     setShowSaveModal(false);
   };
 
-  const addParam = () => {
-    setParams([...params, { key: '', value: '', enabled: true }]);
-    if (activeRequest?.id) {
-      collectionActions.markUnsaved(activeRequest.id);
-    }
-  };
-
-  const updateParam = (
-    index: number,
-    field: keyof Param,
-    value: string | boolean,
-  ) => {
-    const newParams = [...params];
-    newParams[index] = { ...newParams[index], [field]: value };
-    setParams(newParams);
-
-    if (activeRequest?.id) {
-      collectionActions.markUnsaved(activeRequest.id);
-      collectionActions.updateOpenedRequest({
-        ...activeRequest,
-        params: newParams,
-      });
-    }
-  };
-
-  const removeParam = (index: number) => {
-    setParams(params.filter((_, i) => i !== index));
-    if (activeRequest?.id) {
-      collectionActions.markUnsaved(activeRequest.id);
-    }
-  };
-
-  const addHeader = () => {
-    setHeaders([...headers, { key: '', value: '', enabled: true }]);
-    if (activeRequest?.id) {
-      collectionActions.markUnsaved(activeRequest.id);
-    }
-  };
-
-  const updateHeader = (
-    index: number,
-    field: keyof Header,
-    value: string | boolean,
-  ) => {
-    const newHeaders = [...headers];
-    newHeaders[index] = { ...newHeaders[index], [field]: value };
-    setHeaders(newHeaders);
-    if (activeRequest?.id) {
-      collectionActions.markUnsaved(activeRequest.id);
-      collectionActions.updateOpenedRequest({
-        ...activeRequest,
-        headers: newHeaders,
-      });
-    }
-  };
-
-  const removeHeader = (index: number) => {
-    setHeaders(headers.filter((_, i) => i !== index));
-    if (activeRequest?.id) {
-      collectionActions.markUnsaved(activeRequest.id);
-    }
-  };
-
   const addFormField = () => {
     setFormFields([
       ...formFields,
@@ -2766,290 +2882,246 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   }
 
   return (
-    <TooltipProvider>
-      <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-        <div className='sticky top-0 -z-1 md:z-30 bg-white dark:bg-gray-900'>
-          <RequestTabs
-            onBeforeTabChange={syncCurrentRequestToStore}
-            onSaveRequest={async (request) => {
-              if (isNewRequest(activeRequest.id)) {
-                handleSaveRequest();
-              } else {
-                await handleUpdateContentRequest();
-              }
-            }}
-            onCurlImport={handleCurlImport}
-          />
+    <ErrorBoundary>
+      <RequestEditorProvider
+        key={activeRequest?.id}
+        activeRequestId={activeRequest?.id}
+        initialUrl={url}
+        initialMethod={method}
+        initialParams={params}
+        initialHeaders={headers}
+        initialBodyType={bodyType}
+        initialBodyContent={bodyContent}
+        initialAuthType={authType}
+        initialSettings={settings}
+        initialAuthData={authData}
+      >
+        <TooltipProvider>
+          <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
+            <div className='sticky top-0 -z-1 md:z-30 bg-white dark:bg-gray-900'>
+              <RequestTabs
+                onBeforeTabChange={syncCurrentRequestToStore}
+                onSaveRequest={async (request) => {
+                  if (isNewRequest(activeRequest.id)) {
+                    handleSaveRequest();
+                  } else {
+                    await handleUpdateContentRequest();
+                  }
+                }}
+                onCurlImport={handleCurlImport}
+              />
 
-          <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center text-sm space-x-1'>
-                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
-                  {activeCollectionFull?.name}
-                </span>
-                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
-                  /
-                </span>
-
-                {activeRequest?.folderId && (
-                  <>
+              <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center text-sm space-x-1'>
                     <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
-                      {findFolderName(
-                        activeRequest.folderId,
-                        (activeCollectionFull as any)?.folders || [],
-                      )}
+                      {activeCollectionFull?.name}
                     </span>
                     <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
                       /
                     </span>
-                  </>
-                )}
 
-                <div className='flex items-center gap-1'>
-                  <EditableTextWithoutIcon
-                    value={activeRequest.name || ''}
-                    onSave={handleSaveName}
-                    placeholder='Request Name'
-                    fontSize='xs'
-                    fontWeight='medium'
-                  />
+                    {activeRequest?.folderId && (
+                      <>
+                        <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
+                          {findFolderName(
+                            activeRequest.folderId,
+                            (activeCollectionFull as any)?.folders || [],
+                          )}
+                        </span>
+                        <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
+                          /
+                        </span>
+                      </>
+                    )}
 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type='button'
-                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
-                        >
-                          <Info className='w-3.5 h-3.5' />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>Double click to Rename</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
+                    <div className='flex items-center gap-1'>
+                      <EditableTextWithoutIcon
+                        value={activeRequest.name || ''}
+                        onSave={handleSaveName}
+                        placeholder='Request Name'
+                        fontSize='xs'
+                        fontWeight='medium'
+                      />
 
-              <div className='flex items-center gap-1.5'>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <span
-                        className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              type='button'
+                              className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                            >
+                              <Info className='w-3.5 h-3.5' />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            Double click to Rename
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+
+                  <div className='flex items-center gap-1.5'>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${
+                              !hasPreRequestConfigured ||
+                              isCurrentRequestPreRequest
+                                ? 'opacity-50'
+                                : ''
+                            }`}
+                          >
+                            <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
+                            Auto Auth Sync
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {isCurrentRequestPreRequest
+                            ? 'This is the pre-request - token usage is always enabled'
+                            : !hasPreRequestConfigured
+                              ? 'Configure Auto‑Auth for a Collection'
+                              : preRequestEnabled
+                                ? 'Disable Auto‑Auth to provide authentication manually'
+                                : 'Turn on Auto‑Auth sync'}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <div
+                      className={
+                        !hasPreRequestConfigured || isCurrentRequestPreRequest
+                          ? 'opacity-50 pointer-events-none'
+                          : ''
+                      }
+                    >
+                      <ToggleSwitch
+                        id='preRequestAuth'
+                        checked={
+                          isCurrentRequestPreRequest ? true : preRequestEnabled
+                        }
+                        onChange={handlePreRequestToggle}
+                        label=''
+                        description=''
+                        disabled={
                           !hasPreRequestConfigured || isCurrentRequestPreRequest
-                            ? 'opacity-50'
-                            : ''
-                        }`}
-                      >
-                        <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
-                        Auto Auth Sync
-                      </span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {isCurrentRequestPreRequest
-                        ? 'This is the pre-request - token usage is always enabled'
-                        : !hasPreRequestConfigured
-                          ? 'Configure Auto‑Auth for a Collection'
-                          : preRequestEnabled
-                            ? 'Disable Auto‑Auth to provide authentication manually'
-                            : 'Turn on Auto‑Auth sync'}
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <div
-                  className={
-                    !hasPreRequestConfigured || isCurrentRequestPreRequest
-                      ? 'opacity-50 pointer-events-none'
-                      : ''
-                  }
-                >
-                  <ToggleSwitch
-                    id='preRequestAuth'
-                    checked={
-                      isCurrentRequestPreRequest ? true : preRequestEnabled
-                    }
-                    onChange={handlePreRequestToggle}
-                    label=''
-                    description=''
-                    disabled={
-                      !hasPreRequestConfigured || isCurrentRequestPreRequest
-                    }
-                  />
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className='border-gray-200 dark:border-gray-700 px-4 pt-4 flex-shrink-0'>
-          <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
-            <select
-              value={method}
-              onChange={(e) => {
-                const newMethod = e.target.value as RequestMethod;
-                setMethod(newMethod);
-
-                const hasContentTypeHeader = headers.some(
-                  (h) => h.key === 'Content-Type',
-                );
-                if (
-                  methodsWithBody.includes(newMethod) &&
-                  !hasContentTypeHeader
-                ) {
-                  setHeaders([
-                    {
-                      key: 'Content-Type',
-                      value: 'application/json',
-                      enabled: true,
-                    },
-                    ...headers,
-                  ]);
-                  setBodyType('raw');
-                  setBodyContent('{}');
-                } else if (
-                  !methodsWithBody.includes(newMethod) &&
-                  hasContentTypeHeader
-                ) {
-                  setHeaders(headers.filter((h) => h.key !== 'Content-Type'));
-                  setBodyType('raw');
-                  setBodyContent('{}');
-                }
-
-                if (activeRequest?.id) {
-                  collectionActions.updateOpenedRequest({
-                    ...activeRequest,
-                    method: newMethod,
-                  });
-                  collectionActions.markUnsaved(activeRequest.id);
-                }
-              }}
-              className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
-                method,
-              )}`}
-              style={{
-                appearance: 'auto',
-              }}
-            >
-              {methods.map((m) => (
-                <option
-                  key={m}
-                  value={m}
-                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+            <div className='border-gray-200 dark:border-gray-700 px-4 pt-4 flex-shrink-0'>
+              <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
+                <select
+                  value={method}
+                  onChange={handleMethodChange}
+                  className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+                    method,
+                  )}`}
+                  style={{
+                    appearance: 'auto',
+                  }}
                 >
-                  {m}
-                </option>
-              ))}
-            </select>
+                  {methods.map((m) => (
+                    <option
+                      key={m}
+                      value={m}
+                      className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+                    >
+                      {m}
+                    </option>
+                  ))}
+                </select>
 
-            <Input
-              type='text'
-              value={url}
-              onChange={(e) => {
-                const newUrl = e.target.value;
+                <Input
+                  type='text'
+                  value={url}
+                  onChange={handleUrlChange}
+                  placeholder='Enter request URL'
+                  className='text-xs md:text-md'
+                />
 
-                isExtractingRef.current = true;
-
-                setUrl(newUrl);
-
-                if (activeRequest?.id) {
-                  collectionActions.markUnsaved(activeRequest.id);
-                  collectionActions.updateOpenedRequest({
-                    ...activeRequest,
-                    url: newUrl,
-                  });
-                }
-
-                setTimeout(() => {
-                  try {
-                    const urlObj = new URL(newUrl);
-                    const searchParams = urlObj.searchParams;
-
-                    const extractedParams: Param[] = [];
-                    searchParams.forEach((value, key) => {
-                      extractedParams.push({ key, value, enabled: true });
-                    });
-
-                    setParams(extractedParams);
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                    }
-                  } catch (error) {
-                    const queryIndex = newUrl.indexOf('?');
-                    if (queryIndex !== -1) {
-                      const queryString = newUrl.substring(queryIndex + 1);
-                      const searchParams = new URLSearchParams(queryString);
-                      const extractedParams: Param[] = [];
-
-                      searchParams.forEach((value, key) => {
-                        extractedParams.push({ key, value, enabled: true });
-                      });
-
-                      setParams(extractedParams);
-                      if (activeRequest?.id) {
-                        collectionActions.markUnsaved(activeRequest.id);
-                      }
-                    } else {
-                      if (!newUrl.includes('?')) {
-                        setParams([]);
-                      }
-                    }
-                  }
-
-                  setTimeout(() => {
-                    isExtractingRef.current = false;
-                  }, 150);
-                }, 0);
-              }}
-              placeholder='Enter request URL'
-              className='text-xs md:text-md'
-            />
-
-            <div className='justify-end flex space-x-2'>
-              <Button
-                variant='active'
-                onClick={handleSendRequest}
-                disabled={isLoading}
-                className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
-                aria-label='Send request'
-                title='Send request'
-              >
-                <Play className='h-4 w-4' />
-                <span className='hidden sm:inline'>
-                  {isLoading ? 'Sending...' : 'Send'}
-                </span>
-              </Button>
-              <TooltipContainer text='Save request'>
-                {isNewRequest(activeRequest.id) ? (
-                  <button
-                    onClick={handleSaveRequest}
-                    disabled={isSaving} // ← ADD
-                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
-                    aria-label='Save request'
-                  >
-                    {isSaving ? ( // ← REPLACE static icon
-                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                <div className='justify-end flex space-x-2'>
+                  {isLoading ? (
+                    <Button
+                      variant='outline'
+                      onClick={() => {
+                        if (abortControllerRef.current) {
+                          abortControllerRef.current.abort();
+                          toast({
+                            title: 'Cancelling...',
+                            description: 'Request cancellation initiated',
+                          });
+                        }
+                      }}
+                      className='border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                      aria-label='Cancel request'
+                      title='Cancel request'
+                    >
+                      <svg
+                        className='h-4 w-4'
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                      >
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={2}
+                          d='M6 18L18 6M6 6l12 12'
+                        />
+                      </svg>
+                      <span className='hidden sm:inline'>Cancel</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      variant='active'
+                      onClick={handleSendRequest}
+                      disabled={isLoading}
+                      className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                      aria-label='Send request'
+                      title='Send request'
+                    >
+                      <Play className='h-4 w-4' />
+                      <span className='hidden sm:inline'>Send</span>
+                    </Button>
+                  )}
+                  <TooltipContainer text='Save request'>
+                    {isNewRequest(activeRequest.id) ? (
+                      <button
+                        onClick={handleSaveRequest}
+                        disabled={isSaving} // ← ADD
+                        className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
+                        aria-label='Save request'
+                      >
+                        {isSaving ? ( // ← REPLACE static icon
+                          <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                        ) : (
+                          <Save className='h-4 w-4 text-[#136fb0]' />
+                        )}
+                      </button>
                     ) : (
-                      <Save className='h-4 w-4 text-[#136fb0]' />
+                      <button
+                        onClick={handleUpdateContentRequest}
+                        disabled={isSaving} // ← ADD
+                        className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
+                        aria-label='Save request'
+                      >
+                        {isSaving ? ( // ← REPLACE static icon
+                          <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                        ) : (
+                          <Save className='h-4 w-4 text-[#136fb0]' />
+                        )}
+                      </button>
                     )}
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleUpdateContentRequest}
-                    disabled={isSaving} // ← ADD
-                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
-                    aria-label='Save request'
-                  >
-                    {isSaving ? ( // ← REPLACE static icon
-                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
-                    ) : (
-                      <Save className='h-4 w-4 text-[#136fb0]' />
-                    )}
-                  </button>
-                )}
-              </TooltipContainer>
+                  </TooltipContainer>
 
-              {/* <TooltipContainer text='Performance Test'>
+                  {/* <TooltipContainer text='Performance Test'>
                 // {isNewRequest(activeRequest.id) ? (
                   <button
                     // onClick={handleSaveRequest}
@@ -3067,59 +3139,53 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   </button>
                 )}
               </TooltipContainer> */}
-            </div>
-          </div>
-
-          {previewUrl && activeEnvironment?.name !== 'No Environment' && (
-            <div className='mt-2 mb-1'>
-              <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
-                <p className='text-sm text-gray-600 dark:text-gray-400'>
-                  <span className='font-medium'>Final URL Preview:</span>
-                </p>
-                <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
-                  {previewUrl}
-                </p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
 
-        <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-          <nav className='flex overflow-x-auto scrollbar-thin px-4'>
-            <TooltipProvider>
-              {[
-                {
-                  id: 'params',
-                  label: 'Params',
-                  count: params.filter((p) => p.enabled).length,
-                },
-                {
-                  id: 'headers',
-                  label: 'Headers',
-                  count: headers.filter((h) => h.enabled).length,
-                },
-                { id: 'body', label: 'Body', count: getBodyCount() },
-                { id: 'auth', label: 'Auth', count: getAuthCount() },
-                { id: 'pre-request', label: 'Pre-request', count: 0 },
-                { id: 'post-response', label: 'Post-response', count: 0 },
-                {
-                  id: 'schemas',
-                  label: 'Schemas',
-                  count: Array.isArray(schemas) ? schemas.length : 0,
-                },
-                { id: 'settings', label: 'Settings' },
-              ].map((tab) => {
-                const button = (
-                  <button
-                    key={tab.id}
-                    onClick={() => {
-                      setActiveTab(tab.id as any);
-                      onTabChange?.(tab.id);
-                      if (tab.id === 'schemas') {
-                        fetchSchemas();
-                      }
-                    }}
-                    className={`
+              {previewUrl && activeEnvironment?.name !== 'No Environment' && (
+                <div className='mt-2 mb-1'>
+                  <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
+                    <p className='text-sm text-gray-600 dark:text-gray-400'>
+                      <span className='font-medium'>Final URL Preview:</span>
+                    </p>
+                    <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
+                      {previewUrl}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+              <nav className='flex overflow-x-auto scrollbar-thin px-4'>
+                <TooltipProvider>
+                  {[
+                    {
+                      id: 'params',
+                      label: 'Params',
+                      count: params.filter((p) => p.enabled).length,
+                    },
+                    {
+                      id: 'headers',
+                      label: 'Headers',
+                      count: headers.filter((h) => h.enabled).length,
+                    },
+                    { id: 'body', label: 'Body', count: getBodyCount() },
+                    { id: 'auth', label: 'Auth', count: getAuthCount() },
+                    { id: 'pre-request', label: 'Pre-request', count: 0 },
+                    { id: 'post-response', label: 'Post-response', count: 0 },
+                    {
+                      id: 'schemas',
+                      label: 'Schemas',
+                      count: Array.isArray(schemas) ? schemas.length : 0,
+                    },
+                    { id: 'settings', label: 'Settings' },
+                  ].map((tab) => {
+                    const button = (
+                      <button
+                        key={tab.id}
+                        onClick={() => handleTabClick(tab.id)}
+                        className={`
               pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-xs md:text-sm transition-colors whitespace-nowrap
               ${
                 activeTab === tab.id
@@ -3127,868 +3193,369 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
-                  >
-                    {tab.label}
-
-                    {(tab.id === 'auth' ||
-                      tab.id === 'body' ||
-                      tab.id === 'schemas') &&
-                      (tab.count ?? 0) > 0 && (
-                        <span
-                          className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
-                          style={{
-                            backgroundColor:
-                              'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
-                          }}
-                        />
-                      )}
-
-                    {tab.id !== 'auth' &&
-                      tab.id !== 'body' &&
-                      tab.id !== 'schemas' &&
-                      tab.count !== undefined &&
-                      tab.count > 0 && (
-                        <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
-                          {tab.count}
-                        </span>
-                      )}
-                  </button>
-                );
-
-                if (tab.id === 'post-response') {
-                  return (
-                    <Tooltip key={tab.id}>
-                      <TooltipTrigger asChild>{button}</TooltipTrigger>
-                      <TooltipContent>
-                        Manage assertions and extracted variable
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                }
-
-                return button;
-              })}
-            </TooltipProvider>
-          </nav>
-        </div>
-
-        <div className='flex-1 overflow-auto scrollbar-thin p-4'>
-          {activeTab === 'params' && (
-            <KeyValueEditor
-              items={params}
-              onAdd={addParam}
-              onUpdate={updateParam}
-              onRemove={removeParam}
-              title='Query Parameters'
-              addButtonLabel='Add Parameters'
-              emptyMessage='No query parameters added yet.'
-            />
-          )}
-
-          {activeTab === 'headers' && (
-            <KeyValueEditor
-              items={headers}
-              onAdd={addHeader}
-              onUpdate={updateHeader}
-              onRemove={removeHeader}
-              title='Headers'
-              addButtonLabel='Add Header'
-              emptyMessage='No headers added yet.'
-            />
-          )}
-
-          {activeTab === 'body' && (
-            <RequestBody
-              bodyType={bodyType}
-              bodyContent={bodyContent}
-              formFields={formFields}
-              urlEncodedFields={urlEncodedFields}
-              headers={headers}
-              method={method}
-              staticVariables={staticVars}
-              dynamicVariables={dynamicVars}
-              initialVariable={selectedVariable}
-              showSubstituteButton={true}
-              onBodyTypeChange={(newBodyType) => {
-                setBodyType(newBodyType);
-
-                if (newBodyType !== 'none') {
-                  const contentTypeValue =
-                    getContentTypeForBodyType(newBodyType);
-                  const contentTypeHeaderIndex = headers.findIndex(
-                    (h) => h.key.toLowerCase() === 'content-type',
-                  );
-
-                  if (contentTypeHeaderIndex !== -1) {
-                    const updatedHeaders = [...headers];
-                    updatedHeaders[contentTypeHeaderIndex] = {
-                      ...updatedHeaders[contentTypeHeaderIndex],
-                      value: contentTypeValue,
-                    };
-                    setHeaders(updatedHeaders);
-                  } else if (methodsWithBody.includes(method)) {
-                    setHeaders([
-                      {
-                        key: 'Content-Type',
-                        value: contentTypeValue,
-                        enabled: true,
-                      },
-                      ...headers,
-                    ]);
-                  }
-                }
-
-                if (activeRequest?.id) {
-                  collectionActions.markUnsaved(activeRequest.id);
-                }
-              }}
-              onBodyContentChange={(newContent) => {
-                setBodyContent(newContent);
-                if (activeRequest?.id) {
-                  collectionActions.markUnsaved(activeRequest.id);
-                  collectionActions.updateOpenedRequest({
-                    ...activeRequest,
-                    bodyRawContent: newContent,
-                    bodyType,
-                  });
-                }
-              }}
-              onBeautify={handleBeautifyBody}
-              onVariableSelect={handleVariableSelect}
-              onConfirmSubstitution={handleConfirmSubstitutions}
-              onAddFormField={addFormField}
-              onUpdateFormField={updateFormField}
-              onRemoveFormField={removeFormField}
-              onAddUrlEncodedField={addUrlEncodedField}
-              onUpdateUrlEncodedField={updateUrlEncodedField}
-              onRemoveUrlEncodedField={removeUrlEncodedField}
-            />
-          )}
-
-          {activeTab === 'auth' && (
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between'>
-                <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
-                  Authorization
-                  {(() => {
-                    const expiry = getTokenExpiryDisplay(authData);
-                    if (!expiry) return null;
-                    const isExpired = expiry === 'Expired';
-                    return (
-                      <span
-                        className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
                       >
-                        (Expires in: {expiry})
-                      </span>
-                    );
-                  })()}
-                </h4>
-                <select
-                  value='bearer'
-                  disabled
-                  className='border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-800 text-sm font-medium focus:outline-none'
-                >
-                  <option value='bearer'>Bearer Token</option>
-                </select>
-              </div>
+                        {tab.label}
 
-              <div>
-                <Input
-                  type='text'
-                  value={authData.token}
-                  onChange={(e) => {
-                    const newToken = e.target.value;
-                    setAuthData({ ...authData, token: newToken });
+                        {(tab.id === 'auth' ||
+                          tab.id === 'body' ||
+                          tab.id === 'schemas') &&
+                          (tab.count ?? 0) > 0 && (
+                            <span
+                              className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
+                              style={{
+                                backgroundColor:
+                                  'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
+                              }}
+                            />
+                          )}
+
+                        {tab.id !== 'auth' &&
+                          tab.id !== 'body' &&
+                          tab.id !== 'schemas' &&
+                          tab.count !== undefined &&
+                          tab.count > 0 && (
+                            <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
+                              {tab.count}
+                            </span>
+                          )}
+                      </button>
+                    );
+
+                    if (tab.id === 'post-response') {
+                      return (
+                        <Tooltip key={tab.id}>
+                          <TooltipTrigger asChild>{button}</TooltipTrigger>
+                          <TooltipContent>
+                            Manage assertions and extracted variable
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+
+                    return button;
+                  })}
+                </TooltipProvider>
+              </nav>
+            </div>
+
+            <div className='flex-1 overflow-auto scrollbar-thin p-4'>
+              {activeTab === 'params' && (
+                <ParamsTab
+                  params={params}
+                  setParams={setParams}
+                  activeRequestId={activeRequest?.id}
+                />
+              )}
+              {activeTab === 'headers' && (
+                <HeadersTab
+                  headers={headers}
+                  setHeaders={setHeaders}
+                  activeRequestId={activeRequest?.id}
+                />
+              )}
+              {activeTab === 'body' && (
+                <RequestBody
+                  bodyType={bodyType}
+                  bodyContent={bodyContent}
+                  formFields={formFields}
+                  urlEncodedFields={urlEncodedFields}
+                  headers={headers}
+                  method={method}
+                  staticVariables={staticVars}
+                  dynamicVariables={dynamicVars}
+                  initialVariable={selectedVariable}
+                  showSubstituteButton={true}
+                  onBodyTypeChange={(newBodyType) => {
+                    setBodyType(newBodyType);
+
+                    if (newBodyType !== 'none') {
+                      const contentTypeValue =
+                        getContentTypeForBodyType(newBodyType);
+                      const contentTypeHeaderIndex = headers.findIndex(
+                        (h) => h.key.toLowerCase() === 'content-type',
+                      );
+
+                      if (contentTypeHeaderIndex !== -1) {
+                        const updatedHeaders = [...headers];
+                        updatedHeaders[contentTypeHeaderIndex] = {
+                          ...updatedHeaders[contentTypeHeaderIndex],
+                          value: contentTypeValue,
+                        };
+                        setHeaders(updatedHeaders);
+                      } else if (methodsWithBody.includes(method)) {
+                        setHeaders([
+                          {
+                            key: 'Content-Type',
+                            value: contentTypeValue,
+                            enabled: true,
+                          },
+                          ...headers,
+                        ]);
+                      }
+                    }
+
+                    if (activeRequest?.id) {
+                      collectionActions.markUnsaved(activeRequest.id);
+                    }
+                  }}
+                  onBodyContentChange={(newContent) => {
+                    setBodyContent(newContent);
                     if (activeRequest?.id) {
                       collectionActions.markUnsaved(activeRequest.id);
                       collectionActions.updateOpenedRequest({
                         ...activeRequest,
-                        authorizationType: authType,
-                        authorization: { ...authData, token: newToken },
+                        bodyRawContent: newContent,
+                        bodyType,
                       });
                     }
                   }}
-                  placeholder='Enter token'
-                  disabled={preRequestEnabled && !isCurrentRequestPreRequest}
-                  className={
-                    preRequestEnabled && !isCurrentRequestPreRequest
-                      ? 'bg-gray-100 dark:bg-gray-800 cursor-not-allowed'
-                      : ''
-                  }
+                  onBeautify={handleBeautifyBody}
+                  onVariableSelect={handleVariableSelect}
+                  onConfirmSubstitution={handleConfirmSubstitutions}
+                  onAddFormField={addFormField}
+                  onUpdateFormField={updateFormField}
+                  onRemoveFormField={removeFormField}
+                  onAddUrlEncodedField={addUrlEncodedField}
+                  onUpdateUrlEncodedField={updateUrlEncodedField}
+                  onRemoveUrlEncodedField={removeUrlEncodedField}
                 />
-                {preRequestEnabled &&
-                  !isCurrentRequestPreRequest &&
-                  authData.token && (
-                    <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>
-                      Token loaded from collection's authentication request
-                    </p>
-                  )}
-              </div>
-            </div>
-          )}
-          {activeTab === 'pre-request' && (
-            <PrePostRequest
-              type='pre-request'
-              assertions={assertions}
-              setAssertions={setAssertions}
-              responseData={responseData}
-              activeRequest={activeRequest}
-              currentWorkspace={currentWorkspace}
-              updateRequestMutation={updateRequestMutation}
-              toggleAssertion={toggleAssertion}
-              showAssertions={false}
-              selectedVariables={selectedVariable}
-              onRemoveVariable={handleRemoveVariable}
-              onVariableSelect={handleVariableSelect}
-              onSaveAssertions={handleUpdateRequest}
-              staticVariables={usedVariables.staticVars}
-              dynamicVariables={usedVariables.dynamicVars}
-            />
-          )}
-
-          {activeTab === 'post-response' && (
-            <PrePostRequest
-              type='post-response'
-              assertions={assertions}
-              setAssertions={setAssertions}
-              responseData={responseData}
-              activeRequest={activeRequest}
-              currentWorkspace={currentWorkspace}
-              updateRequestMutation={updateRequestMutation}
-              toggleAssertion={toggleAssertion}
-              showAssertions={true}
-              selectedVariables={selectedVariable}
-              onRemoveVariable={handleRemoveVariable}
-              onVariableSelect={handleVariableSelect}
-              onSaveAssertions={handleUpdateRequest}
-              staticVariables={usedVariables.staticVars}
-              dynamicVariables={usedVariables.dynamicVars}
-              extractedVariables={requestSpecificExtractedVariables}
-              onRemoveExtraction={(variableName) => {
-                if (activeRequest?.id) {
-                  collectionActions.removeExtractedVariableRequest(
-                    activeRequest.id,
-                    variableName,
-                  );
-                }
-                if (activeCollection?.id) {
-                  localStorage.removeItem(
-                    `extracted_var_${activeCollection.id}_${variableName}`,
-                  );
-                }
-                if (activeRequest?.id) {
-                  collectionActions.markUnsaved(activeRequest.id);
-                }
-                if (onRemoveExtraction) {
-                  onRemoveExtraction(variableName);
-                }
-              }}
-            />
-          )}
-
-          {activeTab === 'settings' && (
-            <div className='space-y-5'>
-              <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
-                Request Settings
-              </h4>
-
-              <div className='space-y-4'>
-                <ToggleSwitch
-                  id='followRedirects'
-                  checked={settings.options.followRedirects}
-                  onChange={(checked) =>
-                    setSettings((prev) => ({
-                      ...prev,
-                      options: {
-                        ...prev.options,
-                        followRedirects: checked,
-                      },
-                    }))
-                  }
-                  label='Follow Redirects'
-                  description='Automatically follow HTTP redirects'
+              )}
+              {activeTab === 'auth' && (
+                <AuthTab
+                  authData={authData}
+                  setAuthData={setAuthData}
+                  authType={authType}
+                  preRequestEnabled={preRequestEnabled}
+                  isCurrentRequestPreRequest={isCurrentRequestPreRequest}
+                  activeRequestId={activeRequest?.id}
+                  activeRequest={activeRequest}
                 />
-                <div>
-                  <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                    Request Timeout (ms)
-                  </label>
-                  <Input
-                    type='number'
-                    min='0'
-                    value={settings.timeout}
-                    onChange={(e) =>
-                      setSettings((prev) => ({
-                        ...prev,
-                        timeout: Number(e.target.value) || 0,
-                      }))
-                    }
-                    className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2
-             hover:border-blue-400 focus:ring-2 focus:ring-blue-500
-             focus:border-blue-500 focus:outline-none focus:bg-blue-50
-             dark:focus:bg-blue-900/20 transition-all duration-150
-             bg-white dark:bg-gray-800 text-sm'
+              )}
+              {activeTab === 'pre-request' && (
+                <Suspense fallback={<TabLoader />}>
+                  <PrePostRequest
+                    type='pre-request'
+                    assertions={assertions}
+                    setAssertions={setAssertions}
+                    responseData={responseData}
+                    activeRequest={activeRequest}
+                    currentWorkspace={currentWorkspace}
+                    updateRequestMutation={updateRequestMutation}
+                    toggleAssertion={toggleAssertion}
+                    showAssertions={false}
+                    selectedVariables={selectedVariable}
+                    onRemoveVariable={handleRemoveVariable}
+                    onVariableSelect={handleVariableSelect}
+                    onSaveAssertions={handleUpdateRequest}
+                    staticVariables={usedVariables.staticVars}
+                    dynamicVariables={usedVariables.dynamicVars}
                   />
-
-                  <p className='text-xs text-gray-500 dark:text-gray-400 mt-1'>
-                    Time in milliseconds to wait for a response before timing
-                    out
-                  </p>
+                </Suspense>
+              )}
+              {activeTab === 'post-response' && (
+                <Suspense fallback={<TabLoader />}>
+                  <PrePostRequest
+                    type='post-response'
+                    assertions={assertions}
+                    setAssertions={setAssertions}
+                    responseData={responseData}
+                    activeRequest={activeRequest}
+                    currentWorkspace={currentWorkspace}
+                    updateRequestMutation={updateRequestMutation}
+                    toggleAssertion={toggleAssertion}
+                    showAssertions={true}
+                    selectedVariables={selectedVariable}
+                    onRemoveVariable={handleRemoveVariable}
+                    onVariableSelect={handleVariableSelect}
+                    onSaveAssertions={handleUpdateRequest}
+                    staticVariables={usedVariables.staticVars}
+                    dynamicVariables={usedVariables.dynamicVars}
+                    extractedVariables={requestSpecificExtractedVariables}
+                    onRemoveExtraction={(variableName) => {
+                      if (activeRequest?.id) {
+                        collectionActions.removeExtractedVariableRequest(
+                          activeRequest.id,
+                          variableName,
+                        );
+                      }
+                      if (activeCollection?.id) {
+                        localStorage.removeItem(
+                          `extracted_var_${activeCollection.id}_${variableName}`,
+                        );
+                      }
+                      if (activeRequest?.id) {
+                        collectionActions.markUnsaved(activeRequest.id);
+                      }
+                      if (onRemoveExtraction) {
+                        onRemoveExtraction(variableName);
+                      }
+                    }}
+                  />
+                </Suspense>
+              )}
+              {activeTab === 'settings' && (
+                <SettingsTab settings={settings} setSettings={setSettings} />
+              )}
+              {activeTab === 'performance' && (
+                <Suspense fallback={<TabLoader />}>
+                  <PerformanceTab
+                    settings={settings}
+                    setSettings={setSettings}
+                    performanceTestId={performanceTestId}
+                    onCreatePerformanceTest={handleCreatePerformanceTest}
+                    isCreatePending={performanceTestCreateMutation.isPending}
+                    isUpdatePending={performanceTestUpdateMutation.isPending}
+                    onSaveGeneralSettings={() => {
+                      toast({
+                        title: 'Settings Saved',
+                        description:
+                          'Your request settings have been saved successfully.',
+                        duration: 3000,
+                      });
+                    }}
+                  />
+                </Suspense>
+              )}
+              {activeTab === 'schemas' && (
+                <div>
+                  <Suspense fallback={<TabLoader />}>
+                    <SchemaPage />
+                  </Suspense>
                 </div>
-              </div>
-
-              <div className='mt-6 p-4 bg-yellow-50 dark:bg-yellow-900 rounded-md'>
-                <h4 className='text-sm font-medium text-yellow-800 dark:text-yellow-200'>
-                  Request Settings Info
-                </h4>
-                <p className='text-xs text-yellow-700 dark:text-yellow-300 mt-1'>
-                  These settings only apply to this specific request. Global
-                  settings can be configured in the application settings.
-                </p>
-              </div>
+              )}
             </div>
-          )}
 
-          {activeTab === 'performance' && (
-            <>
-              <div className='space-y-6'>
-                <Tabs defaultValue='performance'>
-                  <TabsList className='mb-4'>
-                    <TabsTrigger value='performance'>
-                      Performance Test
-                    </TabsTrigger>
-                    <TabsTrigger value='general'>General Settings</TabsTrigger>
-                  </TabsList>
+            <Modal
+              isOpen={showSaveModal}
+              onClose={handleCancelSave}
+              title='Save Request'
+              footer={
+                <div className='flex justify-end space-x-3'>
+                  <button
+                    onClick={handleCancelSave}
+                    className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleConfirmSave}
+                    disabled={
+                      isSaving ||
+                      (!selectedCollectionId &&
+                        (!isCreatingCollection || !newCollectionName.trim()))
+                    }
+                    className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md flex items-center gap-2' // ← ADD flex items-center gap-2
+                  >
+                    {isSaving ? (
+                      <>
+                        <Loader2 className='h-4 w-4 animate-spin' />
+                        Saving...
+                      </>
+                    ) : (
+                      'Save'
+                    )}
+                  </button>
+                </div>
+              }
+            >
+              <div>
+                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+                  Save to Collection
+                </label>
 
-                  <TabsContent value='performance'>
-                    <div className='space-y-6'>
-                      <div>
-                        <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-2'>
-                          Performance Test Settings
-                        </h3>
-                        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                          <div>
-                            <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                              Number of Requests
-                            </Label>
-                            <Input
-                              type='number'
-                              min={1}
-                              value={settings.performanceTest.numRequests}
-                              onChange={(e) =>
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  performanceTest: {
-                                    ...prev.performanceTest,
-                                    numRequests: Number(e.target.value) || 1,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                              Concurrency
-                            </Label>
-                            <Input
-                              type='number'
-                              min={1}
-                              value={settings.performanceTest.concurrency}
-                              onChange={(e) =>
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  performanceTest: {
-                                    ...prev.performanceTest,
-                                    concurrency: Number(e.target.value) || 1,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                              Delay Between Requests (ms)
-                            </Label>
-                            <Input
-                              type='number'
-                              min={0}
-                              value={settings.performanceTest.delay}
-                              onChange={(e) =>
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  performanceTest: {
-                                    ...prev.performanceTest,
-                                    delay: Number(e.target.value) || 0,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                          <div>
-                            <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                              Timeout (ms)
-                            </Label>
-                            <Input
-                              type='number'
-                              min={0}
-                              value={settings.performanceTest.timeout}
-                              onChange={(e) =>
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  performanceTest: {
-                                    ...prev.performanceTest,
-                                    timeout: Number(e.target.value) || 0,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      <Separator className='my-4' />
-
-                      <div>
-                        <div className='flex items-center justify-between mb-4'>
-                          <h3 className='font-medium text-gray-800 dark:text-gray-200'>
-                            Rate Limiting Settings
-                          </h3>
-                          <div className='flex items-center space-x-2'>
-                            <Label
-                              htmlFor='rate-limit-enabled'
-                              className='text-sm text-gray-700 dark:text-gray-300'
-                            >
-                              Enable Rate Limiting
-                            </Label>
-                            <Switch
-                              id='rate-limit-enabled'
-                              checked={settings.rateLimit.enabled}
-                              onCheckedChange={(checked) =>
-                                setSettings((prev) => ({
-                                  ...prev,
-                                  rateLimit: {
-                                    ...prev.rateLimit,
-                                    enabled: checked,
-                                  },
-                                }))
-                              }
-                            />
-                          </div>
-                        </div>
-
-                        {settings.rateLimit.enabled && (
-                          <div className='space-y-4'>
-                            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                              <div>
-                                <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                                  Requests per Period
-                                </Label>
-                                <Input
-                                  type='number'
-                                  min={1}
-                                  value={settings.rateLimit.requestsPerPeriod}
-                                  onChange={(e) =>
-                                    setSettings((prev) => ({
-                                      ...prev,
-                                      rateLimit: {
-                                        ...prev.rateLimit,
-                                        requestsPerPeriod:
-                                          Number(e.target.value) || 1,
-                                      },
-                                    }))
-                                  }
-                                />
-                              </div>
-                              <div>
-                                <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1'>
-                                  Period (seconds)
-                                </Label>
-                                <Input
-                                  type='number'
-                                  min={1}
-                                  value={settings.rateLimit.periodInSeconds}
-                                  onChange={(e) =>
-                                    setSettings((prev) => ({
-                                      ...prev,
-                                      rateLimit: {
-                                        ...prev.rateLimit,
-                                        periodInSeconds:
-                                          Number(e.target.value) || 1,
-                                      },
-                                    }))
-                                  }
-                                />
-                              </div>
-                            </div>
-
-                            <div>
-                              <Label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                                Rate Limit Type
-                              </Label>
-                              <RadioGroup
-                                value={settings.rateLimit.type}
-                                onValueChange={(value) =>
-                                  setSettings((prev) => ({
-                                    ...prev,
-                                    rateLimit: {
-                                      ...prev.rateLimit,
-                                      type: value as 'fixed' | 'sliding',
-                                    },
-                                  }))
-                                }
-                              >
-                                <div className='flex items-center space-x-2'>
-                                  <RadioGroupItem value='fixed' id='fixed' />
-                                  <Label htmlFor='fixed' className='text-sm'>
-                                    Fixed Window (e.g., 10 req/min starting at
-                                    full minutes)
-                                  </Label>
-                                </div>
-                                <div className='flex items-center space-x-2'>
-                                  <RadioGroupItem
-                                    value='sliding'
-                                    id='sliding'
-                                  />
-                                  <Label htmlFor='sliding' className='text-sm'>
-                                    Sliding Window (e.g., 10 req within any 60s
-                                    period)
-                                  </Label>
-                                </div>
-                              </RadioGroup>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className='mt-6 bg-gray-50 dark:bg-dark-300 p-4 rounded-lg border border-gray-200 dark:border-dark-100'>
-                        <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-4'>
-                          Current Settings Summary
-                        </h3>
-                        <div className='space-y-2 text-sm'>
-                          <div className='flex flex-col'>
-                            <div className='font-medium'>Performance Test:</div>
-                            <ul className='list-disc list-inside ml-4'>
-                              <li>
-                                Requests: {settings.performanceTest.numRequests}
-                              </li>
-                              <li>
-                                Concurrency:{' '}
-                                {settings.performanceTest.concurrency}
-                              </li>
-                              <li>Delay: {settings.performanceTest.delay}ms</li>
-                              <li>
-                                Timeout: {settings.performanceTest.timeout}ms
-                              </li>
-                            </ul>
-                          </div>
-
-                          <div className='flex flex-col'>
-                            <div className='font-medium'>Rate Limiting:</div>
-                            <ul className='list-disc list-inside ml-4 text-gray-600 dark:text-gray-400'>
-                              <ul className='list-disc list-inside ml-4'>
-                                <li>
-                                  Enabled:{' '}
-                                  {settings.rateLimit.enabled ? 'Yes' : 'No'}
-                                </li>
-                                {settings.rateLimit.enabled && (
-                                  <>
-                                    <li>
-                                      Requests per period:{' '}
-                                      {settings.rateLimit.requestsPerPeriod}
-                                    </li>
-                                    <li>
-                                      Period:{' '}
-                                      {settings.rateLimit.periodInSeconds}s
-                                    </li>
-                                    <li>Type: {settings.rateLimit.type}</li>
-                                  </>
-                                )}
-                              </ul>
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className='mt-6 flex justify-end'>
-                        <Button
-                          variant='default'
-                          onClick={handleCreatePerformanceTest}
-                          disabled={
-                            performanceTestCreateMutation.isPending ||
-                            performanceTestUpdateMutation.isPending
-                          }
-                          className='flex items-center gap-2'
-                        >
-                          <Rocket size={16} />
-                          {performanceTestId
-                            ? performanceTestUpdateMutation.isPending
-                              ? 'Updating...'
-                              : 'Update Performance Test'
-                            : performanceTestCreateMutation.isPending
-                              ? 'Creating...'
-                              : 'Create Performance Test'}
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value='general'>
-                    <div className='space-y-6'>
-                      <div>
-                        <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-4'>
-                          General Settings
-                        </h3>
-
-                        <div className='space-y-4'>
-                          <div className='flex flex-wrap items-center gap-6'>
-                            <div className='flex items-center'>
-                              <Checkbox
-                                id='follow-redirects-general'
-                                checked={settings.options.followRedirects}
-                                onCheckedChange={(checked) =>
-                                  setSettings((prev) => ({
-                                    ...prev,
-                                    options: {
-                                      ...prev.options,
-                                      followRedirects: Boolean(checked),
-                                    },
-                                  }))
-                                }
-                                className='rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-100 dark:bg-dark-300'
-                              />
-                              <Label
-                                htmlFor='follow-redirects-general'
-                                className='ml-2 text-sm text-gray-700 dark:text-gray-300'
-                              >
-                                Follow Redirects
-                              </Label>
-                            </div>
-
-                            <div className='flex items-center'>
-                              <Checkbox
-                                id='stop-on-error-general'
-                                checked={settings.options.stopOnError}
-                                onCheckedChange={(checked) =>
-                                  setSettings((prev) => ({
-                                    ...prev,
-                                    options: {
-                                      ...prev.options,
-                                      stopOnError: Boolean(checked),
-                                    },
-                                  }))
-                                }
-                                className='rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-100 dark:bg-dark-300'
-                              />
-                              <Label
-                                htmlFor='stop-on-error-general'
-                                className='ml-2 text-sm text-gray-700 dark:text-gray-300'
-                              >
-                                Stop on Error
-                              </Label>
-                            </div>
-
-                            <div className='flex items-center'>
-                              <Checkbox
-                                id='save-responses-general'
-                                checked={settings.options.saveResponses}
-                                onCheckedChange={(checked) =>
-                                  setSettings((prev) => ({
-                                    ...prev,
-                                    options: {
-                                      ...prev.options,
-                                      saveResponses: Boolean(checked),
-                                    },
-                                  }))
-                                }
-                                className='rounded border-gray-300 text-primary-600 focus:ring-primary-500 dark:border-dark-100 dark:bg-dark-300'
-                              />
-                              <Label
-                                htmlFor='save-responses-general'
-                                className='ml-2 text-sm text-gray-700 dark:text-gray-300'
-                              >
-                                Save All Responses
-                              </Label>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className='mt-6 flex justify-end'>
-                        <Button
-                          variant='default'
-                          onClick={() => {
-                            toast({
-                              title: 'Settings Saved',
-                              description:
-                                'Your request settings have been saved successfully.',
-                              duration: 3000,
-                            });
-                          }}
-                          className='flex items-center gap-2'
-                        >
-                          <Save size={16} />
-                          Save Settings
-                        </Button>
-                      </div>
-
-                      <div className='mt-6 bg-gray-50 dark:bg-dark-300 p-4 rounded-lg border border-gray-200 dark:border-dark-100'>
-                        <h3 className='font-medium text-gray-800 dark:text-gray-200 mb-4'>
-                          Options Summary
-                        </h3>
-                        <ul className='list-disc list-inside ml-4 text-gray-600 dark:text-gray-400'>
-                          <li>
-                            Follow Redirects:{' '}
-                            {settings.options.followRedirects ? 'Yes' : 'No'}
-                          </li>
-                          <li>
-                            Stop on Error:{' '}
-                            {settings.options.stopOnError ? 'Yes' : 'No'}
-                          </li>
-                          <li>
-                            Save All Responses:{' '}
-                            {settings.options.saveResponses ? 'Yes' : 'No'}
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </>
-          )}
-          {activeTab === 'schemas' && (
-            <div>
-              <SchemaPage />
-            </div>
-          )}
-        </div>
-
-        <Modal
-          isOpen={showSaveModal}
-          onClose={handleCancelSave}
-          title='Save Request'
-          footer={
-            <div className='flex justify-end space-x-3'>
-              <button
-                onClick={handleCancelSave}
-                className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmSave}
-                disabled={
-                  isSaving ||
-                  (!selectedCollectionId &&
-                    (!isCreatingCollection || !newCollectionName.trim()))
-                }
-                className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md flex items-center gap-2' // ← ADD flex items-center gap-2
-              >
-                {isSaving ? (
-                  <>
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                    Saving...
-                  </>
-                ) : (
-                  'Save'
-                )}
-              </button>
-            </div>
-          }
-        >
-          <div>
-            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-              Save to Collection
-            </label>
-
-            {!isCreatingCollection ? (
-              <div className='space-y-2'>
-                <select
-                  value={selectedCollectionId}
-                  onChange={(e) => {
-                    setSelectedCollectionId(e.target.value);
-                  }}
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
-                >
-                  <option value=''>Select a collection</option>
-                  {collections.map((collection) => (
-                    <option key={collection.id} value={collection.id}>
-                      {collection.name}
-                    </option>
-                  ))}
-                </select>
-
-                {selectedCollectionId && (
-                  <div className='space-y-1'>
-                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
-                      Folder (optional)
-                    </label>
+                {!isCreatingCollection ? (
+                  <div className='space-y-2'>
                     <select
-                      value={selectedFolderId}
-                      onChange={(e) => setSelectedFolderId(e.target.value)}
+                      value={selectedCollectionId}
+                      onChange={(e) => {
+                        setSelectedCollectionId(e.target.value);
+                      }}
                       className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                     >
-                      <option value=''>No folder</option>
-                      {folderOptions.map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.label}
+                      <option value=''>Select a collection</option>
+                      {collections.map((collection) => (
+                        <option key={collection.id} value={collection.id}>
+                          {collection.name}
                         </option>
                       ))}
                     </select>
+
+                    {selectedCollectionId && (
+                      <div className='space-y-1'>
+                        <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
+                          Folder (optional)
+                        </label>
+                        <select
+                          value={selectedFolderId}
+                          onChange={handleFolderSelectChange}
+                          className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                        >
+                          <option value=''>No folder</option>
+                          {folderOptions.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <button
+                      onClick={handleCreateCollectionClick}
+                      className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
+                    >
+                      <FolderPlus className='h-4 w-4' />
+                      <span>Create New Collection</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className='space-y-2'>
+                    <input
+                      type='text'
+                      value={newCollectionName}
+                      onChange={handleNewCollectionNameChange}
+                      placeholder='Enter collection name'
+                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                      autoFocus
+                    />
+
+                    <button
+                      onClick={() => {
+                        setIsCreatingCollection(false);
+                        setNewCollectionName('');
+                      }}
+                      className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                    >
+                      ← Back to existing collections
+                    </button>
                   </div>
                 )}
-                <button
-                  onClick={() => setIsCreatingCollection(true)}
-                  className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
-                >
-                  <FolderPlus className='h-4 w-4' />
-                  <span>Create New Collection</span>
-                </button>
               </div>
-            ) : (
-              <div className='space-y-2'>
-                <input
-                  type='text'
-                  value={newCollectionName}
-                  onChange={(e) => setNewCollectionName(e.target.value)}
-                  placeholder='Enter collection name'
-                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
-                  autoFocus
-                />
 
-                <button
-                  onClick={() => {
-                    setIsCreatingCollection(false);
-                    setNewCollectionName('');
-                  }}
-                  className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                >
-                  ← Back to existing collections
-                </button>
-              </div>
-            )}
+              {!urlAtOpen.trim() && (
+                <div className='mt-2 text-red-600 text-sm'>
+                  URL is required to save a request.
+                </div>
+              )}
+
+              {!selectedCollectionId &&
+                (!isCreatingCollection || !newCollectionName.trim()) && (
+                  <div className='mt-2 text-red-600 text-sm'>
+                    Please select or create a collection.
+                  </div>
+                )}
+            </Modal>
+            <Suspense fallback={null}>
+              <ImportModal
+                isOpen={showCurlImport}
+                onClose={() => setShowCurlImport(false)}
+                onCurlImport={handleCurlImport}
+              />
+            </Suspense>
           </div>
-
-          {!urlAtOpen.trim() && (
-            <div className='mt-2 text-red-600 text-sm'>
-              URL is required to save a request.
-            </div>
-          )}
-
-          {!selectedCollectionId &&
-            (!isCreatingCollection || !newCollectionName.trim()) && (
-              <div className='mt-2 text-red-600 text-sm'>
-                Please select or create a collection.
-              </div>
-            )}
-        </Modal>
-        <ImportModal
-          isOpen={showCurlImport}
-          onClose={() => setShowCurlImport(false)}
-          onCurlImport={handleCurlImport}
-        />
-      </div>
-    </TooltipProvider>
+        </TooltipProvider>
+      </RequestEditorProvider>
+    </ErrorBoundary>
   );
 };
 
-export default RequestEditor;
+export default React.memo(RequestEditor);

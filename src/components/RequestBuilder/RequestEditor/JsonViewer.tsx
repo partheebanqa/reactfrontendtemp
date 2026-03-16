@@ -30,11 +30,11 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
 
     const regex = new RegExp(
       `(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`,
-      'gi'
+      'gi',
     );
     return text.replace(
       regex,
-      '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>'
+      '<mark class="bg-yellow-200 dark:bg-yellow-800">$1</mark>',
     );
   };
 
@@ -68,7 +68,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({
                         <span className='mr-2 mt-1'>•</span>
                         <span>{suggestion}</span>
                       </li>
-                    )
+                    ),
                   )}
                 </ul>
               </div>
