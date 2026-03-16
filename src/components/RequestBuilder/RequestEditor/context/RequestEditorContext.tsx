@@ -296,21 +296,21 @@ export const RequestEditorProvider: React.FC<RequestEditorProviderProps> = ({
 
   // After all the useState declarations, add these sync effects:
 
-  useEffect(() => {
-    setUrl(initialUrl);
-    setMethod(initialMethod);
-    setParams(initialParams);
-    setHeaders(initialHeaders);
-    setBodyType(initialBodyType);
-    setBodyContent(initialBodyContent);
-    setAuthType(initialAuthType);
-    if (initialAuthData) {
-      setAuthData(initialAuthData);
-    }
-    if (initialSettings) {
-      setSettings(initialSettings);
-    }
-  }, [activeRequestId]); // Only re-sync when the active request changes
+  // useEffect(() => {
+  //   setUrl(initialUrl);
+  //   setMethod(initialMethod);
+  //   setParams(initialParams);
+  //   setHeaders(initialHeaders);
+  //   setBodyType(initialBodyType);
+  //   setBodyContent(initialBodyContent);
+  //   setAuthType(initialAuthType);
+  //   if (initialAuthData) {
+  //     setAuthData(initialAuthData);
+  //   }
+  //   if (initialSettings) {
+  //     setSettings(initialSettings);
+  //   }
+  // }, [activeRequestId]); // Only re-sync when the active request changes
 
   const value = useMemo<RequestEditorContextType>(
     () => ({

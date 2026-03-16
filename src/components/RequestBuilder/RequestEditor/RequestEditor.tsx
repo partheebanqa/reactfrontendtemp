@@ -76,7 +76,10 @@ import {
 import { Assertion } from '@/components/Shared/Assertion/ApiAssertionInterface';
 import { RequestSettings } from '@/lib/requestBreadCrumb';
 import { ErrorBoundary } from './ErrorBoundary';
-import { RequestEditorProvider } from './context/RequestEditorContext';
+import {
+  RequestEditorProvider,
+  useRequestEditor,
+} from './context/RequestEditorContext';
 
 const TabLoader = () => (
   <div className='flex items-center justify-center p-8'>
@@ -141,7 +144,7 @@ const getContentTypeForBodyType = (
   return 'application/json';
 };
 
-const RequestEditor: React.FC<RequestEditorProps> = ({
+const RequestEditorContent: React.FC<RequestEditorProps> = ({
   onUsedVariablesChange,
   activeTab: externalActiveTab,
   onTabChange,
@@ -180,6 +183,39 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     replaceRequest,
   } = useCollection();
 
+  const {
+    url,
+    setUrl,
+    method,
+    setMethod,
+    params,
+    setParams,
+    headers,
+    setHeaders,
+    bodyType,
+    setBodyType,
+    bodyContent,
+    setBodyContent,
+    formFields,
+    setFormFields,
+    urlEncodedFields,
+    setUrlEncodedFields,
+    authType,
+    setAuthType,
+    token,
+    setToken,
+    authData,
+    setAuthData,
+    settings,
+    setSettings,
+    selectedVariable,
+    setSelectedVariable,
+    pendingSubstitutions,
+    setPendingSubstitutions,
+    dynamicVarTrigger,
+    setDynamicVarTrigger,
+  } = useRequestEditor();
+
   const isExtractingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -208,64 +244,64 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
 
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState('');
-  const [url, setUrl] = useState('');
+  //   const [url, setUrl] = useState('');
 
   const [urlAtOpen, setUrlAtOpen] = useState('');
-  const [method, setMethod] = useState<RequestMethod>('GET');
-  const [params, setParams] = useState<Param[]>([]);
-  const [headers, setHeaders] = useState<Header[]>([]);
+  //   const [method, setMethod] = useState<RequestMethod>('GET');
+  //   const [params, setParams] = useState<Param[]>([]);
+  //   const [headers, setHeaders] = useState<Header[]>([]);
 
-  const [bodyType, setBodyType] = useState<BodyType>('raw');
-  const [bodyContent, setBodyContent] = useState('{}');
-  const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
-  const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
-  const [authType, setAuthType] = useState<
-    'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
-  >('bearer');
+  //   const [bodyType, setBodyType] = useState<BodyType>('raw');
+  //   const [bodyContent, setBodyContent] = useState('{}');
+  //   const [formFields, setFormFields] = useState<KeyValuePairWithFile[]>([]);
+  //   const [urlEncodedFields, setUrlEncodedFields] = useState<Param[]>([]);
+  //   const [authType, setAuthType] = useState<
+  //     'none' | 'basic' | 'bearer' | 'apiKey' | 'oauth1' | 'oauth2'
+  //   >('bearer');
 
-  const [token, setToken] = useState('');
-  const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
-    [],
-  );
+  //   const [token, setToken] = useState('');
+  //   const [selectedVariable, setSelectedVariable] = useState<SelectedVariable[]>(
+  //     [],
+  //   );
 
-  const [dynamicVarTrigger, setDynamicVarTrigger] = useState(0);
+  //   const [dynamicVarTrigger, setDynamicVarTrigger] = useState(0);
 
-  const [pendingSubstitutions, setPendingSubstitutions] = useState<
-    PendingSubstitution[]
-  >([]);
-  const [authData, setAuthData] = useState({
-    username: '',
-    password: '',
-    token: '',
-    key: '',
-    value: '',
-    addTo: 'header' as 'header' | 'query',
-    oauth1: {
-      consumerKey: '',
-      consumerSecret: '',
-      token: '',
-      tokenSecret: '',
-      signatureMethod: 'HMAC-SHA1',
-      version: '1.0',
-      realm: '',
-      nonce: '',
-      timestamp: '',
-    },
-    oauth2: {
-      clientId: '',
-      clientSecret: '',
-      accessToken: '',
-      tokenType: 'Bearer',
-      refreshToken: '',
-      scope: '',
-      grantType: 'authorization_code' as
-        | 'authorization_code'
-        | 'client_credentials'
-        | 'password'
-        | 'refresh_token',
-      redirectUri: '',
-    },
-  });
+  //   const [pendingSubstitutions, setPendingSubstitutions] = useState<
+  //     PendingSubstitution[]
+  //   >([]);
+  //   const [authData, setAuthData] = useState({
+  //     username: '',
+  //     password: '',
+  //     token: '',
+  //     key: '',
+  //     value: '',
+  //     addTo: 'header' as 'header' | 'query',
+  //     oauth1: {
+  //       consumerKey: '',
+  //       consumerSecret: '',
+  //       token: '',
+  //       tokenSecret: '',
+  //       signatureMethod: 'HMAC-SHA1',
+  //       version: '1.0',
+  //       realm: '',
+  //       nonce: '',
+  //       timestamp: '',
+  //     },
+  //     oauth2: {
+  //       clientId: '',
+  //       clientSecret: '',
+  //       accessToken: '',
+  //       tokenType: 'Bearer',
+  //       refreshToken: '',
+  //       scope: '',
+  //       grantType: 'authorization_code' as
+  //         | 'authorization_code'
+  //         | 'client_credentials'
+  //         | 'password'
+  //         | 'refresh_token',
+  //       redirectUri: '',
+  //     },
+  //   });
 
   console.log('authDataIneditor:', authData);
 
@@ -295,31 +331,31 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
     return bodyContent.trim() !== '' ? 1 : 0;
   };
 
-  const [settings, setSettings] = useState<RequestSettings>({
-    options: {
-      followRedirects: true,
-      stopOnError: false,
-      saveResponses: false,
-    },
-    timeout: 30000,
-    validateSSL: true,
-    proxy: {
-      enabled: false,
-      url: '',
-    },
-    performanceTest: {
-      numRequests: 1,
-      concurrency: 1,
-      delay: 0,
-      timeout: 1000,
-    },
-    rateLimit: {
-      enabled: false,
-      requestsPerPeriod: 10,
-      periodInSeconds: 60,
-      type: 'fixed',
-    },
-  });
+  //   const [settings, setSettings] = useState<RequestSettings>({
+  //     options: {
+  //       followRedirects: true,
+  //       stopOnError: false,
+  //       saveResponses: false,
+  //     },
+  //     timeout: 30000,
+  //     validateSSL: true,
+  //     proxy: {
+  //       enabled: false,
+  //       url: '',
+  //     },
+  //     performanceTest: {
+  //       numRequests: 1,
+  //       concurrency: 1,
+  //       delay: 0,
+  //       timeout: 1000,
+  //     },
+  //     rateLimit: {
+  //       enabled: false,
+  //       requestsPerPeriod: 10,
+  //       periodInSeconds: 60,
+  //       type: 'fixed',
+  //     },
+  //   });
 
   const formattedVariables = useMemo(() => {
     const formatted: Array<{ name: string; value: string }> = [];
@@ -856,273 +892,281 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
       const newUrl = `${baseUrl}?${queryString}`;
 
       if (newUrl !== url) {
+        isExtractingRef.current = true;
         setUrl(newUrl);
+        setTimeout(() => {
+          isExtractingRef.current = false;
+        }, 200);
       }
     } else {
-      if (url.includes('?') && params.length === 0) {
+      if (url.includes('?')) {
+        isExtractingRef.current = true;
         setUrl(baseUrl);
+        setTimeout(() => {
+          isExtractingRef.current = false;
+        }, 200);
       }
     }
   }, [params, isSaving]);
 
-  useEffect(() => {
-    if (isSaving) return;
+  //   useEffect(() => {
+  //     if (isSaving) return;
 
-    if (activeRequest && activeRequest.id !== loadedRequestId) {
-      setLoadedRequestId(activeRequest.id);
+  //     if (activeRequest && activeRequest.id !== loadedRequestId) {
+  //       setLoadedRequestId(activeRequest.id);
 
-      setUrl(activeRequest.url || '');
-      setMethod((activeRequest.method as RequestMethod) || 'GET');
-      setParams(activeRequest.params || []);
+  //       setUrl(activeRequest.url || '');
+  //       setMethod((activeRequest.method as RequestMethod) || 'GET');
+  //       setParams(activeRequest.params || []);
 
-      if (activeRequest.headers && Array.isArray(activeRequest.headers)) {
-        try {
-          const formattedHeaders = activeRequest.headers.map((h: any) => {
-            return {
-              key: h.key || h.name || '',
-              value: h.value || '',
-              enabled: h.enabled !== undefined ? !!h.enabled : true,
-            };
-          });
+  //       if (activeRequest.headers && Array.isArray(activeRequest.headers)) {
+  //         try {
+  //           const formattedHeaders = activeRequest.headers.map((h: any) => {
+  //             return {
+  //               key: h.key || h.name || '',
+  //               value: h.value || '',
+  //               enabled: h.enabled !== undefined ? !!h.enabled : true,
+  //             };
+  //           });
 
-          const defaultHeaders = methodsWithBody.includes(
-            activeRequest.method as RequestMethod,
-          )
-            ? [
-                {
-                  key: 'Content-Type',
-                  value: 'application/json',
-                  enabled: true,
-                },
-              ]
-            : [];
+  //           const defaultHeaders = methodsWithBody.includes(
+  //             activeRequest.method as RequestMethod,
+  //           )
+  //             ? [
+  //                 {
+  //                   key: 'Content-Type',
+  //                   value: 'application/json',
+  //                   enabled: true,
+  //                 },
+  //               ]
+  //             : [];
 
-          const filteredHeaders = formattedHeaders.filter(
-            (h: Header) =>
-              h.key !== 'Postman-Token' &&
-              h.key !== 'User-Agent' &&
-              !defaultHeaders.find((dh) => dh.key === h.key),
-          );
+  //           const filteredHeaders = formattedHeaders.filter(
+  //             (h: Header) =>
+  //               h.key !== 'Postman-Token' &&
+  //               h.key !== 'User-Agent' &&
+  //               !defaultHeaders.find((dh) => dh.key === h.key),
+  //           );
 
-          setHeaders([...defaultHeaders, ...filteredHeaders]);
-        } catch (error) {
-          console.error('Error formatting headers:', error);
-          setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
-        }
-      } else {
-        setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
-      }
+  //           setHeaders([...defaultHeaders, ...filteredHeaders]);
+  //         } catch (error) {
+  //           console.error('Error formatting headers:', error);
+  //           setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
+  //         }
+  //       } else {
+  //         setHeaders(getDefaultHeaders(activeRequest.method as RequestMethod));
+  //       }
 
-      const allowedBodyTypes = [
-        'none',
-        'json',
-        'form-data',
-        'x-www-form-urlencoded',
-        'raw',
-        'binary',
-      ];
-      const bodyTypeValue = activeRequest.bodyType || 'none';
-      if (allowedBodyTypes.includes(bodyTypeValue)) {
-        setBodyType(bodyTypeValue as BodyType);
-      } else {
-        setBodyType('raw');
-      }
-      setBodyContent(activeRequest.bodyRawContent || '');
-      setPendingSubstitutions([]);
+  //       const allowedBodyTypes = [
+  //         'none',
+  //         'json',
+  //         'form-data',
+  //         'x-www-form-urlencoded',
+  //         'raw',
+  //         'binary',
+  //       ];
+  //       const bodyTypeValue = activeRequest.bodyType || 'none';
+  //       if (allowedBodyTypes.includes(bodyTypeValue)) {
+  //         setBodyType(bodyTypeValue as BodyType);
+  //       } else {
+  //         setBodyType('raw');
+  //       }
+  //       setBodyContent(activeRequest.bodyRawContent || '');
+  //       setPendingSubstitutions([]);
 
-      try {
-        if (bodyTypeValue === 'form-data' && activeRequest.bodyFormData) {
-          if (Array.isArray(activeRequest.bodyFormData)) {
-            const formDataFields = activeRequest.bodyFormData.map(
-              (field: any) => ({
-                key: field.key || '',
-                value: field.value || '',
-                enabled: field.enabled !== undefined ? field.enabled : true,
-                type: (field.type || 'text') as 'text' | 'file',
-                ...(field.fileName ? { fileName: field.fileName } : {}),
-              }),
-            );
-            setFormFields(formDataFields);
-          } else if (typeof activeRequest.bodyFormData === 'object') {
-            const formDataFields = Object.entries(
-              activeRequest.bodyFormData,
-            ).map(([key, value]) => ({
-              key,
-              value: value?.toString() || '',
-              enabled: true,
-              type: 'text' as const,
-            }));
-            setFormFields(formDataFields);
-          } else {
-            setFormFields([]);
-          }
-        } else {
-          setFormFields([]);
-        }
-      } catch (error) {
-        console.error('Error initializing form fields:', error);
-        setFormFields([]);
-      }
+  //       try {
+  //         if (bodyTypeValue === 'form-data' && activeRequest.bodyFormData) {
+  //           if (Array.isArray(activeRequest.bodyFormData)) {
+  //             const formDataFields = activeRequest.bodyFormData.map(
+  //               (field: any) => ({
+  //                 key: field.key || '',
+  //                 value: field.value || '',
+  //                 enabled: field.enabled !== undefined ? field.enabled : true,
+  //                 type: (field.type || 'text') as 'text' | 'file',
+  //                 ...(field.fileName ? { fileName: field.fileName } : {}),
+  //               }),
+  //             );
+  //             setFormFields(formDataFields);
+  //           } else if (typeof activeRequest.bodyFormData === 'object') {
+  //             const formDataFields = Object.entries(
+  //               activeRequest.bodyFormData,
+  //             ).map(([key, value]) => ({
+  //               key,
+  //               value: value?.toString() || '',
+  //               enabled: true,
+  //               type: 'text' as const,
+  //             }));
+  //             setFormFields(formDataFields);
+  //           } else {
+  //             setFormFields([]);
+  //           }
+  //         } else {
+  //           setFormFields([]);
+  //         }
+  //       } catch (error) {
+  //         console.error('Error initializing form fields:', error);
+  //         setFormFields([]);
+  //       }
 
-      try {
-        if (
-          bodyTypeValue === 'x-www-form-urlencoded' &&
-          activeRequest.bodyRawContent
-        ) {
-          try {
-            const urlParams = new URLSearchParams(activeRequest.bodyRawContent);
-            const encodedFields: Param[] = [];
-            urlParams.forEach((value, key) => {
-              encodedFields.push({ key, value, enabled: true });
-            });
-            setUrlEncodedFields(encodedFields);
-          } catch (e) {
-            setUrlEncodedFields([]);
-          }
-        } else {
-          setUrlEncodedFields([]);
-        }
-      } catch (error) {
-        console.error('Error initializing URL encoded fields:', error);
-        setUrlEncodedFields([]);
-      }
+  //       try {
+  //         if (
+  //           bodyTypeValue === 'x-www-form-urlencoded' &&
+  //           activeRequest.bodyRawContent
+  //         ) {
+  //           try {
+  //             const urlParams = new URLSearchParams(activeRequest.bodyRawContent);
+  //             const encodedFields: Param[] = [];
+  //             urlParams.forEach((value, key) => {
+  //               encodedFields.push({ key, value, enabled: true });
+  //             });
+  //             setUrlEncodedFields(encodedFields);
+  //           } catch (e) {
+  //             setUrlEncodedFields([]);
+  //           }
+  //         } else {
+  //           setUrlEncodedFields([]);
+  //         }
+  //       } catch (error) {
+  //         console.error('Error initializing URL encoded fields:', error);
+  //         setUrlEncodedFields([]);
+  //       }
 
-      setToken(activeRequest.authorization?.token || '');
-      const requestAuthType = activeRequest.authorizationType as
-        | 'none'
-        | 'basic'
-        | 'bearer'
-        | 'apiKey'
-        | 'oauth1'
-        | 'oauth2';
+  //       setToken(activeRequest.authorization?.token || '');
+  //       const requestAuthType = activeRequest.authorizationType as
+  //         | 'none'
+  //         | 'basic'
+  //         | 'bearer'
+  //         | 'apiKey'
+  //         | 'oauth1'
+  //         | 'oauth2';
 
-      if (activeRequest.authorization?.token && !requestAuthType) {
-        setAuthType('bearer');
-      } else {
-        setAuthType(requestAuthType || 'bearer');
-      }
+  //       if (activeRequest.authorization?.token && !requestAuthType) {
+  //         setAuthType('bearer');
+  //       } else {
+  //         setAuthType(requestAuthType || 'bearer');
+  //       }
 
-      setAuthData({
-        username: activeRequest.authorization?.username || '',
-        password: activeRequest.authorization?.password || '',
-        token: activeRequest.authorization?.token || '',
-        key: activeRequest.authorization?.key || '',
-        value: activeRequest.authorization?.value || '',
-        addTo: activeRequest.authorization?.addTo || 'header',
-        oauth1: {
-          consumerKey: '',
-          consumerSecret: '',
-          token: '',
-          tokenSecret: '',
-          signatureMethod: 'HMAC-SHA1',
-          version: '1.0',
-          realm: '',
-          nonce: '',
-          timestamp: '',
-        },
-        oauth2: {
-          clientId: '',
-          clientSecret: '',
-          accessToken: '',
-          tokenType: 'Bearer',
-          refreshToken: '',
-          scope: '',
-          grantType: 'authorization_code',
-          redirectUri: '',
-        },
-      });
+  //       setAuthData({
+  //         username: activeRequest.authorization?.username || '',
+  //         password: activeRequest.authorization?.password || '',
+  //         token: activeRequest.authorization?.token || '',
+  //         key: activeRequest.authorization?.key || '',
+  //         value: activeRequest.authorization?.value || '',
+  //         addTo: activeRequest.authorization?.addTo || 'header',
+  //         oauth1: {
+  //           consumerKey: '',
+  //           consumerSecret: '',
+  //           token: '',
+  //           tokenSecret: '',
+  //           signatureMethod: 'HMAC-SHA1',
+  //           version: '1.0',
+  //           realm: '',
+  //           nonce: '',
+  //           timestamp: '',
+  //         },
+  //         oauth2: {
+  //           clientId: '',
+  //           clientSecret: '',
+  //           accessToken: '',
+  //           tokenType: 'Bearer',
+  //           refreshToken: '',
+  //           scope: '',
+  //           grantType: 'authorization_code',
+  //           redirectUri: '',
+  //         },
+  //       });
 
-      if (
-        activeRequest.assertions &&
-        Array.isArray(activeRequest.assertions) &&
-        activeRequest.assertions.length > 0
-      ) {
-        try {
-          const existingAssertions = activeRequest.assertions.map(
-            (assertion: any) => {
-              return {
-                id: assertion.id || `temp-${Math.random()}`,
-                category: assertion.category || 'general',
-                type: assertion.type || 'custom',
-                description: assertion.description || 'Custom assertion',
-                field: assertion.field,
-                operator: assertion.operator || 'equals',
-                expectedValue: assertion.expectedValue,
-                enabled:
-                  assertion.enabled !== undefined ? assertion.enabled : true,
-                impact: assertion.impact,
-                group: assertion.group || 'custom',
-                priority: assertion.priority,
-              } as Assertion;
-            },
-          );
+  //       if (
+  //         activeRequest.assertions &&
+  //         Array.isArray(activeRequest.assertions) &&
+  //         activeRequest.assertions.length > 0
+  //       ) {
+  //         try {
+  //           const existingAssertions = activeRequest.assertions.map(
+  //             (assertion: any) => {
+  //               return {
+  //                 id: assertion.id || `temp-${Math.random()}`,
+  //                 category: assertion.category || 'general',
+  //                 type: assertion.type || 'custom',
+  //                 description: assertion.description || 'Custom assertion',
+  //                 field: assertion.field,
+  //                 operator: assertion.operator || 'equals',
+  //                 expectedValue: assertion.expectedValue,
+  //                 enabled:
+  //                   assertion.enabled !== undefined ? assertion.enabled : true,
+  //                 impact: assertion.impact,
+  //                 group: assertion.group || 'custom',
+  //                 priority: assertion.priority,
+  //               } as Assertion;
+  //             },
+  //           );
 
-          setAssertions(existingAssertions);
-        } catch (error) {
-          console.error('Error loading existing assertions:', error);
-          setAssertions([]);
-        }
-      } else {
-        setAssertions([]);
-      }
+  //           setAssertions(existingAssertions);
+  //         } catch (error) {
+  //           console.error('Error loading existing assertions:', error);
+  //           setAssertions([]);
+  //         }
+  //       } else {
+  //         setAssertions([]);
+  //       }
 
-      if (activeRequest.folderId) {
-        setSelectedFolderId(activeRequest.folderId);
-      } else {
-        setSelectedFolderId('');
-      }
+  //       if (activeRequest.folderId) {
+  //         setSelectedFolderId(activeRequest.folderId);
+  //       } else {
+  //         setSelectedFolderId('');
+  //       }
 
-      if (
-        activeRequest.variable &&
-        Array.isArray(activeRequest.variable) &&
-        activeRequest.variable.length > 0
-      ) {
-        const filteredVariables = activeRequest.variable.filter(
-          (v: any) => v.path || v.name,
-        );
-        setSelectedVariable(filteredVariables);
-      } else {
-        setSelectedVariable([]);
-      }
-      // Restore previously extracted variables from localStorage on initial load
-      if (
-        activeRequest.extractVariables &&
-        Array.isArray(activeRequest.extractVariables) &&
-        activeRequest.extractVariables.length > 0 &&
-        activeCollection?.id
-      ) {
-        activeRequest.extractVariables.forEach((extraction: any) => {
-          const variableName = extraction.name;
-          if (!variableName) return;
+  //       if (
+  //         activeRequest.variable &&
+  //         Array.isArray(activeRequest.variable) &&
+  //         activeRequest.variable.length > 0
+  //       ) {
+  //         const filteredVariables = activeRequest.variable.filter(
+  //           (v: any) => v.path || v.name,
+  //         );
+  //         setSelectedVariable(filteredVariables);
+  //       } else {
+  //         setSelectedVariable([]);
+  //       }
+  //       // Restore previously extracted variables from localStorage on initial load
+  //       if (
+  //         activeRequest.extractVariables &&
+  //         Array.isArray(activeRequest.extractVariables) &&
+  //         activeRequest.extractVariables.length > 0 &&
+  //         activeCollection?.id
+  //       ) {
+  //         activeRequest.extractVariables.forEach((extraction: any) => {
+  //           const variableName = extraction.name;
+  //           if (!variableName) return;
 
-          const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
-          const storedData = localStorage.getItem(storageKey);
+  //           const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
+  //           const storedData = localStorage.getItem(storageKey);
 
-          if (storedData) {
-            try {
-              const parsed = JSON.parse(storedData);
-              if (parsed.value) {
-                collectionActions.setExtractedVariableRequest(
-                  activeRequest.id,
-                  variableName,
-                  String(parsed.value),
-                );
-              }
-            } catch (e) {
-              console.error('Error restoring extracted variable:', e);
-            }
-          }
-        });
-      }
-    } else if (!isSaving && !activeRequest) {
-      setLoadedRequestId(undefined);
-      setAssertions([]);
-      setAuthType('bearer');
-      setSelectedVariable([]);
-      setPendingSubstitutions([]);
-      setResponseData(null);
-    }
-  }, [activeRequest, isSaving, activeCollection?.id]);
+  //           if (storedData) {
+  //             try {
+  //               const parsed = JSON.parse(storedData);
+  //               if (parsed.value) {
+  //                 collectionActions.setExtractedVariableRequest(
+  //                   activeRequest.id,
+  //                   variableName,
+  //                   String(parsed.value),
+  //                 );
+  //               }
+  //             } catch (e) {
+  //               console.error('Error restoring extracted variable:', e);
+  //             }
+  //           }
+  //         });
+  //       }
+  //     } else if (!isSaving && !activeRequest) {
+  //       setLoadedRequestId(undefined);
+  //       setAssertions([]);
+  //       setAuthType('bearer');
+  //       setSelectedVariable([]);
+  //       setPendingSubstitutions([]);
+  //       setResponseData(null);
+  //     }
+  //   }, [activeRequest, isSaving, activeCollection?.id]);
 
   useEffect(() => {
     if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
@@ -2882,246 +2926,229 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
   }
 
   return (
-    <ErrorBoundary>
-      <RequestEditorProvider
-        key={activeRequest?.id}
-        activeRequestId={activeRequest?.id}
-        initialUrl={url}
-        initialMethod={method}
-        initialParams={params}
-        initialHeaders={headers}
-        initialBodyType={bodyType}
-        initialBodyContent={bodyContent}
-        initialAuthType={authType}
-        initialSettings={settings}
-        initialAuthData={authData}
-      >
-        <TooltipProvider>
-          <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
-            <div className='sticky top-0 -z-1 md:z-30 bg-white dark:bg-gray-900'>
-              <RequestTabs
-                onBeforeTabChange={syncCurrentRequestToStore}
-                onSaveRequest={async (request) => {
-                  if (isNewRequest(activeRequest.id)) {
-                    handleSaveRequest();
-                  } else {
-                    await handleUpdateContentRequest();
-                  }
-                }}
-                onCurlImport={handleCurlImport}
-              />
+    <TooltipProvider>
+      <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden'>
+        <div className='sticky top-0 -z-1 md:z-30 bg-white dark:bg-gray-900'>
+          <RequestTabs
+            onBeforeTabChange={syncCurrentRequestToStore}
+            onSaveRequest={async (request) => {
+              if (isNewRequest(activeRequest.id)) {
+                handleSaveRequest();
+              } else {
+                await handleUpdateContentRequest();
+              }
+            }}
+            onCurlImport={handleCurlImport}
+          />
 
-              <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
-                <div className='flex items-center justify-between'>
-                  <div className='flex items-center text-sm space-x-1'>
+          <div className='border-gray-200 dark:border-gray-700 px-4 pt-3 flex-shrink-0'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center text-sm space-x-1'>
+                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
+                  {activeCollectionFull?.name}
+                </span>
+                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
+                  /
+                </span>
+
+                {activeRequest?.folderId && (
+                  <>
                     <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
-                      {activeCollectionFull?.name}
+                      {findFolderName(
+                        activeRequest.folderId,
+                        (activeCollectionFull as any)?.folders || [],
+                      )}
                     </span>
                     <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
                       /
                     </span>
+                  </>
+                )}
 
-                    {activeRequest?.folderId && (
-                      <>
-                        <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
-                          {findFolderName(
-                            activeRequest.folderId,
-                            (activeCollectionFull as any)?.folders || [],
-                          )}
-                        </span>
-                        <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
-                          /
-                        </span>
-                      </>
-                    )}
+                <div className='flex items-center gap-1'>
+                  <EditableTextWithoutIcon
+                    value={activeRequest.name || ''}
+                    onSave={handleSaveName}
+                    placeholder='Request Name'
+                    fontSize='xs'
+                    fontWeight='medium'
+                  />
 
-                    <div className='flex items-center gap-1'>
-                      <EditableTextWithoutIcon
-                        value={activeRequest.name || ''}
-                        onSave={handleSaveName}
-                        placeholder='Request Name'
-                        fontSize='xs'
-                        fontWeight='medium'
-                      />
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type='button'
+                          className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
+                        >
+                          <Info className='w-3.5 h-3.5' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Double click to Rename</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
 
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              type='button'
-                              className='p-1 text-gray-500 hover:text-[rgb(19,111,176)] transition-colors'
-                            >
-                              <Info className='w-3.5 h-3.5' />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            Double click to Rename
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-
-                  <div className='flex items-center gap-1.5'>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span
-                            className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${
-                              !hasPreRequestConfigured ||
-                              isCurrentRequestPreRequest
-                                ? 'opacity-50'
-                                : ''
-                            }`}
-                          >
-                            <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
-                            Auto Auth Sync
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {isCurrentRequestPreRequest
-                            ? 'This is the pre-request - token usage is always enabled'
-                            : !hasPreRequestConfigured
-                              ? 'Configure Auto‑Auth for a Collection'
-                              : preRequestEnabled
-                                ? 'Disable Auto‑Auth to provide authentication manually'
-                                : 'Turn on Auto‑Auth sync'}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <div
-                      className={
-                        !hasPreRequestConfigured || isCurrentRequestPreRequest
-                          ? 'opacity-50 pointer-events-none'
-                          : ''
-                      }
-                    >
-                      <ToggleSwitch
-                        id='preRequestAuth'
-                        checked={
-                          isCurrentRequestPreRequest ? true : preRequestEnabled
-                        }
-                        onChange={handlePreRequestToggle}
-                        label=''
-                        description=''
-                        disabled={
+              <div className='flex items-center gap-1.5'>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap cursor-pointer ${
                           !hasPreRequestConfigured || isCurrentRequestPreRequest
-                        }
-                      />
-                    </div>
-                  </div>
+                            ? 'opacity-50'
+                            : ''
+                        }`}
+                      >
+                        <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
+                        Auto Auth Sync
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {isCurrentRequestPreRequest
+                        ? 'This is the pre-request - token usage is always enabled'
+                        : !hasPreRequestConfigured
+                          ? 'Configure Auto‑Auth for a Collection'
+                          : preRequestEnabled
+                            ? 'Disable Auto‑Auth to provide authentication manually'
+                            : 'Turn on Auto‑Auth sync'}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <div
+                  className={
+                    !hasPreRequestConfigured || isCurrentRequestPreRequest
+                      ? 'opacity-50 pointer-events-none'
+                      : ''
+                  }
+                >
+                  <ToggleSwitch
+                    id='preRequestAuth'
+                    checked={
+                      isCurrentRequestPreRequest ? true : preRequestEnabled
+                    }
+                    onChange={handlePreRequestToggle}
+                    label=''
+                    description=''
+                    disabled={
+                      !hasPreRequestConfigured || isCurrentRequestPreRequest
+                    }
+                  />
                 </div>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className='border-gray-200 dark:border-gray-700 px-4 pt-4 flex-shrink-0'>
-              <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
-                <select
-                  value={method}
-                  onChange={handleMethodChange}
-                  className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
-                    method,
-                  )}`}
-                  style={{
-                    appearance: 'auto',
-                  }}
+        <div className='border-gray-200 dark:border-gray-700 px-4 pt-4 flex-shrink-0'>
+          <div className='flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2'>
+            <select
+              value={method}
+              onChange={handleMethodChange}
+              className={`w-full sm:w-auto border rounded-md pl-3 pr-0 py-2 text-sm font-medium hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-all duration-150 ${getMethodColor(
+                method,
+              )}`}
+              style={{
+                appearance: 'auto',
+              }}
+            >
+              {methods.map((m) => (
+                <option
+                  key={m}
+                  value={m}
+                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
                 >
-                  {methods.map((m) => (
-                    <option
-                      key={m}
-                      value={m}
-                      className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
-                    >
-                      {m}
-                    </option>
-                  ))}
-                </select>
+                  {m}
+                </option>
+              ))}
+            </select>
 
-                <Input
-                  type='text'
-                  value={url}
-                  onChange={handleUrlChange}
-                  placeholder='Enter request URL'
-                  className='text-xs md:text-md'
-                />
+            <Input
+              type='text'
+              value={url}
+              onChange={handleUrlChange}
+              placeholder='Enter request URL'
+              className='text-xs md:text-md'
+            />
 
-                <div className='justify-end flex space-x-2'>
-                  {isLoading ? (
-                    <Button
-                      variant='outline'
-                      onClick={() => {
-                        if (abortControllerRef.current) {
-                          abortControllerRef.current.abort();
-                          toast({
-                            title: 'Cancelling...',
-                            description: 'Request cancellation initiated',
-                          });
-                        }
-                      }}
-                      className='border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
-                      aria-label='Cancel request'
-                      title='Cancel request'
-                    >
-                      <svg
-                        className='h-4 w-4'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M6 18L18 6M6 6l12 12'
-                        />
-                      </svg>
-                      <span className='hidden sm:inline'>Cancel</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      variant='active'
-                      onClick={handleSendRequest}
-                      disabled={isLoading}
-                      className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
-                      aria-label='Send request'
-                      title='Send request'
-                    >
-                      <Play className='h-4 w-4' />
-                      <span className='hidden sm:inline'>Send</span>
-                    </Button>
-                  )}
-                  <TooltipContainer text='Save request'>
-                    {isNewRequest(activeRequest.id) ? (
-                      <button
-                        onClick={handleSaveRequest}
-                        disabled={isSaving} // ← ADD
-                        className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
-                        aria-label='Save request'
-                      >
-                        {isSaving ? ( // ← REPLACE static icon
-                          <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
-                        ) : (
-                          <Save className='h-4 w-4 text-[#136fb0]' />
-                        )}
-                      </button>
+            <div className='justify-end flex space-x-2'>
+              {isLoading ? (
+                <Button
+                  variant='outline'
+                  onClick={() => {
+                    if (abortControllerRef.current) {
+                      abortControllerRef.current.abort();
+                      toast({
+                        title: 'Cancelling...',
+                        description: 'Request cancellation initiated',
+                      });
+                    }
+                  }}
+                  className='border-red-300 dark:border-red-600 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                  aria-label='Cancel request'
+                  title='Cancel request'
+                >
+                  <svg
+                    className='h-4 w-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M6 18L18 6M6 6l12 12'
+                    />
+                  </svg>
+                  <span className='hidden sm:inline'>Cancel</span>
+                </Button>
+              ) : (
+                <Button
+                  variant='active'
+                  onClick={handleSendRequest}
+                  disabled={isLoading}
+                  className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
+                  aria-label='Send request'
+                  title='Send request'
+                >
+                  <Play className='h-4 w-4' />
+                  <span className='hidden sm:inline'>Send</span>
+                </Button>
+              )}
+              <TooltipContainer text='Save request'>
+                {isNewRequest(activeRequest.id) ? (
+                  <button
+                    onClick={handleSaveRequest}
+                    disabled={isSaving} // ← ADD
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
+                    aria-label='Save request'
+                  >
+                    {isSaving ? ( // ← REPLACE static icon
+                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
                     ) : (
-                      <button
-                        onClick={handleUpdateContentRequest}
-                        disabled={isSaving} // ← ADD
-                        className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
-                        aria-label='Save request'
-                      >
-                        {isSaving ? ( // ← REPLACE static icon
-                          <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
-                        ) : (
-                          <Save className='h-4 w-4 text-[#136fb0]' />
-                        )}
-                      </button>
+                      <Save className='h-4 w-4 text-[#136fb0]' />
                     )}
-                  </TooltipContainer>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleUpdateContentRequest}
+                    disabled={isSaving} // ← ADD
+                    className='border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800 px-3 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed'
+                    aria-label='Save request'
+                  >
+                    {isSaving ? ( // ← REPLACE static icon
+                      <Loader2 className='h-4 w-4 text-[#136fb0] animate-spin' />
+                    ) : (
+                      <Save className='h-4 w-4 text-[#136fb0]' />
+                    )}
+                  </button>
+                )}
+              </TooltipContainer>
 
-                  {/* <TooltipContainer text='Performance Test'>
+              {/* <TooltipContainer text='Performance Test'>
                 // {isNewRequest(activeRequest.id) ? (
                   <button
                     // onClick={handleSaveRequest}
@@ -3139,53 +3166,53 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   </button>
                 )}
               </TooltipContainer> */}
-                </div>
-              </div>
-
-              {previewUrl && activeEnvironment?.name !== 'No Environment' && (
-                <div className='mt-2 mb-1'>
-                  <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
-                    <p className='text-sm text-gray-600 dark:text-gray-400'>
-                      <span className='font-medium'>Final URL Preview:</span>
-                    </p>
-                    <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
-                      {previewUrl}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
+          </div>
 
-            <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
-              <nav className='flex overflow-x-auto scrollbar-thin px-4'>
-                <TooltipProvider>
-                  {[
-                    {
-                      id: 'params',
-                      label: 'Params',
-                      count: params.filter((p) => p.enabled).length,
-                    },
-                    {
-                      id: 'headers',
-                      label: 'Headers',
-                      count: headers.filter((h) => h.enabled).length,
-                    },
-                    { id: 'body', label: 'Body', count: getBodyCount() },
-                    { id: 'auth', label: 'Auth', count: getAuthCount() },
-                    { id: 'pre-request', label: 'Pre-request', count: 0 },
-                    { id: 'post-response', label: 'Post-response', count: 0 },
-                    {
-                      id: 'schemas',
-                      label: 'Schemas',
-                      count: Array.isArray(schemas) ? schemas.length : 0,
-                    },
-                    { id: 'settings', label: 'Settings' },
-                  ].map((tab) => {
-                    const button = (
-                      <button
-                        key={tab.id}
-                        onClick={() => handleTabClick(tab.id)}
-                        className={`
+          {previewUrl && activeEnvironment?.name !== 'No Environment' && (
+            <div className='mt-2 mb-1'>
+              <div className='bg-gray-50 dark:bg-gray-800 rounded px-3 py-2 flex gap-2  items-center'>
+                <p className='text-sm text-gray-600 dark:text-gray-400'>
+                  <span className='font-medium'>Final URL Preview:</span>
+                </p>
+                <p className='text-sm text-blue-600 dark:text-blue-400 font-mono break-all'>
+                  {previewUrl}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className='border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
+          <nav className='flex overflow-x-auto scrollbar-thin px-4'>
+            <TooltipProvider>
+              {[
+                {
+                  id: 'params',
+                  label: 'Params',
+                  count: params.filter((p) => p.enabled).length,
+                },
+                {
+                  id: 'headers',
+                  label: 'Headers',
+                  count: headers.filter((h) => h.enabled).length,
+                },
+                { id: 'body', label: 'Body', count: getBodyCount() },
+                { id: 'auth', label: 'Auth', count: getAuthCount() },
+                { id: 'pre-request', label: 'Pre-request', count: 0 },
+                { id: 'post-response', label: 'Post-response', count: 0 },
+                {
+                  id: 'schemas',
+                  label: 'Schemas',
+                  count: Array.isArray(schemas) ? schemas.length : 0,
+                },
+                { id: 'settings', label: 'Settings' },
+              ].map((tab) => {
+                const button = (
+                  <button
+                    key={tab.id}
+                    onClick={() => handleTabClick(tab.id)}
+                    className={`
               pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-xs md:text-sm transition-colors whitespace-nowrap
               ${
                 activeTab === tab.id
@@ -3193,367 +3220,434 @@ const RequestEditor: React.FC<RequestEditorProps> = ({
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }
             `}
-                      >
-                        {tab.label}
+                  >
+                    {tab.label}
 
-                        {(tab.id === 'auth' ||
-                          tab.id === 'body' ||
-                          tab.id === 'schemas') &&
-                          (tab.count ?? 0) > 0 && (
-                            <span
-                              className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
-                              style={{
-                                backgroundColor:
-                                  'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
-                              }}
-                            />
-                          )}
+                    {(tab.id === 'auth' ||
+                      tab.id === 'body' ||
+                      tab.id === 'schemas') &&
+                      (tab.count ?? 0) > 0 && (
+                        <span
+                          className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
+                          style={{
+                            backgroundColor:
+                              'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
+                          }}
+                        />
+                      )}
 
-                        {tab.id !== 'auth' &&
-                          tab.id !== 'body' &&
-                          tab.id !== 'schemas' &&
-                          tab.count !== undefined &&
-                          tab.count > 0 && (
-                            <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
-                              {tab.count}
-                            </span>
-                          )}
-                      </button>
+                    {tab.id !== 'auth' &&
+                      tab.id !== 'body' &&
+                      tab.id !== 'schemas' &&
+                      tab.count !== undefined &&
+                      tab.count > 0 && (
+                        <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
+                          {tab.count}
+                        </span>
+                      )}
+                  </button>
+                );
+
+                if (tab.id === 'post-response') {
+                  return (
+                    <Tooltip key={tab.id}>
+                      <TooltipTrigger asChild>{button}</TooltipTrigger>
+                      <TooltipContent>
+                        Manage assertions and extracted variable
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                }
+
+                return button;
+              })}
+            </TooltipProvider>
+          </nav>
+        </div>
+
+        <div className='flex-1 overflow-auto scrollbar-thin p-4'>
+          {activeTab === 'params' && (
+            <ParamsTab
+              params={params}
+              setParams={setParams}
+              activeRequestId={activeRequest?.id}
+            />
+          )}
+
+          {activeTab === 'headers' && (
+            <HeadersTab
+              headers={headers}
+              setHeaders={setHeaders}
+              activeRequestId={activeRequest?.id}
+            />
+          )}
+          {activeTab === 'body' && (
+            <RequestBody
+              bodyType={bodyType}
+              bodyContent={bodyContent}
+              formFields={formFields}
+              urlEncodedFields={urlEncodedFields}
+              headers={headers}
+              method={method}
+              staticVariables={staticVars}
+              dynamicVariables={dynamicVars}
+              initialVariable={selectedVariable}
+              showSubstituteButton={true}
+              onBodyTypeChange={(newBodyType) => {
+                setBodyType(newBodyType);
+
+                if (newBodyType !== 'none') {
+                  const contentTypeValue =
+                    getContentTypeForBodyType(newBodyType);
+                  const contentTypeHeaderIndex = headers.findIndex(
+                    (h) => h.key.toLowerCase() === 'content-type',
+                  );
+
+                  if (contentTypeHeaderIndex !== -1) {
+                    const updatedHeaders = [...headers];
+                    updatedHeaders[contentTypeHeaderIndex] = {
+                      ...updatedHeaders[contentTypeHeaderIndex],
+                      value: contentTypeValue,
+                    };
+                    setHeaders(updatedHeaders);
+                  } else if (methodsWithBody.includes(method)) {
+                    setHeaders([
+                      {
+                        key: 'Content-Type',
+                        value: contentTypeValue,
+                        enabled: true,
+                      },
+                      ...headers,
+                    ]);
+                  }
+                }
+
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                }
+              }}
+              onBodyContentChange={(newContent) => {
+                setBodyContent(newContent);
+                if (activeRequest?.id) {
+                  collectionActions.markUnsaved(activeRequest.id);
+                  collectionActions.updateOpenedRequest({
+                    ...activeRequest,
+                    bodyRawContent: newContent,
+                    bodyType,
+                  });
+                }
+              }}
+              onBeautify={handleBeautifyBody}
+              onVariableSelect={handleVariableSelect}
+              onConfirmSubstitution={handleConfirmSubstitutions}
+              onAddFormField={addFormField}
+              onUpdateFormField={updateFormField}
+              onRemoveFormField={removeFormField}
+              onAddUrlEncodedField={addUrlEncodedField}
+              onUpdateUrlEncodedField={updateUrlEncodedField}
+              onRemoveUrlEncodedField={removeUrlEncodedField}
+            />
+          )}
+          {activeTab === 'auth' && (
+            <AuthTab
+              authData={authData}
+              setAuthData={setAuthData}
+              authType={authType}
+              preRequestEnabled={preRequestEnabled}
+              isCurrentRequestPreRequest={isCurrentRequestPreRequest}
+              activeRequestId={activeRequest?.id}
+              activeRequest={activeRequest}
+            />
+          )}
+          {activeTab === 'pre-request' && (
+            <Suspense fallback={<TabLoader />}>
+              <PrePostRequest
+                type='pre-request'
+                assertions={assertions}
+                setAssertions={setAssertions}
+                responseData={responseData}
+                activeRequest={activeRequest}
+                currentWorkspace={currentWorkspace}
+                updateRequestMutation={updateRequestMutation}
+                toggleAssertion={toggleAssertion}
+                showAssertions={false}
+                selectedVariables={selectedVariable}
+                onRemoveVariable={handleRemoveVariable}
+                onVariableSelect={handleVariableSelect}
+                onSaveAssertions={handleUpdateRequest}
+                staticVariables={usedVariables.staticVars}
+                dynamicVariables={usedVariables.dynamicVars}
+              />
+            </Suspense>
+          )}
+          {activeTab === 'post-response' && (
+            <Suspense fallback={<TabLoader />}>
+              <PrePostRequest
+                type='post-response'
+                assertions={assertions}
+                setAssertions={setAssertions}
+                responseData={responseData}
+                activeRequest={activeRequest}
+                currentWorkspace={currentWorkspace}
+                updateRequestMutation={updateRequestMutation}
+                toggleAssertion={toggleAssertion}
+                showAssertions={true}
+                selectedVariables={selectedVariable}
+                onRemoveVariable={handleRemoveVariable}
+                onVariableSelect={handleVariableSelect}
+                onSaveAssertions={handleUpdateRequest}
+                staticVariables={usedVariables.staticVars}
+                dynamicVariables={usedVariables.dynamicVars}
+                extractedVariables={requestSpecificExtractedVariables}
+                onRemoveExtraction={(variableName) => {
+                  if (activeRequest?.id) {
+                    collectionActions.removeExtractedVariableRequest(
+                      activeRequest.id,
+                      variableName,
                     );
-
-                    if (tab.id === 'post-response') {
-                      return (
-                        <Tooltip key={tab.id}>
-                          <TooltipTrigger asChild>{button}</TooltipTrigger>
-                          <TooltipContent>
-                            Manage assertions and extracted variable
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    }
-
-                    return button;
-                  })}
-                </TooltipProvider>
-              </nav>
+                  }
+                  if (activeCollection?.id) {
+                    localStorage.removeItem(
+                      `extracted_var_${activeCollection.id}_${variableName}`,
+                    );
+                  }
+                  if (activeRequest?.id) {
+                    collectionActions.markUnsaved(activeRequest.id);
+                  }
+                  if (onRemoveExtraction) {
+                    onRemoveExtraction(variableName);
+                  }
+                }}
+              />
+            </Suspense>
+          )}
+          {activeTab === 'settings' && (
+            <SettingsTab settings={settings} setSettings={setSettings} />
+          )}
+          {activeTab === 'performance' && (
+            <Suspense fallback={<TabLoader />}>
+              <PerformanceTab
+                settings={settings}
+                setSettings={setSettings}
+                performanceTestId={performanceTestId}
+                onCreatePerformanceTest={handleCreatePerformanceTest}
+                isCreatePending={performanceTestCreateMutation.isPending}
+                isUpdatePending={performanceTestUpdateMutation.isPending}
+                onSaveGeneralSettings={() => {
+                  toast({
+                    title: 'Settings Saved',
+                    description:
+                      'Your request settings have been saved successfully.',
+                    duration: 3000,
+                  });
+                }}
+              />
+            </Suspense>
+          )}
+          {activeTab === 'schemas' && (
+            <div>
+              <Suspense fallback={<TabLoader />}>
+                <SchemaPage />
+              </Suspense>
             </div>
+          )}
+        </div>
 
-            <div className='flex-1 overflow-auto scrollbar-thin p-4'>
-              {activeTab === 'params' && (
-                <ParamsTab
-                  params={params}
-                  setParams={setParams}
-                  activeRequestId={activeRequest?.id}
-                />
-              )}
-
-              {activeTab === 'headers' && (
-                <HeadersTab
-                  headers={headers}
-                  setHeaders={setHeaders}
-                  activeRequestId={activeRequest?.id}
-                />
-              )}
-              {activeTab === 'body' && (
-                <RequestBody
-                  bodyType={bodyType}
-                  bodyContent={bodyContent}
-                  formFields={formFields}
-                  urlEncodedFields={urlEncodedFields}
-                  headers={headers}
-                  method={method}
-                  staticVariables={staticVars}
-                  dynamicVariables={dynamicVars}
-                  initialVariable={selectedVariable}
-                  showSubstituteButton={true}
-                  onBodyTypeChange={(newBodyType) => {
-                    setBodyType(newBodyType);
-
-                    if (newBodyType !== 'none') {
-                      const contentTypeValue =
-                        getContentTypeForBodyType(newBodyType);
-                      const contentTypeHeaderIndex = headers.findIndex(
-                        (h) => h.key.toLowerCase() === 'content-type',
-                      );
-
-                      if (contentTypeHeaderIndex !== -1) {
-                        const updatedHeaders = [...headers];
-                        updatedHeaders[contentTypeHeaderIndex] = {
-                          ...updatedHeaders[contentTypeHeaderIndex],
-                          value: contentTypeValue,
-                        };
-                        setHeaders(updatedHeaders);
-                      } else if (methodsWithBody.includes(method)) {
-                        setHeaders([
-                          {
-                            key: 'Content-Type',
-                            value: contentTypeValue,
-                            enabled: true,
-                          },
-                          ...headers,
-                        ]);
-                      }
-                    }
-
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                    }
-                  }}
-                  onBodyContentChange={(newContent) => {
-                    setBodyContent(newContent);
-                    if (activeRequest?.id) {
-                      collectionActions.markUnsaved(activeRequest.id);
-                      collectionActions.updateOpenedRequest({
-                        ...activeRequest,
-                        bodyRawContent: newContent,
-                        bodyType,
-                      });
-                    }
-                  }}
-                  onBeautify={handleBeautifyBody}
-                  onVariableSelect={handleVariableSelect}
-                  onConfirmSubstitution={handleConfirmSubstitutions}
-                  onAddFormField={addFormField}
-                  onUpdateFormField={updateFormField}
-                  onRemoveFormField={removeFormField}
-                  onAddUrlEncodedField={addUrlEncodedField}
-                  onUpdateUrlEncodedField={updateUrlEncodedField}
-                  onRemoveUrlEncodedField={removeUrlEncodedField}
-                />
-              )}
-              {activeTab === 'auth' && (
-                <AuthTab
-                  authData={authData}
-                  setAuthData={setAuthData}
-                  authType={authType}
-                  preRequestEnabled={preRequestEnabled}
-                  isCurrentRequestPreRequest={isCurrentRequestPreRequest}
-                  activeRequestId={activeRequest?.id}
-                  activeRequest={activeRequest}
-                />
-              )}
-              {activeTab === 'pre-request' && (
-                <Suspense fallback={<TabLoader />}>
-                  <PrePostRequest
-                    type='pre-request'
-                    assertions={assertions}
-                    setAssertions={setAssertions}
-                    responseData={responseData}
-                    activeRequest={activeRequest}
-                    currentWorkspace={currentWorkspace}
-                    updateRequestMutation={updateRequestMutation}
-                    toggleAssertion={toggleAssertion}
-                    showAssertions={false}
-                    selectedVariables={selectedVariable}
-                    onRemoveVariable={handleRemoveVariable}
-                    onVariableSelect={handleVariableSelect}
-                    onSaveAssertions={handleUpdateRequest}
-                    staticVariables={usedVariables.staticVars}
-                    dynamicVariables={usedVariables.dynamicVars}
-                  />
-                </Suspense>
-              )}
-              {activeTab === 'post-response' && (
-                <Suspense fallback={<TabLoader />}>
-                  <PrePostRequest
-                    type='post-response'
-                    assertions={assertions}
-                    setAssertions={setAssertions}
-                    responseData={responseData}
-                    activeRequest={activeRequest}
-                    currentWorkspace={currentWorkspace}
-                    updateRequestMutation={updateRequestMutation}
-                    toggleAssertion={toggleAssertion}
-                    showAssertions={true}
-                    selectedVariables={selectedVariable}
-                    onRemoveVariable={handleRemoveVariable}
-                    onVariableSelect={handleVariableSelect}
-                    onSaveAssertions={handleUpdateRequest}
-                    staticVariables={usedVariables.staticVars}
-                    dynamicVariables={usedVariables.dynamicVars}
-                    extractedVariables={requestSpecificExtractedVariables}
-                    onRemoveExtraction={(variableName) => {
-                      if (activeRequest?.id) {
-                        collectionActions.removeExtractedVariableRequest(
-                          activeRequest.id,
-                          variableName,
-                        );
-                      }
-                      if (activeCollection?.id) {
-                        localStorage.removeItem(
-                          `extracted_var_${activeCollection.id}_${variableName}`,
-                        );
-                      }
-                      if (activeRequest?.id) {
-                        collectionActions.markUnsaved(activeRequest.id);
-                      }
-                      if (onRemoveExtraction) {
-                        onRemoveExtraction(variableName);
-                      }
-                    }}
-                  />
-                </Suspense>
-              )}
-              {activeTab === 'settings' && (
-                <SettingsTab settings={settings} setSettings={setSettings} />
-              )}
-              {activeTab === 'performance' && (
-                <Suspense fallback={<TabLoader />}>
-                  <PerformanceTab
-                    settings={settings}
-                    setSettings={setSettings}
-                    performanceTestId={performanceTestId}
-                    onCreatePerformanceTest={handleCreatePerformanceTest}
-                    isCreatePending={performanceTestCreateMutation.isPending}
-                    isUpdatePending={performanceTestUpdateMutation.isPending}
-                    onSaveGeneralSettings={() => {
-                      toast({
-                        title: 'Settings Saved',
-                        description:
-                          'Your request settings have been saved successfully.',
-                        duration: 3000,
-                      });
-                    }}
-                  />
-                </Suspense>
-              )}
-              {activeTab === 'schemas' && (
-                <div>
-                  <Suspense fallback={<TabLoader />}>
-                    <SchemaPage />
-                  </Suspense>
-                </div>
-              )}
+        <Modal
+          isOpen={showSaveModal}
+          onClose={handleCancelSave}
+          title='Save Request'
+          footer={
+            <div className='flex justify-end space-x-3'>
+              <button
+                onClick={handleCancelSave}
+                className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmSave}
+                disabled={
+                  isSaving ||
+                  (!selectedCollectionId &&
+                    (!isCreatingCollection || !newCollectionName.trim()))
+                }
+                className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md flex items-center gap-2' // ← ADD flex items-center gap-2
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    Saving...
+                  </>
+                ) : (
+                  'Save'
+                )}
+              </button>
             </div>
+          }
+        >
+          <div>
+            <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
+              Save to Collection
+            </label>
 
-            <Modal
-              isOpen={showSaveModal}
-              onClose={handleCancelSave}
-              title='Save Request'
-              footer={
-                <div className='flex justify-end space-x-3'>
-                  <button
-                    onClick={handleCancelSave}
-                    className='px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md'
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleConfirmSave}
-                    disabled={
-                      isSaving ||
-                      (!selectedCollectionId &&
-                        (!isCreatingCollection || !newCollectionName.trim()))
-                    }
-                    className='px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md flex items-center gap-2' // ← ADD flex items-center gap-2
-                  >
-                    {isSaving ? (
-                      <>
-                        <Loader2 className='h-4 w-4 animate-spin' />
-                        Saving...
-                      </>
-                    ) : (
-                      'Save'
-                    )}
-                  </button>
-                </div>
-              }
-            >
-              <div>
-                <label className='block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2'>
-                  Save to Collection
-                </label>
+            {!isCreatingCollection ? (
+              <div className='space-y-2'>
+                <select
+                  value={selectedCollectionId}
+                  onChange={(e) => {
+                    setSelectedCollectionId(e.target.value);
+                  }}
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                >
+                  <option value=''>Select a collection</option>
+                  {collections.map((collection) => (
+                    <option key={collection.id} value={collection.id}>
+                      {collection.name}
+                    </option>
+                  ))}
+                </select>
 
-                {!isCreatingCollection ? (
-                  <div className='space-y-2'>
+                {selectedCollectionId && (
+                  <div className='space-y-1'>
+                    <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
+                      Folder (optional)
+                    </label>
                     <select
-                      value={selectedCollectionId}
-                      onChange={(e) => {
-                        setSelectedCollectionId(e.target.value);
-                      }}
+                      value={selectedFolderId}
+                      onChange={handleFolderSelectChange}
                       className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
                     >
-                      <option value=''>Select a collection</option>
-                      {collections.map((collection) => (
-                        <option key={collection.id} value={collection.id}>
-                          {collection.name}
+                      <option value=''>No folder</option>
+                      {folderOptions.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.label}
                         </option>
                       ))}
                     </select>
-
-                    {selectedCollectionId && (
-                      <div className='space-y-1'>
-                        <label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
-                          Folder (optional)
-                        </label>
-                        <select
-                          value={selectedFolderId}
-                          onChange={handleFolderSelectChange}
-                          className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
-                        >
-                          <option value=''>No folder</option>
-                          {folderOptions.map((f) => (
-                            <option key={f.id} value={f.id}>
-                              {f.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                    <button
-                      onClick={handleCreateCollectionClick}
-                      className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
-                    >
-                      <FolderPlus className='h-4 w-4' />
-                      <span>Create New Collection</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className='space-y-2'>
-                    <input
-                      type='text'
-                      value={newCollectionName}
-                      onChange={handleNewCollectionNameChange}
-                      placeholder='Enter collection name'
-                      className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
-                      autoFocus
-                    />
-
-                    <button
-                      onClick={() => {
-                        setIsCreatingCollection(false);
-                        setNewCollectionName('');
-                      }}
-                      className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-                    >
-                      ← Back to existing collections
-                    </button>
                   </div>
                 )}
+                <button
+                  onClick={handleCreateCollectionClick}
+                  className='w-full flex items-center justify-center space-x-2 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 py-2 border border-dashed border-gray-300 dark:border-gray-600 rounded-md'
+                >
+                  <FolderPlus className='h-4 w-4' />
+                  <span>Create New Collection</span>
+                </button>
               </div>
+            ) : (
+              <div className='space-y-2'>
+                <input
+                  type='text'
+                  value={newCollectionName}
+                  onChange={handleNewCollectionNameChange}
+                  placeholder='Enter collection name'
+                  className='w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white hover:border-blue-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none focus:bg-blue-50 dark:focus:bg-blue-900/20 transition-all duration-150'
+                  autoFocus
+                />
 
-              {!urlAtOpen.trim() && (
-                <div className='mt-2 text-red-600 text-sm'>
-                  URL is required to save a request.
-                </div>
-              )}
-
-              {!selectedCollectionId &&
-                (!isCreatingCollection || !newCollectionName.trim()) && (
-                  <div className='mt-2 text-red-600 text-sm'>
-                    Please select or create a collection.
-                  </div>
-                )}
-            </Modal>
-            <Suspense fallback={null}>
-              <ImportModal
-                isOpen={showCurlImport}
-                onClose={() => setShowCurlImport(false)}
-                onCurlImport={handleCurlImport}
-              />
-            </Suspense>
+                <button
+                  onClick={() => {
+                    setIsCreatingCollection(false);
+                    setNewCollectionName('');
+                  }}
+                  className='text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                >
+                  ← Back to existing collections
+                </button>
+              </div>
+            )}
           </div>
-        </TooltipProvider>
+
+          {!urlAtOpen.trim() && (
+            <div className='mt-2 text-red-600 text-sm'>
+              URL is required to save a request.
+            </div>
+          )}
+
+          {!selectedCollectionId &&
+            (!isCreatingCollection || !newCollectionName.trim()) && (
+              <div className='mt-2 text-red-600 text-sm'>
+                Please select or create a collection.
+              </div>
+            )}
+        </Modal>
+        <Suspense fallback={null}>
+          <ImportModal
+            isOpen={showCurlImport}
+            onClose={() => setShowCurlImport(false)}
+            onCurlImport={handleCurlImport}
+          />
+        </Suspense>
+      </div>
+    </TooltipProvider>
+  );
+};
+
+const RequestEditor: React.FC<RequestEditorProps> = (props) => {
+  const { activeRequest } = useCollection();
+
+  return (
+    <ErrorBoundary>
+      <RequestEditorProvider
+        key={activeRequest?.id}
+        activeRequestId={activeRequest?.id}
+        initialUrl={activeRequest?.url || ''}
+        initialMethod={(activeRequest?.method as any) || 'GET'}
+        initialParams={activeRequest?.params || []}
+        initialHeaders={activeRequest?.headers || []}
+        initialBodyType={(activeRequest?.bodyType as any) || 'raw'}
+        initialBodyContent={activeRequest?.bodyRawContent || '{}'}
+        initialAuthType={(activeRequest?.authorizationType as any) || 'bearer'}
+        initialSettings={activeRequest?.settings}
+        initialAuthData={
+          activeRequest?.authorization
+            ? {
+                username: activeRequest.authorization.username || '',
+                password: activeRequest.authorization.password || '',
+                token: activeRequest.authorization.token || '',
+                key: activeRequest.authorization.key || '',
+                value: activeRequest.authorization.value || '',
+                addTo: activeRequest.authorization.addTo || 'header',
+                oauth1: {
+                  consumerKey:
+                    activeRequest.authorization.oauth1?.consumerKey || '',
+                  consumerSecret:
+                    activeRequest.authorization.oauth1?.consumerSecret || '',
+                  token: activeRequest.authorization.oauth1?.token || '',
+                  tokenSecret:
+                    activeRequest.authorization.oauth1?.tokenSecret || '',
+                  signatureMethod:
+                    activeRequest.authorization.oauth1?.signatureMethod ||
+                    'HMAC-SHA1',
+                  version: activeRequest.authorization.oauth1?.version || '1.0',
+                  realm: activeRequest.authorization.oauth1?.realm || '',
+                  nonce: activeRequest.authorization.oauth1?.nonce || '',
+                  timestamp:
+                    activeRequest.authorization.oauth1?.timestamp || '',
+                },
+                oauth2: {
+                  clientId: activeRequest.authorization.oauth2?.clientId || '',
+                  clientSecret:
+                    activeRequest.authorization.oauth2?.clientSecret || '',
+                  accessToken:
+                    activeRequest.authorization.oauth2?.accessToken || '',
+                  tokenType:
+                    activeRequest.authorization.oauth2?.tokenType || 'Bearer',
+                  refreshToken:
+                    activeRequest.authorization.oauth2?.refreshToken || '',
+                  scope: activeRequest.authorization.oauth2?.scope || '',
+                  grantType:
+                    activeRequest.authorization.oauth2?.grantType ||
+                    'authorization_code',
+                  redirectUri:
+                    activeRequest.authorization.oauth2?.redirectUri || '',
+                },
+              }
+            : undefined
+        }
+      >
+        <RequestEditorContent {...props} />
       </RequestEditorProvider>
     </ErrorBoundary>
   );
