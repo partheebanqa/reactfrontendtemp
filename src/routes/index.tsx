@@ -2,7 +2,7 @@ import { Switch, Route, Redirect } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import React, { Suspense, lazy } from 'react';
 
-import AppLayout from '@/components/AppLayout';
+const AppLayout = lazy(() => import('@/components/AppLayout'));
 import { Loader } from '@/components/Loader';
 
 const Landing = lazy(() => import('@/pages/Landing'));
@@ -19,7 +19,7 @@ const JWTValidator = lazy(() =>
   import('@/pages/JWTValidator').then((m) => ({ default: m.JWTValidator })),
 );
 const URLEncoder = lazy(() =>
-  import('@/pages/ URLEncoder').then((m) => ({ default: m.URLEncoder })),
+  import('@/pages/URLEncoder').then((m) => ({ default: m.URLEncoder })),
 );
 const JsonParser = lazy(() => import('@/pages/JsonParser'));
 const SwaggerParser = lazy(() => import('@/pages/SwaggerParser'));

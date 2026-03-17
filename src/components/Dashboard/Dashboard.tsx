@@ -1,9 +1,6 @@
 import { LayoutDashboard } from 'lucide-react';
 import StatsCard from './StatsCard';
-import ExecutionChart from './ExecutionChart';
-import ActiveSchedules from './ActiveSchedules';
 import RecentExecutions from './RecentExecutions';
-import SystemStatus from './SystemStatus';
 import QuickActions from './QuickActions';
 import BreadCum from '../BreadCum/Breadcum';
 import { getDashboard } from '@/services/dashboard.service';
@@ -17,7 +14,6 @@ import {
   DialogFooter,
 } from '../ui/dialog';
 import { Button } from '../ui/button';
-import { navigate } from 'wouter/use-browser-location';
 import WelcomeImage from '../../assests/images/Welcome_optra.webp';
 
 export interface DashboardStats {
@@ -246,7 +242,7 @@ export default function Dashboard() {
                     {/* RIGHT: illustration (inline SVG) */}
                     <div className='relative mx-auto w-full max-w-[480px]'>
                       <div className='relative rounded-2xl  p-6'>
-                        <img src={WelcomeImage} />
+                        <img src={WelcomeImage} loading='lazy' />
                       </div>
                     </div>
                   </div>
@@ -255,7 +251,7 @@ export default function Dashboard() {
                 {/* Footer CTA */}
                 <div className='px-6 sm:px-8 pb-6'>
                   <DialogFooter className='justify-center'>
-                    <DialogClose asChild></DialogClose>
+                    {/* <DialogClose asChild></DialogClose> */}
                   </DialogFooter>
                 </div>
               </div>

@@ -21,7 +21,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom', 'wouter'],
+          'react-core': ['react', 'react-dom'],
+          router: ['wouter'],
           ui: [
             '@radix-ui/react-dialog',
             '@radix-ui/react-dropdown-menu',

@@ -8,22 +8,12 @@ import {
   Check,
   Crown,
   Zap,
-  Star,
   Code,
   Users,
   Calendar,
   BarChart3,
   Shield,
-  Infinity,
-  Mail,
-  Slack,
-  MessageSquare,
   GitBranch,
-  Webhook,
-  Clock,
-  Database,
-  Settings,
-  HeadphonesIcon,
 } from 'lucide-react';
 import LandingLayout from '@/components/LandingLayout/LandingLayout';
 

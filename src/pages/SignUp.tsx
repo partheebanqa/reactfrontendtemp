@@ -118,14 +118,12 @@ export default function SignUp() {
           description: response.message,
           variant: 'success',
         });
-        setTimeout(() => {
-          setLocation('/signin');
-        }, 2000);
+        setLocation('/signin');
       }
     } catch (error) {
       console.error('Error in handleSubmit:', error);
       errorToast(
-        error instanceof Error ? error.message : 'An unexpected error occurred'
+        error instanceof Error ? error.message : 'An unexpected error occurred',
       );
     }
   };
@@ -177,7 +175,11 @@ export default function SignUp() {
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className='space-y-4' autoComplete="off">
+            <form
+              onSubmit={handleSubmit}
+              className='space-y-4'
+              autoComplete='off'
+            >
               <div className='grid grid-cols-2 gap-4'>
                 <div>
                   <Label htmlFor='firstName'>First name</Label>

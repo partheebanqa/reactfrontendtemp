@@ -61,7 +61,7 @@ export default function SignIn() {
   };
 
   const handleDemoLogin = (
-    userType: 'admin' | 'developer' | 'qa' | 'enterprise' | 'pro'
+    userType: 'admin' | 'developer' | 'qa' | 'enterprise' | 'pro',
   ) => {
     const demoCredentials = {
       admin: { email: 'admin@optraflow.dev', password: 'admin123' },
