@@ -145,6 +145,7 @@ export function ExternalTools() {
   const [editingIntegration, setEditingIntegration] =
     useState<WorkSpaceIntegration | null>(null);
   const [integrations, setIntegrations] = useState<WorkSpaceIntegration[]>([]);
+
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [integrationToDelete, setIntegrationToDelete] = useState<string | null>(
@@ -439,8 +440,9 @@ export function ExternalTools() {
   const { currentPlan } = useCurrentPlan();
 
   const usedIntegrationTypes = integrations
-    .filter((i) => i.id !== editingIntegration?.id)
+    ?.filter((i) => i?.id !== editingIntegration?.id)
     .map((i) => i.type);
+
   const integrationOptions = [
     { value: 'slack', label: 'Slack' },
     { value: 'teams', label: 'Microsoft Teams' },
@@ -528,7 +530,7 @@ export function ExternalTools() {
                       <SelectItem
                         disabled={
                           !editingIntegration &&
-                          usedIntegrationTypes.includes('slack')
+                          usedIntegrationTypes?.includes('slack')
                         }
                         value='slack'
                       >
@@ -538,7 +540,7 @@ export function ExternalTools() {
                         value='teams'
                         disabled={
                           !editingIntegration &&
-                          usedIntegrationTypes.includes('teams')
+                          usedIntegrationTypes?.includes('teams')
                         }
                       >
                         Microsoft Teams
@@ -547,7 +549,7 @@ export function ExternalTools() {
                         value='jira'
                         disabled={
                           (!editingIntegration &&
-                            usedIntegrationTypes.includes('jira')) ||
+                            usedIntegrationTypes?.includes('jira')) ||
                           (currentPlan?.PlanName !== 'Enterprise' &&
                             currentPlan?.IsTrial !== true)
                         }
@@ -704,7 +706,7 @@ export function ExternalTools() {
                         >
                           <input
                             type='checkbox'
-                            checked={integrationForm.events.includes(
+                            checked={integrationForm.events?.includes(
                               event.value,
                             )}
                             onChange={(e) =>
@@ -731,7 +733,7 @@ export function ExternalTools() {
                         >
                           <input
                             type='checkbox'
-                            checked={integrationForm.events.includes(
+                            checked={integrationForm.events?.includes(
                               event.value,
                             )}
                             onChange={(e) =>

@@ -47,8 +47,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   const handleToggleAssertion = (id: string) => {
     setTempAssertions(
       tempAssertions.map((a) =>
-        a.id === id ? { ...a, enabled: !a.enabled } : a
-      )
+        a.id === id ? { ...a, enabled: !a.enabled } : a,
+      ),
     );
   };
 
@@ -100,7 +100,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
 
     if (selectedCategory !== 'All Categories') {
       filtered = filtered.filter(
-        (a) => a.category.toUpperCase() === selectedCategory
+        (a) => a.category.toUpperCase() === selectedCategory,
       );
     }
 
@@ -109,7 +109,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
       filtered = filtered.filter(
         (a) =>
           a.description.toLowerCase().includes(search) ||
-          a.category.toLowerCase().includes(search)
+          a.category.toLowerCase().includes(search),
       );
     }
 
@@ -119,8 +119,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         self.findIndex(
           (a) =>
             a.description === assertion.description &&
-            a.category === assertion.category
-        )
+            a.category === assertion.category,
+        ),
     );
 
     return uniqueFiltered;
@@ -210,7 +210,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                     {assertion.priority && (
                       <span
                         className={`px-2 py-0.5 rounded text-xs font-medium ${getPriorityColor(
-                          assertion.priority
+                          assertion.priority,
                         )}`}
                       >
                         {assertion.priority}
@@ -222,8 +222,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                   onClick={() => {
                     setAssertions(
                       assertions.map((a) =>
-                        a.id === assertion.id ? { ...a, enabled: false } : a
-                      )
+                        a.id === assertion.id ? { ...a, enabled: false } : a,
+                      ),
                     );
                   }}
                   className='ml-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors'
@@ -283,7 +283,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                         cat === 'All Categories'
                           ? tempAssertions.length
                           : tempAssertions.filter(
-                              (a) => a.category.toUpperCase() === cat
+                              (a) => a.category.toUpperCase() === cat,
                             ).length;
                       return (
                         <option key={cat} value={cat}>
@@ -351,7 +351,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                                   {assertion.priority && (
                                     <span
                                       className={`px-2 py-1 rounded text-xs font-medium ${getPriorityColor(
-                                        assertion.priority
+                                        assertion.priority,
                                       )}`}
                                     >
                                       {assertion.priority}
@@ -363,7 +363,7 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                           ))}
                         </div>
                       </div>
-                    )
+                    ),
                   )}
                 </div>
               )}

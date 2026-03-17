@@ -1,21 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
-  Bell,
-  Search,
   Settings,
-  User,
   LogOut,
-  ChevronDown,
   Sun,
   Moon,
   Ghost,
   Palette,
-  HelpCircle,
   ChevronsLeft,
   ChevronsRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,13 +24,9 @@ import { useLocation } from 'wouter';
 import WorkspaceModal from '../WorkspaceModal';
 import WorkspaceDropdown from './WorkspaceDropdown';
 import { useToast } from '@/hooks/useToast';
-import NotificationBell from './Notifications/NotificationBell';
 import { HelpModal } from '../HelpModal/HelpModal';
 import EnvironmentDropdown from './EnvirementDropdown';
 import { Environment } from '@/shared/types/datamanagement';
-import { workspaceActions } from '@/store/workspaceStore';
-import { queryClient } from '@/lib/queryClient';
-import { removeCookie } from '@/lib/cookieUtils';
 import { logoutClientSide } from '@/lib/logoutClientSide';
 
 interface HeaderProps {
@@ -45,9 +35,7 @@ interface HeaderProps {
 }
 
 export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
-  const { user, logoutMutation } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [theme, setTheme] = useState('light');
+  const { user } = useAuth();
   const {
     currentWorkspace,
     workspaces,
@@ -62,7 +50,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     mode: 'add' as 'add' | 'edit',
     workspace: null as any,
   });
-  const [environmentModalState, setEnvironmentModalState] = useState<{
+  const [setEnvironmentModalState] = useState<{
     isOpen: boolean;
     mode: 'add' | 'edit' | 'duplicate' | 'manage';
     environment: Environment | null;
@@ -90,8 +78,6 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     '/scheduler',
     '/cicd-configuration',
     '/settings/account',
-
-
   ];
 
   const shouldHideEnvironment =
@@ -134,7 +120,8 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
       return true;
     } catch (error) {
       console.error(
-        `Error ${workspaceModalState.mode === 'add' ? 'creating' : 'updating'
+        `Error ${
+          workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
         error,
       );
@@ -171,35 +158,34 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   };
 
   const handleDeleteEnvironment = async () => {
-    if (!currentWorkspace) return;
     try {
+      if (!currentWorkspace) return;
     } catch (error) {
       console.error('Error deleting environment:', error);
     }
   };
 
-
   const avatarColors = [
-    "bg-red-500",
-    "bg-orange-500",
-    "bg-amber-500",
-    "bg-yellow-500",
-    "bg-lime-500",
-    "bg-green-500",
-    "bg-emerald-500",
-    "bg-teal-500",
-    "bg-cyan-500",
-    "bg-sky-500",
-    "bg-blue-500",
-    "bg-indigo-500",
-    "bg-violet-500",
-    "bg-purple-500",
-    "bg-fuchsia-500",
-    "bg-pink-500",
+    'bg-red-500',
+    'bg-orange-500',
+    'bg-amber-500',
+    'bg-yellow-500',
+    'bg-lime-500',
+    'bg-green-500',
+    'bg-emerald-500',
+    'bg-teal-500',
+    'bg-cyan-500',
+    'bg-sky-500',
+    'bg-blue-500',
+    'bg-indigo-500',
+    'bg-violet-500',
+    'bg-purple-500',
+    'bg-fuchsia-500',
+    'bg-pink-500',
   ];
 
   const getAvatarColor = (name?: string) => {
-    if (!name) return "bg-gray-500";
+    if (!name) return 'bg-gray-500';
 
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
@@ -209,7 +195,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
     return avatarColors[Math.abs(hash) % avatarColors.length];
   };
 
-  const fullName = `${user?.firstName ?? ""}${user?.lastName ?? ""}`;
+  const fullName = `${user?.firstName ?? ''}${user?.lastName ?? ''}`;
   const color = getAvatarColor(fullName);
 
   return (
@@ -259,9 +245,11 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className='flex items-center cursor-pointer'>
-                <Avatar className="h-10 w-10 cursor-pointer">
+                <Avatar className='h-10 w-10 cursor-pointer'>
                   <AvatarImage src={(user as any)?.profileImageUrl} />
-                  <AvatarFallback className={`${color} text-white font-semibold`}>
+                  <AvatarFallback
+                    className={`${color} text-white font-semibold`}
+                  >
                     {getInitials(user?.firstName)}
                   </AvatarFallback>
                 </Avatar>
@@ -309,10 +297,12 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         workspace={workspaceModalState.workspace}
         mode={workspaceModalState.mode}
       />
-      <HelpModal
-        isOpen={showHelpModal}
-        onClose={() => setShowHelpModal(false)}
-      />
+      {showHelpModal && (
+        <HelpModal
+          isOpen={showHelpModal}
+          onClose={() => setShowHelpModal(false)}
+        />
+      )}
     </header>
   );
 }
