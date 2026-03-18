@@ -80,6 +80,7 @@ import {
 } from '@/shared/types/request';
 import VariablePicker from '../Shared/VariablePicker';
 import PrePostRequest from '../Shared/RequestTabs/PrePostRequest';
+import { secureStorage } from '@/utils/secure-storage';
 
 type FormField = {
   id: string;
@@ -537,15 +538,23 @@ export function RequestEditor({
 
     if (initialRequest.id) {
       try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
+        // const raw = localStorage.getItem('lastExecutionByRequest');
+        const existing = secureStorage.loadEncrypted('lastExecutionByRequest');
 
+        // const map = existing ? JSON.parse(existing) : {};
+
+        // if (!map[initialRequest.id]) {
+        //   map[initialRequest.id] = {};
+        // }
+
+        // map[initialRequest.id].assertions = newAssertions;
+        // localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
         if (!map[initialRequest.id]) {
           map[initialRequest.id] = {};
         }
-
         map[initialRequest.id].assertions = newAssertions;
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
       } catch (e) {
         console.error('Failed to persist assertions:', e);
       }
@@ -695,10 +704,13 @@ export function RequestEditor({
     if (hideResponseExplorer) return;
 
     try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      if (!raw) return;
-      const map: Record<string, any> = JSON.parse(raw);
-      const saved = map?.[initialRequest.id];
+      // const raw = localStorage.getItem('lastExecutionByRequest');
+
+      const existing = secureStorage.loadEncrypted('lastExecutionByRequest');
+
+      if (!existing) return;
+      // const map: Record<string, any> = JSON.parse(existing);
+      const saved = existing?.[initialRequest?.id];
 
       const isRecent =
         saved?.endTime &&
@@ -755,8 +767,9 @@ export function RequestEditor({
           }
         }
       } else if (saved && !isRecent) {
+        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
         delete map[initialRequest.id];
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
       }
     } catch (e) {
       console.error('Failed to restore lastExecutionByRequest:', e);
@@ -1367,13 +1380,12 @@ export function RequestEditor({
       }
 
       try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
+        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
         map[initialRequest.id] = {
           ...log,
           assertions: finalAssertions,
         };
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
       }
@@ -1423,10 +1435,9 @@ export function RequestEditor({
       }
 
       try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
+        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
         map[initialRequest.id] = errorLog;
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest (error):', e);
       }
@@ -2094,8 +2105,8 @@ export function RequestEditor({
         const merged = { ...prev, ...extracted };
         updateExtractedVariables(merged);
         try {
-          const raw = localStorage.getItem('lastExecutionByRequest');
-          const map = raw ? JSON.parse(raw) : {};
+          const map =
+            secureStorage.loadEncrypted('lastExecutionByRequest') || {};
           const existing = map[initialRequest.id] || {};
           map[initialRequest.id] = {
             ...existing,
@@ -2104,7 +2115,7 @@ export function RequestEditor({
               ...extracted,
             },
           };
-          localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+          secureStorage.saveEncrypted('lastExecutionByRequest', map);
         } catch (e) {
           console.error(
             'Failed to persist variables into lastExecutionByRequest:',
@@ -2135,11 +2146,10 @@ export function RequestEditor({
 
     // ADD THIS - update localStorage too so it doesn't restore on re-render:
     try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      const map = raw ? JSON.parse(raw) : {};
+      const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
       if (map[initialRequest.id]?.extractedVariables) {
         delete map[initialRequest.id].extractedVariables[variableName];
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
       }
     } catch (e) {
       console.error('Failed to update localStorage on extraction remove:', e);
@@ -2618,10 +2628,10 @@ export function RequestEditor({
     }
 
     try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      if (raw && initialRequest.id) {
-        const map = JSON.parse(raw);
-        const saved = map?.[initialRequest.id];
+      // const raw = localStorage.getItem('lastExecutionByRequest');
+      const raw = secureStorage.loadEncrypted('lastExecutionByRequest');
+      if (raw && typeof raw === 'object' && initialRequest.id) {
+        const saved = raw?.[initialRequest.id];
 
         if (
           saved?.assertions &&
@@ -2645,14 +2655,11 @@ export function RequestEditor({
         const currentAssertions = [...assertions];
         if (currentAssertions.length > 0) {
           try {
-            const raw = localStorage.getItem('lastExecutionByRequest');
-            const map = raw ? JSON.parse(raw) : {};
+            const map =
+              secureStorage.loadEncrypted('lastExecutionByRequest') || {};
             if (map[initialRequest.id]) {
               map[initialRequest.id].assertions = currentAssertions;
-              localStorage.setItem(
-                'lastExecutionByRequest',
-                JSON.stringify(map),
-              );
+              secureStorage.saveEncrypted('lastExecutionByRequest', map);
             }
           } catch (e) {
             console.error('Failed to save assertions on cleanup:', e);

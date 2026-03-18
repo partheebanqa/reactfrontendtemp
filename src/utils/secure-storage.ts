@@ -86,43 +86,43 @@ class SecureStorage {
     }
 
     if (typeof obj === 'object') {
-      const sanitized: any = {};
+      const sanitizedObj: any = {};
 
       Object.keys(obj).forEach((key) => {
         const value = obj[key];
 
-        // Sanitize key names that indicate sensitive data
-        if (
-          key.toLowerCase().includes('password') ||
-          key.toLowerCase().includes('token') ||
-          key.toLowerCase().includes('secret') ||
-          key.toLowerCase().includes('apikey') ||
-          key.toLowerCase().includes('api_key')
-        ) {
-          sanitized[key] = '{{REDACTED}}';
-        } else if (typeof value === 'string') {
-          sanitized[key] = this.sanitizeValue(value);
+        if (typeof value === 'string') {
+          // If it looks like a JSON string, parse and recursively sanitize
+          if (value.startsWith('{') || value.startsWith('[')) {
+            try {
+              const parsed = JSON.parse(value);
+              sanitizedObj[key] = JSON.stringify(this.sanitizeObject(parsed));
+            } catch {
+              // Not valid JSON, sanitize as plain string
+              sanitizedObj[key] = this.sanitizeValue(value);
+            }
+          } else {
+            // Always sanitize every string value regardless of key name
+            sanitizedObj[key] = this.sanitizeValue(value);
+          }
         } else if (typeof value === 'object') {
-          sanitized[key] = this.sanitizeObject(value);
+          sanitizedObj[key] = this.sanitizeObject(value);
         } else {
-          sanitized[key] = value;
+          sanitizedObj[key] = value;
         }
       });
 
-      return sanitized;
+      return sanitizedObj;
     }
 
     return this.sanitizeValue(obj);
   }
-
   /**
    * Save encrypted data to localStorage
    */
   saveEncrypted(key: string, data: any): boolean {
     try {
-      // Sanitize sensitive data
       const sanitized = this.sanitizeObject(data);
-
       const sessionKey = this.getOrCreateSessionKey();
       const encrypted = CryptoJS.AES.encrypt(
         JSON.stringify(sanitized),

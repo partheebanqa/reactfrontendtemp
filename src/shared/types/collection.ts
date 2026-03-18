@@ -168,6 +168,8 @@ export interface CollectionRequest {
   bodyRawContent?: string | null;
   authorizationType: string;
   authorization: {
+    oauth1?: any;
+    oauth2?: any;
     token?: string;
     username?: string;
     password?: string;

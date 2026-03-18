@@ -42,10 +42,8 @@ import {
 } from '@/utils/assertionGenerator';
 import VirtualizedJsonViewer from './VirtualizedJsonViewer';
 import { useToast } from '@/hooks/use-toast';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import { storageManager } from '@/utils/storage-manager';
+import { secureStorage } from '@/utils/secure-storage';
 
 interface JsonNode {
   key: string;
@@ -853,12 +851,8 @@ const ResponseViewer = ({
     ],
   );
 
-  // ---------------------------------------------------------------------------
-  // Extraction confirm
-  // ---------------------------------------------------------------------------
-
   const confirmExtraction = useCallback(
-    (inputVariableName: string, transform?: string) => {
+    async (inputVariableName: string, transform?: string) => {
       if (!activeCollection?.id) {
         console.error('No active collection for extraction');
         return;
@@ -866,6 +860,44 @@ const ResponseViewer = ({
       if (extractionModal && inputVariableName && onExtractVariable) {
         const sanitized = sanitizeVariableName(inputVariableName);
         const finalVariableName = `E_${sanitized}`;
+
+        const isAuthToken =
+          finalVariableName.toLowerCase().includes('token') ||
+          finalVariableName.toLowerCase().includes('auth') ||
+          finalVariableName.toLowerCase().includes('secret') ||
+          finalVariableName.toLowerCase().includes('key') ||
+          finalVariableName.toLowerCase().includes('password');
+
+        const storageKey = `extracted_var_${activeCollection.id}_${finalVariableName}`;
+
+        const payload = {
+          name: finalVariableName,
+          value: String(extractionModal.value),
+          timestamp: Date.now(),
+          collectionId: activeCollection.id,
+          source: extractionModal.source,
+          path: extractionModal.path,
+        };
+
+        if (isAuthToken) {
+          const saved = secureStorage.saveEncrypted(storageKey, payload);
+          if (!saved) {
+            localStorage.setItem(storageKey, JSON.stringify(payload));
+          } else {
+            console.log(`[Security] Encrypted storage: ${finalVariableName}`);
+          }
+        } else {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(payload));
+          } catch (e: any) {
+            if (e.name === 'QuotaExceededError') {
+              console.warn('[Storage] localStorage quota exceeded');
+            } else {
+              console.error('[Storage] Failed to save:', e);
+            }
+          }
+        }
+
         onExtractVariable({
           variableName: finalVariableName,
           name: finalVariableName,
@@ -874,6 +906,7 @@ const ResponseViewer = ({
           value: extractionModal.value,
           transform,
         });
+
         setExtractionModal(null);
         setVariableName('');
         if (activeRequest?.id) collectionActions.markUnsaved(activeRequest.id);
