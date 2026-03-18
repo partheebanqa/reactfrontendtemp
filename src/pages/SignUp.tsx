@@ -14,7 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Eye, EyeOff, Lock, Mail, User, Building } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import LogoFull from '../assests/images/OptraLogo.png';
+import LogoFull from '../assests/images/OptraLogo.webp';
 import { useToast } from '@/hooks/useToast';
 
 export default function SignUp() {

@@ -44,6 +44,8 @@ import {
 } from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { generateAssertions } from '@/utils/assertionGenerator';
+import { secureStorage } from '@/utils/secure-storage';
+import { storageManager } from '@/utils/storage-manager';
 import { Input } from '@/components/ui/input';
 import EditableTextWithoutIcon from '@/components/ui/EditableTextWithoutIcon';
 import { generateDynamicValueById, getMethodColor } from '@/lib/request-utils';
@@ -1220,39 +1222,43 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
   }, [activeRequest?.id, activeCollection?.id, collections]);
 
   useEffect(() => {
-    // Don't load token if this IS the pre-request itself
     if (isCurrentRequestPreRequest) {
       return;
     }
 
     if (preRequestEnabled && activeCollection?.id && activeRequest?.id) {
       const storageKey = `extracted_var_${activeCollection.id}_E_token`;
-      const storedData = localStorage.getItem(storageKey);
 
-      if (storedData) {
-        try {
-          const parsedData = JSON.parse(storedData);
-          const tokenValue = parsedData.value;
-
-          if (tokenValue) {
-            setAuthType('bearer');
-            setAuthData((prev) => ({
-              ...prev,
-              token: tokenValue,
-            }));
-
-            collectionActions.updateOpenedRequest({
-              ...activeRequest,
-              authorizationType: 'bearer',
-              authorization: {
-                ...activeRequest.authorization,
-                token: tokenValue,
-              },
-            });
+      // Try encrypted storage first
+      const encryptedData = secureStorage.loadEncrypted(storageKey);
+      const tokenValue =
+        encryptedData?.value ??
+        (() => {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed.value ?? null;
+          } catch {
+            return null;
           }
-        } catch (error) {
-          console.error('Error parsing stored token:', error);
-        }
+        })();
+
+      if (tokenValue) {
+        setAuthType('bearer');
+        setAuthData((prev) => ({
+          ...prev,
+          token: tokenValue,
+        }));
+
+        collectionActions.updateOpenedRequest({
+          ...activeRequest,
+          authorizationType: 'bearer',
+          authorization: {
+            ...activeRequest.authorization,
+            token: tokenValue,
+          },
+        });
       }
     }
   }, [
@@ -1278,43 +1284,35 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
     }
 
     if (checked && activeCollection?.id) {
-      collectionActions.setRequestPreRequestEnabled(
-        activeRequest.id,
-        checked,
-        activeCollection.id,
-      );
-    }
-
-    if (checked && activeCollection?.id) {
       const storageKey = `extracted_var_${activeCollection.id}_E_token`;
-      const storedData = localStorage.getItem(storageKey);
 
-      if (storedData) {
-        try {
-          const parsedData = JSON.parse(storedData);
-          const tokenValue = parsedData.value;
-
-          if (tokenValue) {
-            setAuthType('bearer');
-            setAuthData((prev) => ({
-              ...prev,
-              token: tokenValue,
-            }));
-
-            toast({
-              title: 'Pre-request Token Loaded',
-              description: 'Using token from authentication request',
-              variant: 'success',
-            });
+      // Try encrypted storage first, then fall back to plain localStorage
+      const encryptedData = secureStorage.loadEncrypted(storageKey);
+      const tokenValue =
+        encryptedData?.value ??
+        (() => {
+          try {
+            const raw = localStorage.getItem(storageKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return parsed.value ?? null;
+          } catch {
+            return null;
           }
-        } catch (error) {
-          console.error('Error loading token:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load pre-request token',
-            variant: 'destructive',
-          });
-        }
+        })();
+
+      if (tokenValue) {
+        setAuthType('bearer');
+        setAuthData((prev) => ({
+          ...prev,
+          token: tokenValue,
+        }));
+
+        toast({
+          title: 'Pre-request Token Loaded',
+          description: 'Using encrypted token from authentication request',
+          variant: 'success',
+        });
       } else {
         toast({
           title: 'Token Not Found',
@@ -1578,6 +1576,13 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         ];
 
         for (const storageKey of possibleTokenKeys) {
+          const encryptedData = secureStorage.loadEncrypted(storageKey);
+          if (encryptedData?.value) {
+            effectiveToken = encryptedData.value;
+            effectiveAuthType = 'bearer';
+            break;
+          }
+
           const storedData = localStorage.getItem(storageKey);
           if (storedData) {
             try {
@@ -1585,7 +1590,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
               if (parsedData.value) {
                 effectiveToken = parsedData.value;
                 effectiveAuthType = 'bearer';
-
                 break;
               }
             } catch (error) {
@@ -1593,7 +1597,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
             }
           }
         }
-
         if (effectiveToken === authData.token) {
           console.warn('⚠️ Pre-request token not found in localStorage');
         }
@@ -1844,17 +1847,26 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                   );
 
                   const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
-                  localStorage.setItem(
-                    storageKey,
-                    JSON.stringify({
-                      name: variableName,
-                      value: String(extractedValue),
-                      timestamp: Date.now(),
-                      collectionId: activeCollection.id,
-                      source: extraction.source,
-                      path: extraction.path,
-                    }),
-                  );
+
+                  const isAuthToken =
+                    variableName.toLowerCase().includes('token') ||
+                    variableName.toLowerCase().includes('auth') ||
+                    variableName.toLowerCase().includes('secret');
+
+                  const payload = {
+                    name: variableName,
+                    value: String(extractedValue),
+                    timestamp: Date.now(),
+                    collectionId: activeCollection.id,
+                    source: extraction.source,
+                    path: extraction.path,
+                  };
+
+                  if (isAuthToken) {
+                    secureStorage.saveEncrypted(storageKey, payload);
+                  } else {
+                    localStorage.setItem(storageKey, JSON.stringify(payload));
+                  }
 
                   if (activeRequest?.id) {
                     collectionActions.setExtractedVariableRequest(

@@ -1,9 +1,4 @@
 import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Code, Facebook, Instagram, InstagramIcon, Linkedin, LinkedinIcon, Mail, Youtube } from 'lucide-react';
-import { Link } from 'wouter';
-import LogoFull from '../../assests/images/OptraLogo-removebg-preview.png';
-import Header from '../Header';
 import { LayoutHeader } from './Header';
 import { navigate } from 'wouter/use-browser-location';
 import { Footer } from './Footer';
@@ -13,17 +8,15 @@ interface LandingLayoutProps {
 }
 
 const LandingLayout: React.FC<LandingLayoutProps> = ({ children }) => {
-
-  const year = new Date()
+  const year = new Date();
 
   const hanldeClick = () => {
-    navigate('/signin')
-  }
+    navigate('/signin');
+  };
   try {
     return (
       <div className='min-h-screen'>
-        <div className="sticky top-0 z-50 bg-white">
-
+        <div className='sticky top-0 z-50 bg-white'>
           {/* Header */}
           {/* <header className='container mx-auto px-2 py-2 '>
 

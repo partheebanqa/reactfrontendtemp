@@ -4,7 +4,7 @@ const Header = lazy(() => import('./Header/index'));
 const TrialBanner = lazy(() => import('./TrialBanner'));
 import { useAuth } from '@/hooks/useAuth';
 import { Link, useLocation } from 'wouter';
-import LogoFull from '../assests/images/OptraLogo.png';
+import LogoFull from '../assests/images/OptraLogo.webp';
 
 interface AppLayoutProps {
   children: React.ReactNode;

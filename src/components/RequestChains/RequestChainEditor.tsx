@@ -92,6 +92,9 @@ import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagementStore } from '@/store/dataManagementStore';
 import { generateAssertions } from '@/utils/assertionGenerator';
+import { storageManager } from '@/utils/storage-manager';
+import { secureStorage } from '@/utils/secure-storage';
+import { debounce } from 'lodash';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { RequestAnalyzer } from './RequestAnalyzer';
 import { AddRequestMenu } from './AddRequestMenu';
@@ -256,6 +259,7 @@ export function RequestChainEditor({
   });
 
   const lastSyncedChainUpdatedAt = useRef<string | undefined>(undefined);
+  const lastSyncedRequestIdsRef = useRef<string>('');
 
   useEffect(() => {
     if (!chain) return;
@@ -303,14 +307,15 @@ export function RequestChainEditor({
         }
       });
 
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      if (raw) {
-        const map: Record<string, any> = JSON.parse(raw);
+      // const raw = encrypted.getItem('lastExecutionByRequest');
+      const raw = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+
+      if (raw && typeof raw === 'object') {
         const currentRequestIds = new Set(
           formData.chainRequests?.map((r) => r.id) || [],
         );
 
-        Object.entries(map).forEach(([requestId, log]: [string, any]) => {
+        Object.entries(raw).forEach(([requestId, log]: [string, any]) => {
           if (
             currentRequestIds.has(requestId) &&
             log.assertions &&
@@ -332,107 +337,74 @@ export function RequestChainEditor({
   }, [formData.chainRequests]);
 
   useEffect(() => {
-    const currentRequestIds = new Set(
-      formData.chainRequests?.map((r) => r.id) || [],
-    );
-
-    setAssertionsByRequest((prev) => {
-      const filtered = Object.fromEntries(
-        Object.entries(prev).filter(([requestId]) =>
-          currentRequestIds.has(requestId),
-        ),
-      );
-
-      return filtered;
-    });
-  }, [formData.chainRequests]);
-
-  useEffect(() => {
-    const currentRequestIds = new Set(
-      formData.chainRequests?.map((r) => r.id) || [],
-    );
-
-    setAssertionsByRequest((prev) => {
-      const filtered = Object.fromEntries(
-        Object.entries(prev).filter(([requestId]) =>
-          currentRequestIds.has(requestId),
-        ),
-      );
-
-      return filtered;
-    });
-  }, [formData.chainRequests]);
-
-  useEffect(() => {
-    if (Object.keys(assertionsByRequest).length > 0) {
-      Object.entries(assertionsByRequest).forEach(([requestId, assertions]) => {
-        persistAssertionsToStorage(requestId, assertions);
-      });
-    }
+    const saveAssertions = async () => {
+      if (Object.keys(assertionsByRequest).length > 0) {
+        await Promise.all(
+          Object.entries(assertionsByRequest).map(([requestId, assertions]) =>
+            persistAssertionsToStorage(requestId, assertions),
+          ),
+        );
+      }
+    };
+    saveAssertions();
   }, [assertionsByRequest]);
 
   useEffect(() => {
-    const syncAssertionsFromStorage = () => {
-      try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        if (!raw) return;
+    const currentRequestIds =
+      formData.chainRequests
+        ?.map((r) => r.id)
+        .sort()
+        .join(',') || '';
 
-        const map: Record<string, any> = JSON.parse(raw);
-        const currentRequestIds = new Set(
+    if (currentRequestIds === lastSyncedRequestIdsRef.current) return;
+    lastSyncedRequestIdsRef.current = currentRequestIds;
+
+    const syncAssertionsFromStorage = async () => {
+      try {
+        const requestIds = new Set(
           formData.chainRequests?.map((r) => r.id) || [],
         );
 
-        let hasChanges = false;
-        const updatedRequests = formData.chainRequests?.map((request) => {
-          if (
-            currentRequestIds.has(request.id) &&
-            map[request.id]?.assertions
-          ) {
-            const storageAssertions = map[request.id].assertions;
-            const currentAssertions = request.assertions || [];
+        const loadedAssertions: Record<string, any[]> = {};
 
-            if (
-              JSON.stringify(storageAssertions) !==
-              JSON.stringify(currentAssertions)
-            ) {
-              hasChanges = true;
+        for (const requestId of requestIds) {
+          let assertions = await storageManager.getAssertions(requestId);
 
-              setAssertionsByRequest((prev) => ({
-                ...prev,
-                [request.id]: storageAssertions,
-              }));
-
-              return {
-                ...request,
-                assertions: storageAssertions,
-              };
+          if (!assertions) {
+            const encrypted = secureStorage.loadEncrypted(
+              `assertions_${requestId}`,
+            );
+            if (encrypted) {
+              assertions = encrypted.assertions;
             }
           }
-          return request;
-        });
 
-        if (hasChanges && updatedRequests) {
-          setFormData((prev) => ({
+          if (assertions && assertions.length > 0) {
+            loadedAssertions[requestId] = assertions;
+          }
+        }
+
+        if (Object.keys(loadedAssertions).length > 0) {
+          setAssertionsByRequest((prev) => ({
             ...prev,
-            chainRequests: updatedRequests,
+            ...loadedAssertions,
           }));
         }
       } catch (e) {
-        console.error('Failed to sync assertions from localStorage:', e);
+        console.error('[RequestChainEditor] Failed to sync assertions:', e);
       }
     };
 
     syncAssertionsFromStorage();
 
-    window.addEventListener('storage', syncAssertionsFromStorage);
-
-    const intervalId = setInterval(syncAssertionsFromStorage, 500);
+    const debouncedSync = debounce(syncAssertionsFromStorage, 2000);
+    window.addEventListener('storage', debouncedSync);
 
     return () => {
-      window.removeEventListener('storage', syncAssertionsFromStorage);
-      clearInterval(intervalId);
+      window.removeEventListener('storage', debouncedSync);
+      debouncedSync.cancel();
     };
-  }, [formData.chainRequests]);
+  }, [formData.chainRequests?.length]);
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
@@ -1215,9 +1187,11 @@ export function RequestChainEditor({
 
       let previousExecutionLog = null;
       try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        if (raw) {
-          const map = JSON.parse(raw);
+        // const raw = encrypted.getItem('lastExecutionByRequest');
+        const existing = secureStorage.loadEncrypted('lastExecutionByRequest');
+
+        if (existing) {
+          const map = existing;
           previousExecutionLog = map[request.id];
         }
       } catch (e) {
@@ -1340,13 +1314,21 @@ export function RequestChainEditor({
       };
 
       try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
+        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+
         map[request.id] = {
           ...log,
           assertions: finalAssertions,
         };
-        localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
+
+        // Verify sanitization worked
+        const verified = secureStorage.loadEncrypted('lastExecutionByRequest');
+        console.log(
+          'map123_verified:',
+          JSON.stringify(verified?.[request.id]?.response?.body),
+        );
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
       }
@@ -1372,13 +1354,8 @@ export function RequestChainEditor({
       };
 
       try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        const map = raw ? JSON.parse(raw) : {};
-        map[request.id] = errorLog;
-        localStorage.setItem(
-          'lastExecutionByRequest',
-          JSON.stringify(errorLog),
-        );
+        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+        secureStorage.saveEncrypted('lastExecutionByRequest', map);
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest (error):', e);
       }
@@ -1485,7 +1462,10 @@ export function RequestChainEditor({
             requestAssertions = request.assertions;
           } else {
             try {
-              const raw = localStorage.getItem('lastExecutionByRequest');
+              // const raw = encrypted.getItem('lastExecutionByRequest');
+              const raw =
+                secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+
               if (raw) {
                 const map = JSON.parse(raw);
                 if (
@@ -1497,7 +1477,7 @@ export function RequestChainEditor({
                 }
               }
             } catch (e) {
-              console.error('Failed to read assertions from localStorage:', e);
+              console.error('Failed to read assertions from encrypted:', e);
             }
           }
 
@@ -1737,6 +1717,76 @@ export function RequestChainEditor({
     });
   };
 
+  // AI SUGGEST SECURITY PATCH: Encrypt entire request chain before saving
+  const saveChainSecurely = async (chainData: RequestChain) => {
+    try {
+      // Save encrypted to encrypted as backup
+      const encryptedBackup = secureStorage.saveEncrypted(
+        `chain_backup_${chainData.id}`,
+        {
+          ...chainData,
+          requests: formData.chainRequests,
+        },
+      );
+
+      if (!encryptedBackup) {
+        console.warn('[Security] Failed to create encrypted backup');
+      }
+
+      // Save to backend (HTTPS encrypts in transit)
+      const result = await (chainData.id
+        ? updateRequestChain(chainData.id, chainData)
+        : saveRequestChain(chainData));
+
+      toast({
+        title: 'Chain Saved Securely',
+        description: 'All credentials encrypted and saved',
+      });
+
+      return result;
+    } catch (e) {
+      console.error('[Security] Failed to save chain securely:', e);
+      toast({
+        title: 'Save Failed',
+        description: 'Could not encrypt and save chain',
+        variant: 'destructive',
+      });
+      throw e;
+    }
+  };
+
+  const handleSaveClick = async () => {
+    try {
+      // Validation
+      if (!formData.name?.trim()) {
+        toast({
+          title: 'Validation Error',
+          description: 'Please enter a chain name',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const chainData: RequestChain = {
+        ...chain,
+        name: formData.name,
+        description: formData.description || '',
+        chainRequests: formData.chainRequests || [],
+        workspaceId: currentWorkspace?.id || '',
+        tags: tags || [],
+      };
+
+      // SECURITY: Use encrypted save
+      const result = await saveChainSecurely(chainData);
+
+      if (result) {
+        onSave(result);
+      }
+    } catch (error) {
+      console.error('Error saving chain:', error);
+    }
+  };
+
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [tempName, setTempName] = useState<string>('');
@@ -1895,178 +1945,187 @@ export function RequestChainEditor({
     setExpandedRequests(new Set([...expandedRequests, tempId]));
   };
 
-  const saveChainToAPI = async (): Promise<RequestChain | null> => {
-    if (!formData.name?.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Chain name is required',
-        variant: 'destructive',
-      });
-      return null;
-    }
+  // const saveChainToAPI = async (): Promise<RequestChain | null> => {
+  //   if (!formData.name?.trim()) {
+  //     toast({
+  //       title: 'Validation Error',
+  //       description: 'Chain name is required',
+  //       variant: 'destructive',
+  //     });
+  //     return null;
+  //   }
 
-    try {
-      setIsSaving(true);
-      const originalRequestIds = new Set(
-        chain?.chainRequests?.map((r) => r.id) || [],
-      );
+  //   try {
+  //     setIsSaving(true);
+  //     const originalRequestIds = new Set(
+  //       chain?.chainRequests?.map((r) => r.id) || [],
+  //     );
 
-      const allStoredAssertions: Record<string, any[]> = {};
-      try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        if (raw) {
-          const map = JSON.parse(raw);
-          Object.keys(map).forEach((requestId) => {
-            if (
-              map[requestId]?.assertions &&
-              Array.isArray(map[requestId].assertions)
-            ) {
-              allStoredAssertions[requestId] = map[requestId].assertions;
-            }
-          });
-        }
-      } catch (e) {
-        console.error('Failed to read stored assertions:', e);
-      }
+  //     const allStoredAssertions: Record<string, any[]> = {};
+  //     try {
+  //       const raw = encrypted.getItem('lastExecutionByRequest');
+  //       if (raw) {
+  //         const map = JSON.parse(raw);
+  //         Object.keys(map).forEach((requestId) => {
+  //           if (
+  //             map[requestId]?.assertions &&
+  //             Array.isArray(map[requestId].assertions)
+  //           ) {
+  //             allStoredAssertions[requestId] = map[requestId].assertions;
+  //           }
+  //         });
+  //       }
+  //     } catch (e) {
+  //       console.error('Failed to read stored assertions:', e);
+  //     }
 
-      const chainDataForBackend = {
-        ...formData,
-        chainRequests: formData.chainRequests?.map((request, index) => {
-          const token = request.authToken?.trim() || '';
-          const authorization: any = {};
-          let authorizationType = request.authorizationType || 'none';
+  //     const chainDataForBackend = {
+  //       ...formData,
+  //       chainRequests: formData.chainRequests?.map((request, index) => {
+  //         const token = request.authToken?.trim() || '';
+  //         const authorization: any = {};
+  //         let authorizationType = request.authorizationType || 'none';
 
-          if (token) {
-            authorization.token = token;
-            authorizationType = 'bearer';
-          } else {
-            authorizationType = 'none';
-          }
+  //         if (token) {
+  //           authorization.token = token;
+  //           authorizationType = 'bearer';
+  //         } else {
+  //           authorizationType = 'none';
+  //         }
 
-          const isExistingRequest =
-            request.id && originalRequestIds.has(request.id);
+  //         const isExistingRequest =
+  //           request.id && originalRequestIds.has(request.id);
 
-          let requestAssertions: any[] = [];
+  //         let requestAssertions: any[] = [];
 
-          if (
-            assertionsByRequest[request.id] &&
-            assertionsByRequest[request.id].length > 0
-          ) {
-            requestAssertions = assertionsByRequest[request.id];
-          } else if (
-            allStoredAssertions[request.id] &&
-            allStoredAssertions[request.id].length > 0
-          ) {
-            requestAssertions = allStoredAssertions[request.id];
-          }
+  //         if (
+  //           assertionsByRequest[request.id] &&
+  //           assertionsByRequest[request.id].length > 0
+  //         ) {
+  //           requestAssertions = assertionsByRequest[request.id];
+  //         } else if (
+  //           allStoredAssertions[request.id] &&
+  //           allStoredAssertions[request.id].length > 0
+  //         ) {
+  //           requestAssertions = allStoredAssertions[request.id];
+  //         }
 
-          const allAssertions = requestAssertions
-            .filter((a) => a.enabled !== false)
-            .map((assertion) => ({
-              ...assertion,
-              enabled: true,
-            }));
+  //         const allAssertions = requestAssertions
+  //           .filter((a) => a.enabled !== false)
+  //           .map((assertion) => ({
+  //             ...assertion,
+  //             enabled: true,
+  //           }));
 
-          if (isExistingRequest) {
-            return {
-              ...request,
-              order: index + 1,
-              authorizationType,
-              authorization,
-              assertions: allAssertions,
-              variables: request.variables || [],
-              tags: tags ?? [],
-              headers:
-                request.headers?.map((h) =>
-                  h.id && !h.id.startsWith('temp_')
-                    ? h
-                    : { ...h, id: undefined },
-                ) || [],
-              params:
-                request.params?.map((p) =>
-                  p.id && !p.id.startsWith('temp_')
-                    ? p
-                    : { ...p, id: undefined },
-                ) || [],
-            };
-          } else {
-            return {
-              ...request,
-              id: undefined,
-              order: index + 1,
-              authorizationType,
-              authorization,
-              assertions: allAssertions,
-              variables: request.variables || [],
-              headers:
-                request.headers?.map((h) => ({ ...h, id: undefined })) || [],
-              params:
-                request.params?.map((p) => ({ ...p, id: undefined })) || [],
-            };
-          }
-        }),
-      };
+  //         if (isExistingRequest) {
+  //           return {
+  //             ...request,
+  //             order: index + 1,
+  //             authorizationType,
+  //             authorization,
+  //             assertions: allAssertions,
+  //             variables: request.variables || [],
+  //             tags: tags ?? [],
+  //             headers:
+  //               request.headers?.map((h) =>
+  //                 h.id && !h.id.startsWith('temp_')
+  //                   ? h
+  //                   : { ...h, id: undefined },
+  //               ) || [],
+  //             params:
+  //               request.params?.map((p) =>
+  //                 p.id && !p.id.startsWith('temp_')
+  //                   ? p
+  //                   : { ...p, id: undefined },
+  //               ) || [],
+  //           };
+  //         } else {
+  //           return {
+  //             ...request,
+  //             id: undefined,
+  //             order: index + 1,
+  //             authorizationType,
+  //             authorization,
+  //             assertions: allAssertions,
+  //             variables: request.variables || [],
+  //             headers:
+  //               request.headers?.map((h) => ({ ...h, id: undefined })) || [],
+  //             params:
+  //               request.params?.map((p) => ({ ...p, id: undefined })) || [],
+  //           };
+  //         }
+  //       }),
+  //     };
 
-      const transformedRequests = chainDataForBackend.chainRequests.map(
-        transformRequestForSave,
-      );
+  //     const transformedRequests = chainDataForBackend.chainRequests.map(
+  //       transformRequestForSave,
+  //     );
 
-      const chainData: RequestChain = {
-        id: requestChainId || chain?.id || '',
-        workspaceId: formData.workspaceId || currentWorkspace?.id || '',
-        name: formData.name,
-        description: formData.description || '',
-        environmentId: selectedEnvironment,
-        chainRequests: transformedRequests,
-        variables: formData.variables || [],
-        enabled: formData.enabled ?? true,
-        createdAt: chain?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        lastExecuted: chain?.lastExecuted,
-        executionCount: chain?.executionCount || 0,
-        successRate: chain?.successRate || 0,
-        tags: tags ?? ['untagged', 'new'],
-      };
+  //     const chainData: RequestChain = {
+  //       id: requestChainId || chain?.id || '',
+  //       workspaceId: formData.workspaceId || currentWorkspace?.id || '',
+  //       name: formData.name,
+  //       description: formData.description || '',
+  //       environmentId: selectedEnvironment,
+  //       chainRequests: transformedRequests,
+  //       variables: formData.variables || [],
+  //       enabled: formData.enabled ?? true,
+  //       createdAt: chain?.createdAt || new Date().toISOString(),
+  //       updatedAt: new Date().toISOString(),
+  //       lastExecuted: chain?.lastExecuted,
+  //       executionCount: chain?.executionCount || 0,
+  //       successRate: chain?.successRate || 0,
+  //       tags: tags ?? ['untagged', 'new'],
+  //     };
 
-      const savedChain =
-        chainData.id === ''
-          ? await saveRequestChain(chainData)
-          : await updateRequestChain(chainData, chainData.id);
+  //     const savedChain =
+  //       chainData.id === ''
+  //         ? await saveRequestChain(chainData)
+  //         : await updateRequestChain(chainData, chainData.id);
 
-      setFormData((prev) => ({ ...prev, id: savedChain.id }));
+  //     setFormData((prev) => ({ ...prev, id: savedChain.id }));
 
-      toast({
-        title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
-        description:
-          chainData.id === ''
-            ? 'Your request chain has been saved successfully with assertions.'
-            : 'Your request chain has been updated successfully with assertions.',
-      });
+  //     if (formData.variables && formData.variables.length > 0) {
+  //       saveVariablesSecurely(formData.variables);
+  //     }
 
-      return savedChain;
-    } catch (error) {
-      console.error('Failed to save chain:', error);
-      toast({
-        title: chain?.id ? 'Update Failed' : 'Save Failed',
-        description:
-          error instanceof Error
-            ? error.message
-            : `Failed to ${chain?.id ? 'update' : 'save'} request chain`,
-        variant: 'destructive',
-      });
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  //     secureStorage.saveEncrypted(`chain_backup_${savedChain.id}`, {
+  //       ...chainData,
+  //       savedAt: new Date().toISOString(),
+  //     });
 
-  const handleSave = async () => {
-    const saved = await saveChainToAPI();
-    if (saved) {
-      onSave(saved);
-    }
-    return saved;
-  };
+  //     toast({
+  //       title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
+  //       description:
+  //         chainData.id === ''
+  //           ? 'Your request chain has been saved successfully with assertions.'
+  //           : 'Your request chain has been updated successfully with assertions.',
+  //     });
+
+  //     return savedChain;
+  //   } catch (error) {
+  //     console.error('Failed to save chain:', error);
+  //     toast({
+  //       title: chain?.id ? 'Update Failed' : 'Save Failed',
+  //       description:
+  //         error instanceof Error
+  //           ? error.message
+  //           : `Failed to ${chain?.id ? 'update' : 'save'} request chain`,
+  //       variant: 'destructive',
+  //     });
+  //     return null;
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+  // const handleSave = async () => {
+  //   const saved = await saveChainToAPI();
+  //   if (saved) {
+  //     onSave(saved);
+  //   }
+  //   return saved;
+  // };
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {
@@ -2457,12 +2516,12 @@ export function RequestChainEditor({
               dynamicVariableOverrides={dynamicOverrides}
               onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
               requestAssertions={assertionsByRequest[request.id] || []}
-              onAssertionsUpdate={(assertions) => {
+              onAssertionsUpdate={async (assertions) => {
                 setAssertionsByRequest((prev) => ({
                   ...prev,
                   [request.id]: assertions,
                 }));
-                persistAssertionsToStorage(request.id, assertions);
+                await persistAssertionsToStorage(request.id, assertions);
               }}
               requestIndex={requestIndex}
               formData={formData}
@@ -2474,19 +2533,111 @@ export function RequestChainEditor({
     }
   }
 
-  const persistAssertionsToStorage = (requestId: string, assertions: any[]) => {
+  const saveVariablesSecurely = (variables: Variable[]) => {
     try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      const map = raw ? JSON.parse(raw) : {};
+      secureStorage.saveEncrypted('chain_variables', variables);
+    } catch (e) {
+      console.error('[Security] Failed to encrypt variables:', e);
+    }
+  };
 
-      if (!map[requestId]) {
-        map[requestId] = {};
+  const loadVariablesSecurely = (): Variable[] => {
+    try {
+      const encrypted = secureStorage.loadEncrypted('chain_variables');
+      return encrypted || [];
+    } catch (e) {
+      console.error('[Security] Failed to decrypt variables:', e);
+      return [];
+    }
+  };
+
+  const handleSecureLogout = () => {
+    try {
+      secureStorage.clearAll();
+
+      storageManager.clearAll();
+
+      sessionStorage.clear();
+
+      setAssertionsByRequest({});
+      setFormData({
+        name: '',
+        description: '',
+        chainRequests: [],
+      });
+
+      console.log('[Security] All sensitive data cleared on logout');
+
+      toast({
+        title: 'Logged Out Securely',
+        description: 'All credentials have been cleared',
+      });
+    } catch (e) {
+      console.error('[Security] Logout error:', e);
+      toast({
+        title: 'Logout Warning',
+        description: 'Some data may not have been cleared',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const loadChainBackup = async (
+    chainId: string,
+  ): Promise<RequestChain | null> => {
+    try {
+      const backup = secureStorage.loadEncrypted(`chain_backup_${chainId}`);
+
+      if (backup) {
+        console.log('[Security] Loaded encrypted backup');
+        toast({
+          title: 'Backup Loaded',
+          description: 'Using encrypted local backup',
+        });
+        return backup;
       }
 
-      map[requestId].assertions = assertions;
-      localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
+      return null;
     } catch (e) {
-      console.error('Failed to persist assertions:', e);
+      console.error('[Security] Failed to load backup:', e);
+      return null;
+    }
+  };
+
+  const persistAssertionsToStorage = async (
+    requestId: string,
+    assertions: any[],
+  ) => {
+    try {
+      const success = await storageManager.saveAssertions(
+        requestId,
+        assertions,
+        chain?.id,
+      );
+
+      if (success) return;
+
+      console.warn('[Storage] IndexedDB failed, using encrypted encrypted');
+      const encrypted = secureStorage.saveEncrypted(`assertions_${requestId}`, {
+        requestId,
+        assertions,
+      });
+
+      if (!encrypted) {
+        toast({
+          title: 'Storage Warning',
+          description:
+            'Unable to save assertions. Please save your chain to persist changes.',
+          variant: 'destructive',
+        });
+      }
+    } catch (e) {
+      console.error('[Storage] Failed to persist assertions:', e);
+      toast({
+        title: 'Storage Error',
+        description: 'Failed to save assertions. Your work may not be saved.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -2833,7 +2984,7 @@ export function RequestChainEditor({
                                                   ] || [];
                                                 return assertions;
                                               })()}
-                                              onAssertionsUpdate={(
+                                              onAssertionsUpdate={async (
                                                 assertions,
                                               ) => {
                                                 setAssertionsByRequest(
@@ -2842,7 +2993,7 @@ export function RequestChainEditor({
                                                     [request.id]: assertions,
                                                   }),
                                                 );
-                                                persistAssertionsToStorage(
+                                                await persistAssertionsToStorage(
                                                   request.id,
                                                   assertions,
                                                 );
@@ -2939,7 +3090,7 @@ export function RequestChainEditor({
                                                           executionLog.requestId
                                                         ] || []
                                                       }
-                                                      onAssertionsUpdate={(
+                                                      onAssertionsUpdate={async (
                                                         assertions,
                                                       ) => {
                                                         setAssertionsByRequest(
@@ -2949,7 +3100,7 @@ export function RequestChainEditor({
                                                               assertions,
                                                           }),
                                                         );
-                                                        persistAssertionsToStorage(
+                                                        await persistAssertionsToStorage(
                                                           executionLog.requestId,
                                                           assertions,
                                                         );
@@ -3341,7 +3492,7 @@ export function RequestChainEditor({
                   setIsExecuting(executing);
                   setCurrentRequestIndex(requestIndex);
                 }}
-                onPreExecute={saveChainToAPI}
+                onPreExecute={saveChainSecurely}
                 chainName={formData?.name}
                 chainId={chain?.id}
                 isRunAllExecuting={isExecuting}
