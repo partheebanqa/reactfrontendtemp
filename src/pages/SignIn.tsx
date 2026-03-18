@@ -16,7 +16,7 @@ import { Eye, EyeOff, Lock, Mail } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { Loader } from '@/components/Loader';
-import LogoFull from '../assests/images/OptraLogo.png';
+import LogoFull from '../assests/images/OptraLogo.webp';
 
 export default function SignIn() {
   const [, setLocation] = useLocation();

@@ -14,6 +14,9 @@ import {
   X,
   Wand2,
   FlaskConical,
+  AlertTriangle,
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -26,7 +29,12 @@ import {
   type Operator,
 } from '@/lib/operators';
 import ApiAssertionInterface from '../Shared/Assertion/ApiAssertionInterface';
-import { generateAssertionsForPath } from '@/utils/assertionGenerator';
+import {
+  ASSERTION_LIMITS,
+  generateAssertionsForPath,
+  generateAssertionsWithStats,
+} from '@/utils/assertionGenerator';
+import { useToast } from '@/hooks/use-toast';
 
 interface ResponseExplorerProps {
   response?: {
@@ -76,6 +84,70 @@ interface JsonNode {
   level: number;
 }
 
+const ResponseSizeWarning = ({ response }: { response: any }) => {
+  const [size, setSize] = useState<number>(0);
+
+  useEffect(() => {
+    if (response?.body) {
+      const sizeInMB =
+        new Blob([JSON.stringify(response.body)]).size / (1024 * 1024);
+      setSize(sizeInMB);
+    }
+  }, [response]);
+
+  if (size < 5) return null;
+
+  return (
+    <div className='bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4'>
+      <div className='flex items-start'>
+        <AlertTriangle className='h-5 w-5 text-yellow-600 mr-2 flex-shrink-0 mt-0.5' />
+        <div className='flex-1'>
+          <h4 className='text-sm font-medium text-yellow-800'>
+            Large Response Detected
+          </h4>
+          <p className='text-sm text-yellow-700 mt-1'>
+            This response is {size.toFixed(1)}MB. Auto-generating assertions may
+            be slow. Some assertions may be skipped to prevent browser
+            performance issues.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const AssertionGenerationStats = ({ stats }: { stats: any | null }) => {
+  if (!stats || stats.totalAssertions === 0) return null;
+
+  return (
+    <div className='text-xs text-gray-500 space-y-1 p-2 bg-gray-50 rounded mb-4'>
+      <div className='font-medium'>Generation Statistics:</div>
+      <div>• Total assertions: {stats.totalAssertions}</div>
+      {stats.maxDepthReached > 0 && (
+        <div>
+          • Max depth reached: {stats.maxDepthReached}/
+          {ASSERTION_LIMITS.MAX_DEPTH}
+        </div>
+      )}
+      {stats.skippedDeepPaths > 0 && (
+        <div className='text-yellow-600'>
+          • Skipped {stats.skippedDeepPaths} deeply nested paths
+        </div>
+      )}
+      {stats.skippedLargeArrays > 0 && (
+        <div className='text-yellow-600'>
+          • Partially processed {stats.skippedLargeArrays} large arrays
+        </div>
+      )}
+      {stats.truncated && (
+        <div className='text-orange-600'>
+          • Truncated at {ASSERTION_LIMITS.MAX_ASSERTIONS} assertions limit
+        </div>
+      )}
+    </div>
+  );
+};
+
 export function ResponseExplorer({
   response,
   onExtractVariable,
@@ -103,6 +175,10 @@ export function ResponseExplorer({
   allStaticVariables,
   allExtractedVariables,
 }: ResponseExplorerProps) {
+  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStats, setGenerationStats] = useState<any>(null);
+
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
@@ -182,6 +258,100 @@ export function ResponseExplorer({
       }
       return undefined;
     }, obj);
+  };
+
+  const handleAutoGenerateAssertions = async () => {
+    if (!response) {
+      toast({
+        title: 'No Response',
+        description: 'Execute the request first to generate assertions',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const responseSize =
+        new Blob([JSON.stringify(response.body)]).size / (1024 * 1024);
+
+      if (responseSize > 5) {
+        const confirmed = window.confirm(
+          `This response is ${responseSize.toFixed(1)}MB. ` +
+            `Auto-generating assertions may take a while and could slow down your browser. ` +
+            `Continue?`,
+        );
+
+        if (!confirmed) {
+          setIsGenerating(false);
+          return;
+        }
+      }
+
+      toast({
+        title: 'Generating Assertions',
+        description: 'This may take a moment for large responses...',
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const startTime = performance.now();
+      const { assertions, stats } = generateAssertionsWithStats(response);
+      const duration = performance.now() - startTime;
+
+      setGenerationStats(stats);
+
+      console.log(
+        `[Performance] Generated ${assertions.length} assertions in ${duration.toFixed(0)}ms`,
+      );
+
+      const messages: string[] = [];
+
+      if (stats.truncated) {
+        messages.push(
+          `⚠️ Reached limit of ${ASSERTION_LIMITS.MAX_ASSERTIONS} assertions`,
+        );
+      }
+      if (stats.skippedDeepPaths > 0) {
+        messages.push(
+          `⚠️ ${stats.skippedDeepPaths} deeply nested paths skipped ` +
+            `(max depth: ${ASSERTION_LIMITS.MAX_DEPTH})`,
+        );
+      }
+      if (stats.skippedLargeArrays > 0) {
+        messages.push(
+          `⚠️ ${stats.skippedLargeArrays} large arrays partially processed ` +
+            `(max ${ASSERTION_LIMITS.MAX_ARRAY_ITEMS} items per array)`,
+        );
+      }
+
+      if (messages.length > 0) {
+        toast({
+          title: `Generated ${stats.totalAssertions} Assertions`,
+          description: messages.join(' • '),
+        });
+      } else {
+        toast({
+          title: 'Assertions Generated Successfully',
+          description: `Generated ${stats.totalAssertions} assertions in ${duration.toFixed(0)}ms`,
+        });
+      }
+
+      onAssertionsUpdate?.(assertions);
+    } catch (error) {
+      console.error('[Assertion Generator] Error:', error);
+      toast({
+        title: 'Generation Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to generate assertions',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const getAutoExtractedVariables = () => {
@@ -1095,6 +1265,8 @@ export function ResponseExplorer({
 
   return (
     <div className='space-y-6'>
+      <ResponseSizeWarning response={response} />
+      <AssertionGenerationStats stats={generationStats} />
       <div className='bg-white border border-gray-200 rounded-lg'>
         <div className='border-b border-gray-200 flex items-center justify-between px-6'>
           <nav className='flex space-x-6'>
@@ -1167,15 +1339,34 @@ export function ResponseExplorer({
           </nav>
 
           <div className='flex items-center gap-4'>
-            <button
-              onClick={() => setShowAssertionUI(true)}
-              className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
-            >
-              <FlaskConical className='w-4 h-4' />
-
-              <span>Manage Assertions</span>
-            </button>
-
+            <div className='flex items-center gap-2'>
+              <Button
+                onClick={handleAutoGenerateAssertions}
+                disabled={!response || isGenerating}
+                variant='outline'
+                size='sm'
+                className='gap-2'
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className='w-4 h-4 animate-spin' />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className='w-4 h-4' />
+                    Auto-Generate
+                  </>
+                )}
+              </Button>
+              <button
+                onClick={() => setShowAssertionUI(true)}
+                className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
+              >
+                <FlaskConical className='w-4 h-4' />
+                <span>Manage Assertions</span>
+              </button>
+            </div>
             {response && (
               <div className='flex items-center space-x-4 text-sm text-gray-600'>
                 {/* {response.status && (
@@ -1465,9 +1656,14 @@ export function ResponseExplorer({
           fieldType={selectedAssertion.fieldType}
           allAssertions={normalizedAssertions}
           setAssertions={onAssertionsUpdate}
-          onGenerateForPath={(path, value) =>
-            generateAssertionsForPath(path, value)
-          }
+          onGenerateForPath={(path, value) => {
+            const assertions = generateAssertionsForPath(path, value);
+            toast({
+              title: 'Assertions Generated',
+              description: `Generated ${assertions.length} assertions for ${path}`,
+            });
+            return assertions;
+          }}
           variables={variables}
           dynamicVariables={dynamicVariables}
           extractedVariables={getExtractedVariablesForAssertion()}

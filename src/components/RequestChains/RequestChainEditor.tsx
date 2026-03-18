@@ -92,6 +92,9 @@ import { ResponseExplorer } from './ResponseExplorer';
 import BreadCum from '../BreadCum/Breadcum';
 import { useDataManagementStore } from '@/store/dataManagementStore';
 import { generateAssertions } from '@/utils/assertionGenerator';
+import { storageManager } from '@/utils/storage-manager';
+import { secureStorage } from '@/utils/secure-storage';
+import { debounce } from 'lodash';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { RequestAnalyzer } from './RequestAnalyzer';
 import { AddRequestMenu } from './AddRequestMenu';
@@ -256,6 +259,7 @@ export function RequestChainEditor({
   });
 
   const lastSyncedChainUpdatedAt = useRef<string | undefined>(undefined);
+  const lastSyncedRequestIdsRef = useRef<string>('');
 
   useEffect(() => {
     if (!chain) return;
@@ -332,107 +336,74 @@ export function RequestChainEditor({
   }, [formData.chainRequests]);
 
   useEffect(() => {
-    const currentRequestIds = new Set(
-      formData.chainRequests?.map((r) => r.id) || [],
-    );
-
-    setAssertionsByRequest((prev) => {
-      const filtered = Object.fromEntries(
-        Object.entries(prev).filter(([requestId]) =>
-          currentRequestIds.has(requestId),
-        ),
-      );
-
-      return filtered;
-    });
-  }, [formData.chainRequests]);
-
-  useEffect(() => {
-    const currentRequestIds = new Set(
-      formData.chainRequests?.map((r) => r.id) || [],
-    );
-
-    setAssertionsByRequest((prev) => {
-      const filtered = Object.fromEntries(
-        Object.entries(prev).filter(([requestId]) =>
-          currentRequestIds.has(requestId),
-        ),
-      );
-
-      return filtered;
-    });
-  }, [formData.chainRequests]);
-
-  useEffect(() => {
-    if (Object.keys(assertionsByRequest).length > 0) {
-      Object.entries(assertionsByRequest).forEach(([requestId, assertions]) => {
-        persistAssertionsToStorage(requestId, assertions);
-      });
-    }
+    const saveAssertions = async () => {
+      if (Object.keys(assertionsByRequest).length > 0) {
+        await Promise.all(
+          Object.entries(assertionsByRequest).map(([requestId, assertions]) =>
+            persistAssertionsToStorage(requestId, assertions),
+          ),
+        );
+      }
+    };
+    saveAssertions();
   }, [assertionsByRequest]);
 
   useEffect(() => {
-    const syncAssertionsFromStorage = () => {
-      try {
-        const raw = localStorage.getItem('lastExecutionByRequest');
-        if (!raw) return;
+    const currentRequestIds =
+      formData.chainRequests
+        ?.map((r) => r.id)
+        .sort()
+        .join(',') || '';
 
-        const map: Record<string, any> = JSON.parse(raw);
-        const currentRequestIds = new Set(
+    if (currentRequestIds === lastSyncedRequestIdsRef.current) return;
+    lastSyncedRequestIdsRef.current = currentRequestIds;
+
+    const syncAssertionsFromStorage = async () => {
+      try {
+        const requestIds = new Set(
           formData.chainRequests?.map((r) => r.id) || [],
         );
 
-        let hasChanges = false;
-        const updatedRequests = formData.chainRequests?.map((request) => {
-          if (
-            currentRequestIds.has(request.id) &&
-            map[request.id]?.assertions
-          ) {
-            const storageAssertions = map[request.id].assertions;
-            const currentAssertions = request.assertions || [];
+        const loadedAssertions: Record<string, any[]> = {};
 
-            if (
-              JSON.stringify(storageAssertions) !==
-              JSON.stringify(currentAssertions)
-            ) {
-              hasChanges = true;
+        for (const requestId of requestIds) {
+          let assertions = await storageManager.getAssertions(requestId);
 
-              setAssertionsByRequest((prev) => ({
-                ...prev,
-                [request.id]: storageAssertions,
-              }));
-
-              return {
-                ...request,
-                assertions: storageAssertions,
-              };
+          if (!assertions) {
+            const encrypted = secureStorage.loadEncrypted(
+              `assertions_${requestId}`,
+            );
+            if (encrypted) {
+              assertions = encrypted.assertions;
             }
           }
-          return request;
-        });
 
-        if (hasChanges && updatedRequests) {
-          setFormData((prev) => ({
+          if (assertions && assertions.length > 0) {
+            loadedAssertions[requestId] = assertions;
+          }
+        }
+
+        if (Object.keys(loadedAssertions).length > 0) {
+          setAssertionsByRequest((prev) => ({
             ...prev,
-            chainRequests: updatedRequests,
+            ...loadedAssertions,
           }));
         }
       } catch (e) {
-        console.error('Failed to sync assertions from localStorage:', e);
+        console.error('[RequestChainEditor] Failed to sync assertions:', e);
       }
     };
 
     syncAssertionsFromStorage();
 
-    window.addEventListener('storage', syncAssertionsFromStorage);
-
-    const intervalId = setInterval(syncAssertionsFromStorage, 500);
+    const debouncedSync = debounce(syncAssertionsFromStorage, 2000);
+    window.addEventListener('storage', debouncedSync);
 
     return () => {
-      window.removeEventListener('storage', syncAssertionsFromStorage);
-      clearInterval(intervalId);
+      window.removeEventListener('storage', debouncedSync);
+      debouncedSync.cancel();
     };
-  }, [formData.chainRequests]);
+  }, [formData.chainRequests?.length]);
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
@@ -2457,12 +2428,12 @@ export function RequestChainEditor({
               dynamicVariableOverrides={dynamicOverrides}
               onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
               requestAssertions={assertionsByRequest[request.id] || []}
-              onAssertionsUpdate={(assertions) => {
+              onAssertionsUpdate={async (assertions) => {
                 setAssertionsByRequest((prev) => ({
                   ...prev,
                   [request.id]: assertions,
                 }));
-                persistAssertionsToStorage(request.id, assertions);
+                await persistAssertionsToStorage(request.id, assertions);
               }}
               requestIndex={requestIndex}
               formData={formData}
@@ -2474,19 +2445,40 @@ export function RequestChainEditor({
     }
   }
 
-  const persistAssertionsToStorage = (requestId: string, assertions: any[]) => {
+  const persistAssertionsToStorage = async (
+    requestId: string,
+    assertions: any[],
+  ) => {
     try {
-      const raw = localStorage.getItem('lastExecutionByRequest');
-      const map = raw ? JSON.parse(raw) : {};
+      const success = await storageManager.saveAssertions(
+        requestId,
+        assertions,
+        chain?.id,
+      );
 
-      if (!map[requestId]) {
-        map[requestId] = {};
+      if (success) return;
+
+      console.warn('[Storage] IndexedDB failed, using encrypted localStorage');
+      const encrypted = secureStorage.saveEncrypted(`assertions_${requestId}`, {
+        requestId,
+        assertions,
+      });
+
+      if (!encrypted) {
+        toast({
+          title: 'Storage Warning',
+          description:
+            'Unable to save assertions. Please save your chain to persist changes.',
+          variant: 'destructive',
+        });
       }
-
-      map[requestId].assertions = assertions;
-      localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
     } catch (e) {
-      console.error('Failed to persist assertions:', e);
+      console.error('[Storage] Failed to persist assertions:', e);
+      toast({
+        title: 'Storage Error',
+        description: 'Failed to save assertions. Your work may not be saved.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -2833,7 +2825,7 @@ export function RequestChainEditor({
                                                   ] || [];
                                                 return assertions;
                                               })()}
-                                              onAssertionsUpdate={(
+                                              onAssertionsUpdate={async (
                                                 assertions,
                                               ) => {
                                                 setAssertionsByRequest(
@@ -2842,7 +2834,7 @@ export function RequestChainEditor({
                                                     [request.id]: assertions,
                                                   }),
                                                 );
-                                                persistAssertionsToStorage(
+                                                await persistAssertionsToStorage(
                                                   request.id,
                                                   assertions,
                                                 );
@@ -2939,7 +2931,7 @@ export function RequestChainEditor({
                                                           executionLog.requestId
                                                         ] || []
                                                       }
-                                                      onAssertionsUpdate={(
+                                                      onAssertionsUpdate={async (
                                                         assertions,
                                                       ) => {
                                                         setAssertionsByRequest(
@@ -2949,7 +2941,7 @@ export function RequestChainEditor({
                                                               assertions,
                                                           }),
                                                         );
-                                                        persistAssertionsToStorage(
+                                                        await persistAssertionsToStorage(
                                                           executionLog.requestId,
                                                           assertions,
                                                         );

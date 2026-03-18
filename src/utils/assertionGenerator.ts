@@ -967,3 +967,69 @@ export const generateAssertionsForPath = (
 
   return assertions;
 };
+
+export interface GenerationStats {
+  totalAssertions: number;
+  skippedDeepPaths: number;
+  skippedLargeArrays: number;
+  truncated: boolean;
+  maxDepthReached: number;
+}
+
+export const ASSERTION_LIMITS = {
+  MAX_DEPTH: 10,
+  MAX_ASSERTIONS: 500,
+  MAX_ARRAY_ITEMS: 50,
+  MAX_RESPONSE_SIZE_MB: 10,
+} as const;
+
+export const generateAssertionsWithStats = (
+  response: any,
+): { assertions: Assertion[]; stats: GenerationStats } => {
+  const stats: GenerationStats = {
+    totalAssertions: 0,
+    skippedDeepPaths: 0,
+    skippedLargeArrays: 0,
+    truncated: false,
+    maxDepthReached: 0,
+  };
+
+  try {
+    // Parse body if it's a string
+    let parsedData = response.data;
+    if (!parsedData && response.body) {
+      try {
+        parsedData = JSON.parse(response.body);
+      } catch {
+        parsedData = null;
+      }
+    }
+
+    const formattedResponse: ApiResponse = {
+      status: response.status ?? response.statusCode ?? 200,
+      statusText: response.statusText || '',
+      headers: response.headers ?? {},
+      data: parsedData ?? {},
+      responseTime: response.responseTime ?? 0,
+      size: response.size ?? 0,
+    };
+
+    const assertions = generateAssertions(formattedResponse);
+
+    // Check limits
+    if (assertions.length > ASSERTION_LIMITS.MAX_ASSERTIONS) {
+      stats.truncated = true;
+      stats.totalAssertions = ASSERTION_LIMITS.MAX_ASSERTIONS;
+      return {
+        assertions: assertions.slice(0, ASSERTION_LIMITS.MAX_ASSERTIONS),
+        stats,
+      };
+    }
+
+    stats.totalAssertions = assertions.length;
+    return { assertions, stats };
+  } catch (error) {
+    console.error('[generateAssertionsWithStats] Error:', error);
+    return { assertions: [], stats };
+  }
+};

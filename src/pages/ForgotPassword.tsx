@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { useForgotPasswordMutation } from '@/store/query/authQuery';
-import LogoFull from '../assests/images/OptraLogo.png';
+import LogoFull from '../assests/images/OptraLogo.webp';
 
 export default function ForgotPassword() {
   const [, setLocation] = useLocation();

@@ -3,9 +3,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useParams } from 'wouter';
 import { useQuery } from '@tanstack/react-query';
 import { executionService } from '@/services/executionService.service';
-import AnalyticsReport from '@/components/Reports/Components/Analistics';
-import DetailedTestResults from '@/components/Reports/Components/DetailedTestResults';
-import TestCategoryCard from '@/components/Reports/Components/TestCategoryCard';
 import RequestChainExecutionFlow from '@/components/Reports/Components/RequestChainExecutionFlow';
 import VariablesAndDataFlow from '@/components/Reports/Components/VariablesAndDataFlow';
 import {
@@ -20,29 +17,15 @@ import {
   CheckCircle,
   XCircle,
   SkipForward,
-  Activity,
-  Globe,
-  Loader2,
-  AlertCircle,
 } from 'lucide-react';
-import {
-  format,
-  formatDate,
-  formatDistanceToNow,
-  isValid,
-  sub,
-} from 'date-fns';
-import { Button } from '@/components/ui/button';
+import { formatDistanceToNow, isValid } from 'date-fns';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { shareReport } from '@/utils/exportUtils';
 import { RequestGrouping } from '../Reports/Components/RequestGrouping';
-import Logo from '../../assests/images/OptraLogo.png';
+import Logo from '../../assests/images/OptraLogo.webp';
 import { Loader } from '../Loader';
-import {
-  downloadAsHTMLSameUI,
-  downloadAsPDFSameUI,
-} from '@/utils/exportUtilsSameUi';
+import { downloadAsHTMLSameUI } from '@/utils/exportUtilsSameUi';
 import {
   Tooltip,
   TooltipContent,
@@ -58,15 +41,13 @@ import {
   downloadAsPDF,
   mapBackendSuiteReportToTestSuiteData,
 } from '@/utils/exportUtilsNew';
-import {
-  convertDateStamp,
-  convertTimestamp,
-  isValidTimestamp,
-} from '@/utils/exportDate';
+import { convertDateStamp } from '@/utils/exportDate';
 import { useWorkspace } from '@/hooks/useWorkspace';
-import { createIntegrationJiraIssue, getWorkSpaceIntegrations } from '@/services/integrationTools.service';
+import {
+  createIntegrationJiraIssue,
+  getWorkSpaceIntegrations,
+} from '@/services/integrationTools.service';
 import { WorkSpaceIntegration } from '../settings/ExternalTools';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import JiraIntegrationModal from './JiraIntegrationModal';
 
@@ -157,9 +138,9 @@ const computeOverall = (data: any) => {
   const avgDuration =
     tcs.length > 0
       ? Math.round(
-        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
-        tcs.length
-      )
+          tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+            tcs.length,
+        )
       : Number.isFinite(data?.duration)
         ? Number(data.duration)
         : 0;
@@ -310,18 +291,17 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     }
   }, [workspaceId]);
 
-
   const jiraIntegration = integrations?.find(
-    (integration) => integration.type === "jira"
+    (integration) => integration.type === 'jira',
   );
-  const integrationId = jiraIntegration?.id
+  const integrationId = jiraIntegration?.id;
 
   const [openJiraModal, setOpenJiraModal] = useState(false);
 
   const [jiraPayload, setJiraPayload] = useState({
-    summary: "",
-    description: "",
-    issueType: "",
+    summary: '',
+    description: '',
+    issueType: '',
   });
 
   const [jiraLoading, setJiraLoading] = useState(false);
@@ -333,21 +313,18 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
       setJiraLoading(true);
 
       await createIntegrationJiraIssue(
-        integrationId || "",
+        integrationId || '',
         jiraPayload,
-        workspaceId || ""
+        workspaceId || '',
       );
-      toast({ title: "Jira issue created successfully" });
+      toast({ title: 'Jira issue created successfully' });
       setOpenJiraModal(false);
-
     } catch (error) {
-      console.error("Failed to create Jira issue", error);
+      console.error('Failed to create Jira issue', error);
     } finally {
       setJiraLoading(false);
     }
   };
-
-
 
   return (
     <div id='report-content'>
@@ -357,7 +334,9 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <h1 className='text-lg md:text-3xl font-bold text-gray-900 mb-2'>
               {data.name}
             </h1>
-            <p className='text-sm md:text-md text-gray-600'>{data.description}</p>
+            <p className='text-sm md:text-md text-gray-600'>
+              {data.description}
+            </p>
           </div>
 
           <div>
@@ -377,7 +356,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               <p className='text-xs md:text-sm font-semibold'>
                 {(() => {
                   const { dateTime, tz } = convertDateStamp(
-                    data.lastExecutionDate
+                    data.lastExecutionDate,
                   );
                   return `${dateTime}, ${tz}`;
                 })()}
@@ -389,7 +368,9 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <Clock className='w-5 h-5 text-green-500' />
             <div>
               <p className='text-xs md:text-sm text-gray-500'>Duration</p>
-              <p className='text-xs md:text-sm font-semibold'>{formatDuration(data.duration)}</p>
+              <p className='text-xs md:text-sm font-semibold'>
+                {formatDuration(data.duration)}
+              </p>
             </div>
           </div>
 
@@ -397,7 +378,9 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <User className='w-5 h-5 text-purple-500' />
             <div>
               <p className='text-xs md:text-sm text-gray-500'>Executed By</p>
-              <p className='text-xs md:text-sm font-semibold text-xs'>{data.executedBy}</p>
+              <p className='text-xs md:text-sm font-semibold text-xs'>
+                {data.executedBy}
+              </p>
             </div>
           </div>
 
@@ -405,7 +388,9 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
             <Database className='w-5 h-5 text-orange-500' />
             <div>
               <p className='text-xs md:text-sm text-gray-500'>Environment</p>
-              <p className='text-xs md:text-sm font-semibold text-xs'>{data.environmentId}</p>
+              <p className='text-xs md:text-sm font-semibold text-xs'>
+                {data.environmentId}
+              </p>
             </div>
           </div>
         </div>
@@ -529,7 +514,9 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
           >
             <div className='flex items-center justify-between'>
               <div>
-                <p className='text-xs md:text-sm text-gray-500 mb-1'>{metric.title}</p>
+                <p className='text-xs md:text-sm text-gray-500 mb-1'>
+                  {metric.title}
+                </p>
                 <p className='text-md md:text-2xl font-bold text-gray-900'>
                   {metric.value}
                 </p>
@@ -580,7 +567,7 @@ function percentile(values: number[], p: number) {
   const sorted = [...values].sort((a, b) => a - b);
   const idx = Math.min(
     sorted.length - 1,
-    Math.max(0, Math.ceil((p / 100) * sorted.length) - 1)
+    Math.max(0, Math.ceil((p / 100) * sorted.length) - 1),
   );
   return sorted[idx];
 }
@@ -662,20 +649,20 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
       responseSize: `${req.responseSize || 0} bytes`,
       duration: `${req.duration}ms`,
       substitutedVariables: req.substitutedVariables || [],
-      assertionResults: req?.assertionResults?.map((v: any) => ({
-        status: v.status,
-        category: v.category,
-        description: v.description,
-        field: v.field,
-        responseSize: v.responseSize,
-        responseStatus: v.responseStatus,
-        responseTime: v.responseTime,
-        type: v.type,
-        actualValue: v.actualValue,
-        operator: v.operator,
-        expectedValue: v.expectedValue,
-
-      })) ?? [],
+      assertionResults:
+        req?.assertionResults?.map((v: any) => ({
+          status: v.status,
+          category: v.category,
+          description: v.description,
+          field: v.field,
+          responseSize: v.responseSize,
+          responseStatus: v.responseStatus,
+          responseTime: v.responseTime,
+          type: v.type,
+          actualValue: v.actualValue,
+          operator: v.operator,
+          expectedValue: v.expectedValue,
+        })) ?? [],
       status:
         req.status === 'passed'
           ? 'success'
@@ -690,7 +677,6 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
       errorMessage: req.status === 'failed' ? 'Request failed' : undefined,
     })) || [];
 
-
   const globalVars = data.globalVariables || {};
   const extractedVars =
     data.extractedVariables?.reduce((acc: any, variable: any) => {
@@ -701,7 +687,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
   const overall = React.useMemo(() => computeChainOverall(data), [data]);
   const methodMetrics = React.useMemo(
     () => buildRequestMetricsFromChain(data),
-    [data]
+    [data],
   );
   const successRateColor =
     overall.successRate >= 80
@@ -752,7 +738,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.min(
       Math.floor(Math.log(bytes) / Math.log(k)),
-      sizes.length - 1
+      sizes.length - 1,
     );
     return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
   };
@@ -834,24 +820,22 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
     }
   }, [workspaceId]);
 
-
   const jiraIntegration = integrations?.find(
-    (integration) => integration.type === "jira"
+    (integration) => integration.type === 'jira',
   );
-  const integrationId = jiraIntegration?.id
+  const integrationId = jiraIntegration?.id;
 
   const [openJiraModal, setOpenJiraModal] = useState(false);
 
   const [jiraPayload, setJiraPayload] = useState({
-    summary: "",
-    description: "",
-    issueType: "",
+    summary: '',
+    description: '',
+    issueType: '',
   });
 
   const [jiraLoading, setJiraLoading] = useState(false);
 
   const { toast } = useToast();
-
 
   const handleJiraSubmit = async (e: any) => {
     e.preventDefault();
@@ -859,22 +843,20 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
       setJiraLoading(true);
 
       await createIntegrationJiraIssue(
-        integrationId || "",
+        integrationId || '',
         jiraPayload,
-        workspaceId || ""
+        workspaceId || '',
       );
-      toast({ title: "Jira issue created successfully" });
+      toast({ title: 'Jira issue created successfully' });
       setOpenJiraModal(false);
-
     } catch (error) {
-      console.error("Failed to create Jira issue", error);
+      console.error('Failed to create Jira issue', error);
     } finally {
       setJiraLoading(false);
     }
   };
 
-
-  const [, navigate] = useLocation()
+  const [, navigate] = useLocation();
 
   return (
     <div>
@@ -928,7 +910,7 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
               <p className='text-sm font-semibold'>
                 {(() => {
                   const { dateTime, tz } = convertDateStamp(
-                    data.lastExecutionDate
+                    data.lastExecutionDate,
                   );
                   return `${dateTime}, ${tz}`;
                 })()}
@@ -989,21 +971,21 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
                     if (jiraIntegration) {
                       setOpenJiraModal(true);
                     } else {
-                      navigate("/settings/account?tab=external-tools");
+                      navigate('/settings/account?tab=external-tools');
                     }
                   }}
-                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1"
+                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1'
                 >
                   <JiraIcon />
 
                   {!jiraIntegration && (
-                    <span className="text-xs text-red-500">Not Configured</span>
+                    <span className='text-xs text-red-500'>Not Configured</span>
                   )}
                 </button>
               </TooltipTrigger>
 
               <TooltipContent>
-                {jiraIntegration ? "Create Jira issue" : "Configure Jira"}
+                {jiraIntegration ? 'Create Jira issue' : 'Configure Jira'}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -1013,7 +995,6 @@ const RequestChainReport: React.FC<RequestChainReportProps> = ({
             setOpenJiraModal={() => setOpenJiraModal(false)}
             testSuiteData={data}
           />
-
         </div>
       </div>
 
@@ -1115,21 +1096,21 @@ const ExecutionReportPage: React.FC = () => {
     queryKey: ['execution-report', entityId, type, executionId],
     queryFn: async () => {
       if (!entityId || !type || !executionId || !currentWorkspace?.id) {
-        throw new Error("Missing required parameters");
+        throw new Error('Missing required parameters');
       }
 
-      if (type === "test_suite") {
+      if (type === 'test_suite') {
         return executionService.getTestSuiteReport(
           entityId,
           executionId,
-          currentWorkspace.id
+          currentWorkspace.id,
         );
       }
 
       return executionService.getRequestChainReport(
         entityId,
         executionId,
-        currentWorkspace.id
+        currentWorkspace.id,
       );
     },
 
@@ -1138,7 +1119,6 @@ const ExecutionReportPage: React.FC = () => {
       Boolean(type) &&
       Boolean(executionId) &&
       Boolean(currentWorkspace?.id),
-
   });
 
   useEffect(() => {

@@ -61,7 +61,6 @@ import {
 import 'codemirror/lib/codemirror.css';
 import 'codemirror/theme/material.css';
 import 'codemirror/mode/javascript/javascript';
-import './../RequestBuilder/RequestEditor/whiteorange.css';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import {
   Tooltip,

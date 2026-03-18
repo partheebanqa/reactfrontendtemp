@@ -35,8 +35,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { generateAssertionsForPath } from '@/utils/assertionGenerator';
+import {
+  generateAssertionsForPath,
+  generateAssertionsWithStats,
+  ASSERTION_LIMITS,
+} from '@/utils/assertionGenerator';
 import VirtualizedJsonViewer from './VirtualizedJsonViewer';
+import { useToast } from '@/hooks/use-toast';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -418,6 +423,8 @@ const ResponseViewer = ({
 
   // Raw search input — typed value
   const [searchInput, setSearchInput] = useState('');
+  const { toast } = useToast();
+
   // Debounced search query — used for actual filtering
   const [searchQuery, setSearchQuery] = useState('');
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -434,6 +441,8 @@ const ResponseViewer = ({
   const [showAssertionModal, setShowAssertionModal] = useState(false);
   const [activeFieldPath, setActiveFieldPath] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<any>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStats, setGenerationStats] = useState<any>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
@@ -605,6 +614,100 @@ const ResponseViewer = ({
   const handleGenerateForPath = useCallback((path: string, value: any) => {
     return generateAssertionsForPath(path, value);
   }, []);
+
+  const handleAutoGenerateAssertions = useCallback(async () => {
+    if (!responseData) {
+      toast({
+        title: 'No Response',
+        description: 'Send a request first to generate assertions',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGenerating(true);
+
+    try {
+      const responseSize =
+        new Blob([JSON.stringify(responseData.body)]).size / (1024 * 1024);
+
+      if (responseSize > 5) {
+        const confirmed = window.confirm(
+          `This response is ${responseSize.toFixed(1)}MB. ` +
+            `Auto-generating assertions may take a while. Continue?`,
+        );
+        if (!confirmed) {
+          setIsGenerating(false);
+          return;
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const startTime = performance.now();
+      const { assertions: newAssertions, stats } =
+        generateAssertionsWithStats(responseData);
+      const duration = performance.now() - startTime;
+
+      setGenerationStats(stats);
+
+      const messages: string[] = [];
+      if (stats.truncated)
+        messages.push(
+          `Reached limit of ${ASSERTION_LIMITS.MAX_ASSERTIONS} assertions`,
+        );
+      if (stats.skippedDeepPaths > 0)
+        messages.push(`${stats.skippedDeepPaths} deeply nested paths skipped`);
+      if (stats.skippedLargeArrays > 0)
+        messages.push(
+          `${stats.skippedLargeArrays} large arrays partially processed`,
+        );
+
+      const assertionsMatch = (a: any, b: any) =>
+        a.description === b.description &&
+        a.category === b.category &&
+        a.type === b.type;
+
+      const merged = newAssertions.map((newA) => {
+        const existing = assertions.find((ex) => assertionsMatch(ex, newA));
+        return existing
+          ? { ...newA, enabled: existing.enabled ?? true }
+          : { ...newA, enabled: false };
+      });
+
+      setAssertions(merged);
+
+      if (messages.length > 0) {
+        toast({
+          title: `Generated ${stats.totalAssertions} Assertions`,
+          description: messages.join(' • '),
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Assertions Generated',
+          description: `${merged.length} assertions ready in ${duration.toFixed(0)}ms. Enable them in Manage Assertions.`,
+          variant: 'success',
+        });
+      }
+
+      console.log(
+        `[Performance] Generated ${merged.length} assertions in ${duration.toFixed(0)}ms`,
+        messages.length ? messages : 'No limits hit',
+      );
+    } catch (error) {
+      console.error('[Assertion Generator] Error:', error);
+      toast({
+        title: 'Generation Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to generate assertions',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [responseData, assertions, setAssertions, toast]);
 
   // ---------------------------------------------------------------------------
   // Expand / collapse all
@@ -1193,6 +1296,45 @@ const ResponseViewer = ({
             <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
               <Code className='w-4 h-4' />
               <span className='text-xs md:text-sm'>Raw</span>
+            </button>
+            <button
+              onClick={handleAutoGenerateAssertions}
+              disabled={!responseData || isGenerating}
+              className='flex items-center space-x-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 disabled:opacity-50'
+            >
+              {isGenerating ? (
+                <>
+                  <svg
+                    className='w-4 h-4 animate-spin'
+                    fill='none'
+                    viewBox='0 0 24 24'
+                  >
+                    <circle
+                      className='opacity-25'
+                      cx='12'
+                      cy='12'
+                      r='10'
+                      stroke='currentColor'
+                      strokeWidth='4'
+                    />
+                    <path
+                      className='opacity-75'
+                      fill='currentColor'
+                      d='M4 12a8 8 0 018-8v8z'
+                    />
+                  </svg>
+                  <span className='text-xs md:text-sm hidden md:block'>
+                    Generating...
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Stars className='w-4 h-4' />
+                  <span className='text-xs md:text-sm hidden md:block'>
+                    Auto-Generate
+                  </span>
+                </>
+              )}
             </button>
             <button
               onClick={() => setShowAssertionUI(true)}

@@ -14,10 +14,9 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowLeft,
-  Shield,
 } from 'lucide-react';
 import { resetPasswordApi } from '@/services/auth.service';
-import LogoFull from '../assests/images/OptraLogo.png';
+import LogoFull from '../assests/images/OptraLogo.webp';
 
 const ResetPassword: React.FC = () => {
   const [location, setLocation] = useLocation();
@@ -147,7 +146,7 @@ const ResetPassword: React.FC = () => {
 
   const handlePasswordChange = (
     field: 'newPassword' | 'confirmPassword',
-    value: string
+    value: string,
   ) => {
     setPasswords((prev) => ({
       ...prev,
@@ -172,7 +171,7 @@ const ResetPassword: React.FC = () => {
   };
 
   const togglePasswordVisibility = (
-    field: 'newPassword' | 'confirmPassword'
+    field: 'newPassword' | 'confirmPassword',
   ) => {
     setShowPasswords((prev) => ({
       ...prev,
@@ -317,39 +316,43 @@ const ResetPassword: React.FC = () => {
               </h4>
               <div className='space-y-1 text-xs'>
                 <div
-                  className={`flex items-center space-x-2 ${passwords.newPassword.length >= 6
-                    ? 'text-green-600'
-                    : 'text-muted-foreground'
-                    }`}
+                  className={`flex items-center space-x-2 ${
+                    passwords.newPassword.length >= 6
+                      ? 'text-green-600'
+                      : 'text-muted-foreground'
+                  }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>At least 6 characters</span>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 ${/(?=.*[a-z])(?=.*[A-Z])/.test(passwords.newPassword)
-                    ? 'text-green-600'
-                    : 'text-muted-foreground'
-                    }`}
+                  className={`flex items-center space-x-2 ${
+                    /(?=.*[a-z])(?=.*[A-Z])/.test(passwords.newPassword)
+                      ? 'text-green-600'
+                      : 'text-muted-foreground'
+                  }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>Both uppercase and lowercase letters</span>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 ${/(?=.*\d)/.test(passwords.newPassword)
-                    ? 'text-green-600'
-                    : 'text-muted-foreground'
-                    }`}
+                  className={`flex items-center space-x-2 ${
+                    /(?=.*\d)/.test(passwords.newPassword)
+                      ? 'text-green-600'
+                      : 'text-muted-foreground'
+                  }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>At least one number</span>
                 </div>
                 <div
-                  className={`flex items-center space-x-2 ${passwords.newPassword &&
+                  className={`flex items-center space-x-2 ${
+                    passwords.newPassword &&
                     passwords.confirmPassword &&
                     passwords.newPassword === passwords.confirmPassword
-                    ? 'text-green-600'
-                    : 'text-muted-foreground'
-                    }`}
+                      ? 'text-green-600'
+                      : 'text-muted-foreground'
+                  }`}
                 >
                   <CheckCircle className='w-3 h-3' />
                   <span>Passwords match</span>

@@ -7,12 +7,12 @@ import {
   StepForward,
 } from 'lucide-react';
 
-import RadipTest from '../../assests/images/QuickTest.gif';
-import Security from '../../assests/images/securityScan.gif';
+import RadipTest from '../../assests/images/QuickTest.webp';
+import Security from '../../assests/images/securityScan.webp';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import CICD from '../../assests/images/CICD.gif';
-import Integration from '../../assests/images/IntegrationTesting.gif';
+import CICD from '../../assests/images/CICD.webp';
+import Integration from '../../assests/images/IntegrationTesting.webp';
 
 const features = [
   {
