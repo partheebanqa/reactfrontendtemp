@@ -1718,73 +1718,176 @@ export function RequestChainEditor({
   };
 
   // AI SUGGEST SECURITY PATCH: Encrypt entire request chain before saving
-  const saveChainSecurely = async (chainData: RequestChain) => {
-    try {
-      // Save encrypted to encrypted as backup
-      const encryptedBackup = secureStorage.saveEncrypted(
-        `chain_backup_${chainData.id}`,
-        {
-          ...chainData,
-          requests: formData.chainRequests,
-        },
-      );
-
-      if (!encryptedBackup) {
-        console.warn('[Security] Failed to create encrypted backup');
-      }
-
-      // Save to backend (HTTPS encrypts in transit)
-      const result = await (chainData.id
-        ? updateRequestChain(chainData.id, chainData)
-        : saveRequestChain(chainData));
-
+  const saveChainToAPI = async (): Promise<RequestChain | null> => {
+    if (!formData.name?.trim()) {
       toast({
-        title: 'Chain Saved Securely',
-        description: 'All credentials encrypted and saved',
-      });
-
-      return result;
-    } catch (e) {
-      console.error('[Security] Failed to save chain securely:', e);
-      toast({
-        title: 'Save Failed',
-        description: 'Could not encrypt and save chain',
+        title: 'Validation Error',
+        description: 'Chain name is required',
         variant: 'destructive',
       });
-      throw e;
+      return null;
+    }
+
+    try {
+      setIsSaving(true);
+      const originalRequestIds = new Set(
+        chain?.chainRequests?.map((r) => r.id) || [],
+      );
+
+      const allStoredAssertions: Record<string, any[]> = {};
+      try {
+        const raw = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+        if (raw && typeof raw === 'object') {
+          Object.keys(raw).forEach((requestId) => {
+            if (
+              raw[requestId]?.assertions &&
+              Array.isArray(raw[requestId].assertions)
+            ) {
+              allStoredAssertions[requestId] = raw[requestId].assertions;
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Failed to read stored assertions:', e);
+      }
+
+      const chainDataForBackend = {
+        ...formData,
+        chainRequests: formData.chainRequests?.map((request, index) => {
+          const token = request.authToken?.trim() || '';
+          const authorization: any = {};
+          let authorizationType = request.authorizationType || 'none';
+
+          if (token) {
+            authorization.token = token;
+            authorizationType = 'bearer';
+          } else {
+            authorizationType = 'none';
+          }
+
+          const isExistingRequest =
+            request.id && originalRequestIds.has(request.id);
+
+          let requestAssertions: any[] = [];
+
+          if (
+            assertionsByRequest[request.id] &&
+            assertionsByRequest[request.id].length > 0
+          ) {
+            requestAssertions = assertionsByRequest[request.id];
+          } else if (
+            allStoredAssertions[request.id] &&
+            allStoredAssertions[request.id].length > 0
+          ) {
+            requestAssertions = allStoredAssertions[request.id];
+          }
+
+          const allAssertions = requestAssertions
+            .filter((a) => a.enabled !== false)
+            .map((assertion) => ({
+              ...assertion,
+              enabled: true,
+            }));
+
+          if (isExistingRequest) {
+            return {
+              ...request,
+              order: index + 1,
+              authorizationType,
+              authorization,
+              assertions: allAssertions,
+              variables: request.variables || [],
+              tags: tags ?? [],
+              headers:
+                request.headers?.map((h) =>
+                  h.id && !h.id.startsWith('temp_')
+                    ? h
+                    : { ...h, id: undefined },
+                ) || [],
+              params:
+                request.params?.map((p) =>
+                  p.id && !p.id.startsWith('temp_')
+                    ? p
+                    : { ...p, id: undefined },
+                ) || [],
+            };
+          } else {
+            return {
+              ...request,
+              id: undefined,
+              order: index + 1,
+              authorizationType,
+              authorization,
+              assertions: allAssertions,
+              variables: request.variables || [],
+              headers:
+                request.headers?.map((h) => ({ ...h, id: undefined })) || [],
+              params:
+                request.params?.map((p) => ({ ...p, id: undefined })) || [],
+            };
+          }
+        }),
+      };
+
+      const transformedRequests = chainDataForBackend.chainRequests.map(
+        transformRequestForSave,
+      );
+
+      const chainData: RequestChain = {
+        id: requestChainId || chain?.id || '',
+        workspaceId: formData.workspaceId || currentWorkspace?.id || '',
+        name: formData.name,
+        description: formData.description || '',
+        environmentId: selectedEnvironment,
+        chainRequests: transformedRequests,
+        variables: formData.variables || [],
+        enabled: formData.enabled ?? true,
+        createdAt: chain?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        lastExecuted: chain?.lastExecuted,
+        executionCount: chain?.executionCount || 0,
+        successRate: chain?.successRate || 0,
+        tags: tags ?? ['untagged', 'new'],
+      };
+
+      const savedChain =
+        chainData.id === ''
+          ? await saveRequestChain(chainData)
+          : await updateRequestChain(chainData, chainData.id);
+
+      setFormData((prev) => ({ ...prev, id: savedChain.id }));
+
+      toast({
+        title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
+        description:
+          chainData.id === ''
+            ? 'Your request chain has been saved successfully with assertions.'
+            : 'Your request chain has been updated successfully with assertions.',
+      });
+
+      return savedChain;
+    } catch (error) {
+      console.error('Failed to save chain:', error);
+      toast({
+        title: chain?.id ? 'Update Failed' : 'Save Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : `Failed to ${chain?.id ? 'update' : 'save'} request chain`,
+        variant: 'destructive',
+      });
+      return null;
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleSaveClick = async () => {
-    try {
-      // Validation
-      if (!formData.name?.trim()) {
-        toast({
-          title: 'Validation Error',
-          description: 'Please enter a chain name',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const chainData: RequestChain = {
-        ...chain,
-        name: formData.name,
-        description: formData.description || '',
-        chainRequests: formData.chainRequests || [],
-        workspaceId: currentWorkspace?.id || '',
-        tags: tags || [],
-      };
-
-      // SECURITY: Use encrypted save
-      const result = await saveChainSecurely(chainData);
-
-      if (result) {
-        onSave(result);
-      }
-    } catch (error) {
-      console.error('Error saving chain:', error);
+  const handleSave = async () => {
+    const saved = await saveChainToAPI();
+    if (saved) {
+      onSave(saved);
     }
+    return saved;
   };
 
   const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
@@ -3492,7 +3595,7 @@ export function RequestChainEditor({
                   setIsExecuting(executing);
                   setCurrentRequestIndex(requestIndex);
                 }}
-                onPreExecute={saveChainSecurely}
+                onPreExecute={saveChainToAPI}
                 chainName={formData?.name}
                 chainId={chain?.id}
                 isRunAllExecuting={isExecuting}
