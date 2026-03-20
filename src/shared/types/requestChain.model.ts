@@ -146,6 +146,7 @@ export interface ExecutionLog {
   startTime: string;
   endTime?: string;
   duration?: number;
+
   request: {
     method: string;
     url: string;
@@ -156,6 +157,7 @@ export interface ExecutionLog {
     status: number;
     headers: Record<string, string>;
     body: string;
+    responseTime?: number;
     size: number;
     cookies?: Record<string, string>;
     assertions?: any[];

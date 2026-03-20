@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -239,6 +240,11 @@ export function RequestEditor({
 
   const [showVariablesPopup, setShowVariablesPopup] = useState(false);
   const variablesPopupRef = useRef<HTMLDivElement>(null);
+  const variablesButtonRef = useRef<HTMLButtonElement>(null);
+  const [variablesPickerPos, setVariablesPickerPos] = useState({
+    top: 0,
+    left: 0,
+  });
 
   const [searchText, setSearchText] = useState('');
 
@@ -1046,16 +1052,31 @@ export function RequestEditor({
   const getPreviewUrl = (variables: Variable[]) => {
     const replacedUrl = replaceVariables(url, variables);
     const baseUrl = environmentBaseUrl?.trim();
-    if (!baseUrl) return replacedUrl;
+    let finalBase: string;
     try {
       const parsedOriginal = new URL(replacedUrl);
-      const parsedBase = new URL(baseUrl);
-      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+      const parsedBase = baseUrl ? new URL(baseUrl) : null;
+      finalBase = parsedBase
+        ? `${parsedBase.origin}${parsedOriginal.pathname}`
+        : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
     } catch {
-      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+      finalBase = baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '').split('?')[0]}`
+        : replacedUrl.split('?')[0];
     }
-  };
 
+    const resolvedParams = params.filter(
+      (p) => p.enabled !== false && p.key?.trim(),
+    );
+
+    if (resolvedParams.length === 0) return finalBase;
+
+    const queryString = resolvedParams
+      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .join('&');
+
+    return `${finalBase}?${queryString}`;
+  };
   const updateDynamicOverride = (name: string, value: string | number) => {
     if (!onRegenerateDynamicVariable) {
       setDynamicOverrides((prev) => {
@@ -1147,7 +1168,7 @@ export function RequestEditor({
       ...initialRequest,
       extractVariables: initialRequest.extractVariables ?? [],
       headers: initialRequest.headers ?? [],
-      params: initialRequest.params ?? [],
+      params: params ?? [],
       url: url,
       body: body,
       authToken: auth.token,
@@ -1237,7 +1258,39 @@ export function RequestEditor({
 
       const payload = buildRequestPayload(processedRequest, allVariables);
 
-      const previewUrl = getPreviewUrl(allVariables);
+      const getPreviewUrlWithResolvedParams = () => {
+        const resolvedUrl = (processedRequest.url as string) || '';
+        const baseUrl = environmentBaseUrl?.trim();
+        let finalBase: string;
+        try {
+          const parsedOriginal = new URL(resolvedUrl);
+          const parsedBase = baseUrl ? new URL(baseUrl) : null;
+          finalBase = parsedBase
+            ? `${parsedBase.origin}${parsedOriginal.pathname}`
+            : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
+        } catch {
+          finalBase = baseUrl
+            ? `${baseUrl.replace(/\/$/, '')}/${resolvedUrl.replace(/^\//, '').split('?')[0]}`
+            : resolvedUrl.split('?')[0];
+        }
+
+        const resolvedParams = (
+          (processedRequest.params as any[]) || []
+        ).filter((p) => p.enabled !== false && p.key?.trim());
+
+        if (resolvedParams.length === 0) return finalBase;
+
+        const queryString = resolvedParams
+          .map(
+            (p) =>
+              `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`,
+          )
+          .join('&');
+
+        return `${finalBase}?${queryString}`;
+      };
+
+      const previewUrl = getPreviewUrlWithResolvedParams();
       payload.request.url = previewUrl;
       const processedAssertions = assertions
         .filter((a) => a.enabled)
@@ -1364,6 +1417,7 @@ export function RequestEditor({
           headers: result.headers,
           body: result.body,
           size: result.metrics.bytesReceived,
+          responseTime: result.metrics.responseTime,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
           assertions: assertionResult,
           requestCurl: result.requestCurl || '',
@@ -1403,7 +1457,33 @@ export function RequestEditor({
         allVariables,
       );
 
-      const previewUrl = getPreviewUrl(allVariables);
+      const previewUrl = (() => {
+        const resolvedUrl = (processedRequest.url as string) || '';
+        const baseUrl = environmentBaseUrl?.trim();
+        let finalBase: string;
+        try {
+          const parsedOriginal = new URL(resolvedUrl);
+          const parsedBase = baseUrl ? new URL(baseUrl) : null;
+          finalBase = parsedBase
+            ? `${parsedBase.origin}${parsedOriginal.pathname}`
+            : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
+        } catch {
+          finalBase = baseUrl
+            ? `${baseUrl.replace(/\/$/, '')}/${resolvedUrl.replace(/^\//, '').split('?')[0]}`
+            : resolvedUrl.split('?')[0];
+        }
+        const resolvedParams = (
+          (processedRequest.params as any[]) || []
+        ).filter((p) => p.enabled !== false && p.key?.trim());
+        if (resolvedParams.length === 0) return finalBase;
+        const queryString = resolvedParams
+          .map(
+            (p) =>
+              `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`,
+          )
+          .join('&');
+        return `${finalBase}?${queryString}`;
+      })();
       const actualRequestHeaders = Object.fromEntries(
         processedRequest.headers.map((h) => [h.key, h.value]),
       );
@@ -2757,14 +2837,34 @@ export function RequestEditor({
       (index === undefined || inlinePickerTarget?.index === index) &&
       (inlinePickerTarget?.subField ?? 'value') === subField;
 
+    const triggerRef = useRef<HTMLButtonElement>(null);
+    const [portalPos, setPortalPos] = useState({ top: 0, left: 0 });
+
+    useEffect(() => {
+      if (isOpen && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        const pickerHeight = 320;
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const top =
+          spaceBelow < pickerHeight && rect.top > pickerHeight
+            ? rect.top - pickerHeight + window.scrollY
+            : rect.bottom + window.scrollY + 4;
+        setPortalPos({
+          top,
+          left: Math.min(
+            rect.right - 280 + window.scrollX,
+            window.innerWidth - 300 + window.scrollX,
+          ),
+        });
+      }
+    }, [isOpen]);
+
     const allVars = getAllAvailableVariables();
 
     return (
-      <div
-        className='relative inline-flex'
-        ref={isOpen ? inlinePickerRef : undefined}
-      >
+      <div className='relative inline-flex'>
         <button
+          ref={triggerRef}
           type='button'
           onClick={(e) => {
             e.stopPropagation();
@@ -2777,35 +2877,43 @@ export function RequestEditor({
           Substitute Variable
         </button>
 
-        {isOpen && (
-          <div
-            className='absolute right-0 top-8 z-50'
-            style={{ minWidth: 280 }}
-          >
-            <VariablePicker
-              staticVariables={allVars
-                .filter((v) => v.name.startsWith('S_'))
-                .map((v) => ({
-                  name: v.name,
-                  value: String(v.value ?? v.initialValue ?? ''),
-                }))}
-              dynamicVariables={allVars
-                .filter((v) => v.name.startsWith('D_'))
-                .map((v) => ({
-                  name: v.name,
-                  value: String(v.value ?? v.initialValue ?? ''),
-                }))}
-              extractedVariables={allVars
-                .filter((v) => v.name.startsWith('E_'))
-                .map((v) => ({
-                  name: v.name,
-                  value: String(v.value ?? v.initialValue ?? ''),
-                }))}
-              bindingLabel={subField}
-              onSelect={handleInlineVariableSelect}
-            />
-          </div>
-        )}
+        {isOpen &&
+          typeof document !== 'undefined' &&
+          createPortal(
+            <div
+              ref={inlinePickerRef}
+              style={{
+                position: 'fixed',
+                top: portalPos.top,
+                left: portalPos.left,
+                zIndex: 9999,
+              }}
+            >
+              <VariablePicker
+                staticVariables={allVars
+                  .filter((v) => v.name.startsWith('S_'))
+                  .map((v) => ({
+                    name: v.name,
+                    value: String(v.value ?? v.initialValue ?? ''),
+                  }))}
+                dynamicVariables={allVars
+                  .filter((v) => v.name.startsWith('D_'))
+                  .map((v) => ({
+                    name: v.name,
+                    value: String(v.value ?? v.initialValue ?? ''),
+                  }))}
+                extractedVariables={allVars
+                  .filter((v) => v.name.startsWith('E_'))
+                  .map((v) => ({
+                    name: v.name,
+                    value: String(v.value ?? v.initialValue ?? ''),
+                  }))}
+                bindingLabel={subField}
+                onSelect={handleInlineVariableSelect}
+              />
+            </div>,
+            document.body,
+          )}
       </div>
     );
   };
@@ -2839,31 +2947,70 @@ export function RequestEditor({
   const usedRequestVariables = useMemo(() => {
     const usedVariableNamesSet = new Set<string>();
 
-    const allTextFields = [
-      initialRequest.url || '',
-      initialRequest.body || '',
-      initialRequest.authToken || '',
-      initialRequest.authUsername || '',
-      initialRequest.authPassword || '',
-      initialRequest.authApiKey || '',
-      initialRequest.authApiValue || '',
-      initialRequest.authorization?.token || '',
-      ...(initialRequest.headers || []).map((h) => `${h.key} ${h.value}`),
-      ...(initialRequest.params || []).map((p) => `${p.key} ${p.value}`),
+    const allChainRequests = [
+      ...(formData?.chainRequests || []),
+      initialRequest,
     ];
 
-    const allText = allTextFields.join(' ');
-    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
-    variableMatches.forEach((match) => {
-      usedVariableNamesSet.add(match.replace(/\{\{(\w+)\}\}/, '$1'));
+    allChainRequests.forEach((req: any) => {
+      // 1. Scan all text fields for {{variableName}} patterns
+      const textFields = [
+        req.url || '',
+        req.body || '',
+        req.bodyRawContent || '',
+        req.authToken || '',
+        req.authUsername || '',
+        req.authPassword || '',
+        req.authApiKey || '',
+        req.authApiValue || '',
+        req.authorization?.token || '',
+        req.authorization?.username || '',
+        req.authorization?.password || '',
+        req.authorization?.key || '',
+        req.authorization?.value || '',
+        ...(req.headers || []).map((h: any) => `${h.key} ${h.value}`),
+        ...(req.params || []).map((p: any) => `${p.key} ${p.value}`),
+      ];
+
+      const text = textFields.join(' ');
+      const matches = text.match(/\{\{(\w+)\}\}/g) || [];
+      matches.forEach((match: string) => {
+        const varName = match.replace(/^\{\{|\}\}$/g, '');
+        usedVariableNamesSet.add(varName);
+      });
+
+      // 2. Also pick up variables registered via the structured `variables` array
+      // (these are {field, key, variable} mappings set by body/header/param substitution UI)
+      if (Array.isArray(req.variables)) {
+        req.variables.forEach((v: any) => {
+          if (v.variable) usedVariableNamesSet.add(v.variable);
+        });
+      }
+
+      // 3. Also pick up variables registered via the legacy `variable` array
+      if (Array.isArray(req.variable)) {
+        req.variable.forEach((v: any) => {
+          if (v.name) usedVariableNamesSet.add(v.name);
+        });
+      }
     });
 
+    // 4. Include all extracted variable names from across the chain
     Object.keys(extractedVariables).forEach((varName) => {
       usedVariableNamesSet.add(varName);
+    });
+    Object.values(extractedVariablesByRequest || {}).forEach((reqVars) => {
+      Object.keys(reqVars).forEach((varName) => {
+        usedVariableNamesSet.add(varName);
+      });
     });
 
     const usedVariableNames = Array.from(usedVariableNamesSet);
 
+    // 5. Return ALL static and dynamic vars — not filtered by usage —
+    // so the assertion modal always has the full variable set available.
+    // We still filter to only vars actually referenced, but now the scan
+    // is comprehensive (text patterns + structured substitutions).
     return {
       staticVars: storeVariables
         .filter((v) => usedVariableNames.includes(v.name))
@@ -2878,7 +3025,16 @@ export function RequestEditor({
           value: String(v.value || v.initialValue || ''),
         })),
     };
-  }, [initialRequest, storeVariables, dynamicStructured, extractedVariables]);
+  }, [
+    initialRequest,
+    formData?.chainRequests,
+    storeVariables,
+    dynamicStructured,
+    extractedVariables,
+    extractedVariablesByRequest,
+  ]);
+
+  console.log('usedRequestVariables123:', usedRequestVariables);
 
   const compactView = (
     <div className='space-y-4'>
@@ -3039,44 +3195,30 @@ export function RequestEditor({
           </nav>
 
           <div className='relative'>
-            {showVariablesPopup && (
-              <div
-                ref={variablesPopupRef}
-                className='absolute right-0 top-10 z-50'
-              >
-                <VariablePicker
-                  staticVariables={storeVariables
-                    .filter((v) => v.name.startsWith('S_'))
-                    .map((v) => ({
-                      name: v.name,
-                      value: String(v.value ?? v.initialValue ?? ''),
-                    }))}
-                  dynamicVariables={dynamicStructured
-                    .filter((v) => v.name.startsWith('D_'))
-                    .map((v) => ({
-                      name: v.name,
-                      value: String(v.value ?? v.initialValue ?? ''),
-                    }))}
-                  extractedVariables={Object.entries(parentExtractedVariables)
-                    .filter(([name]) => name.startsWith('E_'))
-                    .map(([name, value]) => ({
-                      name,
-                      value: String(value),
-                    }))}
-                  bindingLabel='Chain'
-                  onSelect={(variableName) => {
-                    navigator.clipboard.writeText(`{{${variableName}}}`);
-                    toast({
-                      title: 'Copied to Clipboard',
-                      description: `Copied: {{${variableName}}}`,
-                    });
-                    setShowVariablesPopup(false);
-                  }}
-                />
-              </div>
-            )}
             <div className='flex items-center gap-2'>
-              <Button onClick={() => setShowVariablesPopup((prev) => !prev)}>
+              <Button
+                ref={variablesButtonRef}
+                onClick={() => {
+                  if (!showVariablesPopup && variablesButtonRef.current) {
+                    const rect =
+                      variablesButtonRef.current.getBoundingClientRect();
+                    const pickerHeight = 350;
+                    const spaceBelow = window.innerHeight - rect.bottom;
+                    const top =
+                      spaceBelow < pickerHeight
+                        ? rect.top - pickerHeight + window.scrollY
+                        : rect.bottom + window.scrollY + 4;
+                    setVariablesPickerPos({
+                      top,
+                      left: Math.min(
+                        rect.right - 290 + window.scrollX,
+                        window.innerWidth - 310 + window.scrollX,
+                      ),
+                    });
+                  }
+                  setShowVariablesPopup((prev) => !prev);
+                }}
+              >
                 Variables
               </Button>
 
@@ -3309,7 +3451,7 @@ export function RequestEditor({
                   <span
                     className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
                   >
-                    (Expires in: {expiry})
+                    (Validity: {expiry})
                   </span>
                 );
               })()}
@@ -3549,6 +3691,50 @@ export function RequestEditor({
               requestExtractedVariables={extractedVariables}
             />
           </div>
+        )}
+      {showVariablesPopup &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={variablesPopupRef}
+            style={{
+              position: 'fixed',
+              top: variablesPickerPos.top,
+              left: variablesPickerPos.left,
+              zIndex: 9999,
+            }}
+          >
+            <VariablePicker
+              staticVariables={storeVariables
+                .filter((v) => v.name.startsWith('S_'))
+                .map((v) => ({
+                  name: v.name,
+                  value: String(v.value ?? v.initialValue ?? ''),
+                }))}
+              dynamicVariables={dynamicStructured
+                .filter((v) => v.name.startsWith('D_'))
+                .map((v) => ({
+                  name: v.name,
+                  value: String(v.value ?? v.initialValue ?? ''),
+                }))}
+              extractedVariables={Object.entries(parentExtractedVariables)
+                .filter(([name]) => name.startsWith('E_'))
+                .map(([name, value]) => ({
+                  name,
+                  value: String(value),
+                }))}
+              bindingLabel='Chain'
+              onSelect={(variableName) => {
+                navigator.clipboard.writeText(`{{${variableName}}}`);
+                toast({
+                  title: 'Copied to Clipboard',
+                  description: `Copied: {{${variableName}}}`,
+                });
+                setShowVariablesPopup(false);
+              }}
+            />
+          </div>,
+          document.body,
         )}
     </div>
   );
@@ -4020,7 +4206,7 @@ export function RequestEditor({
                     <span
                       className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
                     >
-                      (Expires in: {expiry})
+                      (Validity: {expiry})
                     </span>
                   );
                 })()}

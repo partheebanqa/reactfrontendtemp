@@ -29,6 +29,31 @@ class SecureStorage {
   }
 
   /**
+   * Check if a value IS a credential that should be stored as-is.
+   * The value itself tells us — not the key name.
+   */
+  private isCredentialValue(value: string): boolean {
+    if (!value || typeof value !== 'string') return false;
+
+    // Variable placeholder like {{E_token}} — preserve as-is
+    if (/^\{\{[\w]+\}\}$/.test(value)) return true;
+
+    // Raw JWT token (3 base64url segments separated by dots)
+    if (/^eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(value))
+      return true;
+
+    // Bearer + JWT
+    if (
+      /^Bearer\s+eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/.test(
+        value,
+      )
+    )
+      return true;
+
+    return false;
+  }
+
+  /**
    * Sanitize sensitive values before storage
    */
   private sanitizeValue(value: any): any {
@@ -92,17 +117,16 @@ class SecureStorage {
         const value = obj[key];
 
         if (typeof value === 'string') {
-          // If it looks like a JSON string, parse and recursively sanitize
-          if (value.startsWith('{') || value.startsWith('[')) {
+          if (this.isCredentialValue(value)) {
+            sanitizedObj[key] = value;
+          } else if (value.startsWith('{') || value.startsWith('[')) {
             try {
               const parsed = JSON.parse(value);
               sanitizedObj[key] = JSON.stringify(this.sanitizeObject(parsed));
             } catch {
-              // Not valid JSON, sanitize as plain string
               sanitizedObj[key] = this.sanitizeValue(value);
             }
           } else {
-            // Always sanitize every string value regardless of key name
             sanitizedObj[key] = this.sanitizeValue(value);
           }
         } else if (typeof value === 'object') {

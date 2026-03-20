@@ -49,7 +49,7 @@ const AuthTab = React.memo(
                 <span
                   className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
                 >
-                  (Expires in: {expiry})
+                  (Validity: {expiry})
                 </span>
               );
             })()}

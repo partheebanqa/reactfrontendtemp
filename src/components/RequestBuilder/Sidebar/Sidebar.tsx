@@ -84,6 +84,7 @@ import {
 } from '@/lib/request-utils';
 import { CollectionRequestsResponse } from '@/shared/types/request';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { secureStorage } from '@/utils/secure-storage';
 
 interface ISidebar {
   toggleSidebar: () => void;
@@ -735,8 +736,8 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
 
     for (const storageKey of storageKeys) {
       try {
-        const data = JSON.parse(localStorage.getItem(storageKey) || '{}');
-        if (data.value && isBearerToken(data.value)) {
+        const data = secureStorage.loadEncrypted(storageKey);
+        if (data?.value && isBearerToken(data.value)) {
           hasValidToken = true;
           break;
         }
@@ -895,22 +896,19 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
           if (value !== undefined && value !== null) {
             const storageKey = `extracted_var_${collectionId}_${varName}`;
 
-            localStorage.setItem(
-              storageKey,
-              JSON.stringify({
-                name: varName,
-                value: String(value),
-                timestamp: Date.now(),
-                collectionId: collectionId,
-                source: 'response_body',
-                requestName: preRequest.name || '',
-                requestId: preRequest.id || '',
-                path:
-                  preRequest.extractVariables.find(
-                    (ev: any) => (ev.variableName || ev.name) === varName,
-                  )?.path || '',
-              }),
-            );
+            secureStorage.saveEncrypted(storageKey, {
+              name: varName,
+              value: String(value),
+              timestamp: Date.now(),
+              collectionId: collectionId,
+              source: 'response_body',
+              requestName: preRequest.name || '',
+              requestId: preRequest.id || '',
+              path:
+                preRequest.extractVariables.find(
+                  (ev: any) => (ev.variableName || ev.name) === varName,
+                )?.path || '',
+            });
 
             collectionActions.setExtractedVariable(
               collectionId,
@@ -959,9 +957,8 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
 
       storageKeys.forEach((key) => {
         try {
-          const data = JSON.parse(localStorage.getItem(key) || '{}');
-
-          if (data.value && data.name) {
+          const data = secureStorage.loadEncrypted(key);
+          if (data?.value && data?.name) {
             collectionActions.setExtractedVariable(
               collection.id,
               data.name,
@@ -970,7 +967,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
           }
         } catch (error) {
           console.error(
-            'Error loading extracted variable from localStorage:',
+            'Error loading extracted variable from secureStorage:',
             error,
           );
         }
@@ -1005,8 +1002,8 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
 
         storageKeys.forEach((key) => {
           try {
-            const data = JSON.parse(localStorage.getItem(key) || '{}');
-            if (data.value && data.name) {
+            const data = secureStorage.loadEncrypted(key);
+            if (data?.value && data?.name) {
               collectionActions.setExtractedVariable(
                 collectionId,
                 data.name,
@@ -1014,7 +1011,10 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
               );
             }
           } catch (error) {
-            console.error('Error restoring variable from localStorage:', error);
+            console.error(
+              'Error restoring variable from secureStorage:',
+              error,
+            );
           }
         });
 
