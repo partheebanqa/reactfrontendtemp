@@ -180,7 +180,7 @@ export function ResponseExplorer({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
 
-  console.log('response111:', response);
+  console.log('dynamicVariables123:', dynamicVariables);
 
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
@@ -1666,8 +1666,12 @@ export function ResponseExplorer({
             });
             return assertions;
           }}
-          variables={variables}
-          dynamicVariables={dynamicVariables}
+          variables={variables?.length ? variables : allStaticVariables || []}
+          dynamicVariables={
+            dynamicVariables?.length
+              ? dynamicVariables
+              : allDynamicVariables || []
+          }
           extractedVariables={getExtractedVariablesForAssertion()}
           onSelect={(assertionType: string, config?: any) => {
             // Handle suggested-multiple — add each assertion INDIVIDUALLY

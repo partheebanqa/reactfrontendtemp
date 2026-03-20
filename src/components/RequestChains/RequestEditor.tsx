@@ -2947,31 +2947,70 @@ export function RequestEditor({
   const usedRequestVariables = useMemo(() => {
     const usedVariableNamesSet = new Set<string>();
 
-    const allTextFields = [
-      initialRequest.url || '',
-      initialRequest.body || '',
-      initialRequest.authToken || '',
-      initialRequest.authUsername || '',
-      initialRequest.authPassword || '',
-      initialRequest.authApiKey || '',
-      initialRequest.authApiValue || '',
-      initialRequest.authorization?.token || '',
-      ...(initialRequest.headers || []).map((h) => `${h.key} ${h.value}`),
-      ...(initialRequest.params || []).map((p) => `${p.key} ${p.value}`),
+    const allChainRequests = [
+      ...(formData?.chainRequests || []),
+      initialRequest,
     ];
 
-    const allText = allTextFields.join(' ');
-    const variableMatches = allText.match(/\{\{(\w+)\}\}/g) || [];
-    variableMatches.forEach((match) => {
-      usedVariableNamesSet.add(match.replace(/\{\{(\w+)\}\}/, '$1'));
+    allChainRequests.forEach((req: any) => {
+      // 1. Scan all text fields for {{variableName}} patterns
+      const textFields = [
+        req.url || '',
+        req.body || '',
+        req.bodyRawContent || '',
+        req.authToken || '',
+        req.authUsername || '',
+        req.authPassword || '',
+        req.authApiKey || '',
+        req.authApiValue || '',
+        req.authorization?.token || '',
+        req.authorization?.username || '',
+        req.authorization?.password || '',
+        req.authorization?.key || '',
+        req.authorization?.value || '',
+        ...(req.headers || []).map((h: any) => `${h.key} ${h.value}`),
+        ...(req.params || []).map((p: any) => `${p.key} ${p.value}`),
+      ];
+
+      const text = textFields.join(' ');
+      const matches = text.match(/\{\{(\w+)\}\}/g) || [];
+      matches.forEach((match: string) => {
+        const varName = match.replace(/^\{\{|\}\}$/g, '');
+        usedVariableNamesSet.add(varName);
+      });
+
+      // 2. Also pick up variables registered via the structured `variables` array
+      // (these are {field, key, variable} mappings set by body/header/param substitution UI)
+      if (Array.isArray(req.variables)) {
+        req.variables.forEach((v: any) => {
+          if (v.variable) usedVariableNamesSet.add(v.variable);
+        });
+      }
+
+      // 3. Also pick up variables registered via the legacy `variable` array
+      if (Array.isArray(req.variable)) {
+        req.variable.forEach((v: any) => {
+          if (v.name) usedVariableNamesSet.add(v.name);
+        });
+      }
     });
 
+    // 4. Include all extracted variable names from across the chain
     Object.keys(extractedVariables).forEach((varName) => {
       usedVariableNamesSet.add(varName);
+    });
+    Object.values(extractedVariablesByRequest || {}).forEach((reqVars) => {
+      Object.keys(reqVars).forEach((varName) => {
+        usedVariableNamesSet.add(varName);
+      });
     });
 
     const usedVariableNames = Array.from(usedVariableNamesSet);
 
+    // 5. Return ALL static and dynamic vars — not filtered by usage —
+    // so the assertion modal always has the full variable set available.
+    // We still filter to only vars actually referenced, but now the scan
+    // is comprehensive (text patterns + structured substitutions).
     return {
       staticVars: storeVariables
         .filter((v) => usedVariableNames.includes(v.name))
@@ -2986,7 +3025,16 @@ export function RequestEditor({
           value: String(v.value || v.initialValue || ''),
         })),
     };
-  }, [initialRequest, storeVariables, dynamicStructured, extractedVariables]);
+  }, [
+    initialRequest,
+    formData?.chainRequests,
+    storeVariables,
+    dynamicStructured,
+    extractedVariables,
+    extractedVariablesByRequest,
+  ]);
+
+  console.log('usedRequestVariables123:', usedRequestVariables);
 
   const compactView = (
     <div className='space-y-4'>

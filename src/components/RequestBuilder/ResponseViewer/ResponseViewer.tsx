@@ -1330,7 +1330,7 @@ const ResponseViewer = ({
               <Code className='w-4 h-4' />
               <span className='text-xs md:text-sm'>Raw</span>
             </button>
-            <button
+            {/* <button
               onClick={handleAutoGenerateAssertions}
               disabled={!responseData || isGenerating}
               className='flex items-center space-x-2 text-sm font-medium text-purple-600 dark:text-purple-400 hover:text-purple-700 disabled:opacity-50'
@@ -1368,7 +1368,7 @@ const ResponseViewer = ({
                   </span>
                 </>
               )}
-            </button>
+            </button> */}
             <button
               onClick={() => setShowAssertionUI(true)}
               className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200'

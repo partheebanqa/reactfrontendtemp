@@ -135,6 +135,8 @@ export function RequestChainEditor({
     DynamicVariableOverride[]
   >([]);
 
+  console.log('dynamicOverrides123:', dynamicOverrides);
+
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
   >(() => {
@@ -803,17 +805,32 @@ export function RequestChainEditor({
     });
 
     if (applicationsCount === 0) {
+      // Fallback: directly set auth token as variable placeholder
+      const fallbackRequests = formData.chainRequests.map((request, index) => {
+        if (index !== targetRequestIndex) return request;
+        return {
+          ...request,
+          authToken: `{{${variableName}}}`,
+          authorizationType: 'bearer' as const,
+          authorization: {
+            token: `{{${variableName}}}`,
+          },
+          authUsername: '',
+          authPassword: '',
+          authApiKey: '',
+          authApiValue: '',
+          authApiLocation: 'header',
+        };
+      });
+
+      setFormData({ ...formData, chainRequests: [...fallbackRequests] });
+
       toast({
-        title: 'No Changes Made',
-        description: `The value "${extractedValue.substring(
-          0,
-          20,
-        )}..." was not found in request #${targetRequestIndex + 1}`,
-        variant: 'destructive',
+        title: 'Auth Token Applied',
+        description: `{{${variableName}}} set as Bearer Token on request #${targetRequestIndex + 1}`,
       });
       return;
     }
-
     setFormData({ ...formData, chainRequests: [...updatedRequests] });
 
     toast({
@@ -1064,20 +1081,67 @@ export function RequestChainEditor({
       ),
     ];
   };
-
   const usedChainVariables = useMemo(() => {
-    return getUsedVariablesForChain(
-      formData.chainRequests || [],
-      storeVariables,
-      dynamicStructured,
-      extractedVariablesByRequest,
-    );
-  }, [
-    formData.chainRequests,
-    storeVariables,
-    dynamicStructured,
-    extractedVariablesByRequest,
-  ]);
+    const usedVarNames = new Set<string>();
+
+    (formData.chainRequests || []).forEach((req: any) => {
+      // Scan all text fields for {{varName}} patterns
+      const textFields = [
+        req.url || '',
+        req.body || '',
+        req.bodyRawContent || '',
+        req.authToken || '',
+        req.authUsername || '',
+        req.authPassword || '',
+        req.authApiKey || '',
+        req.authApiValue || '',
+        req.authorization?.token || '',
+        req.authorization?.username || '',
+        req.authorization?.password || '',
+        req.authorization?.key || '',
+        req.authorization?.value || '',
+        ...(req.headers || []).map((h: any) => `${h.key} ${h.value}`),
+        ...(req.params || []).map((p: any) => `${p.key} ${p.value}`),
+      ];
+
+      const text = textFields.join(' ');
+      const matches = text.match(/\{\{(\w+)\}\}/g) || [];
+      matches.forEach((match: string) => {
+        usedVarNames.add(match.replace(/^\{\{|\}\}$/g, ''));
+      });
+
+      // Also scan structured variables array {field, key, variable}
+      if (Array.isArray(req.variables)) {
+        req.variables.forEach((v: any) => {
+          if (v.variable) usedVarNames.add(v.variable);
+        });
+      }
+
+      // Also scan legacy variable array {path, name}
+      if (Array.isArray(req.variable)) {
+        req.variable.forEach((v: any) => {
+          if (v.name) usedVarNames.add(v.name);
+        });
+      }
+    });
+
+    const usedNames = Array.from(usedVarNames);
+
+    return {
+      staticVars: storeVariables
+        .filter((v) => usedNames.includes(v.name))
+        .map((v) => ({
+          name: v.name,
+          value: String(v.value || v.initialValue || ''),
+        })),
+      dynamicVars: dynamicStructured
+        .filter((v) => usedNames.includes(v.name))
+        .map((v) => ({
+          name: v.name,
+          value: String(v.value || v.initialValue || ''),
+        })),
+    };
+  }, [formData.chainRequests, storeVariables, dynamicStructured]);
 
   const executeSingleRequest = async (
     request: APIRequest,
@@ -3289,10 +3353,10 @@ export function RequestChainEditor({
                                                         return varsUpToThisPoint;
                                                       })()}
                                                       allDynamicVariables={
-                                                        dynamicOverrides
+                                                        usedChainVariables.dynamicVars
                                                       }
                                                       allStaticVariables={
-                                                        storeVariables
+                                                        usedChainVariables.staticVars
                                                       }
                                                       allExtractedVariables={
                                                         extractedVariablesArray

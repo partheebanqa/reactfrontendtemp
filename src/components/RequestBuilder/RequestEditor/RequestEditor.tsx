@@ -1862,11 +1862,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                     path: extraction.path,
                   };
 
-                  if (isAuthToken) {
-                    secureStorage.saveEncrypted(storageKey, payload);
-                  } else {
-                    localStorage.setItem(storageKey, JSON.stringify(payload));
-                  }
+                  secureStorage.saveEncrypted(storageKey, payload);
 
                   if (activeRequest?.id) {
                     collectionActions.setExtractedVariableRequest(
@@ -3483,7 +3479,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                     );
                   }
                   if (activeCollection?.id) {
-                    localStorage.removeItem(
+                    secureStorage.removeEncrypted(
                       `extracted_var_${activeCollection.id}_${variableName}`,
                     );
                   }

@@ -1098,6 +1098,9 @@ function FlowView({
             · hover to trace · click pill to remove
           </span>
         </div>
+        <div className='text-xs text-blue-700 p-2.5 rounded-lg border border-blue-200 bg-blue-50 mb-4'>
+          💡 Hover a variable to highlight its data flow across the pipeline
+        </div>
 
         {sortedVars.length > 0 && (
           <div className='xl:hidden mb-3'>
@@ -1123,10 +1126,6 @@ function FlowView({
                     onLeave={() => setActiveVar(null)}
                   />
                 ))}
-                <div className='text-xs text-blue-700 p-2.5 rounded-lg border border-blue-200 bg-blue-50'>
-                  💡 Hover a variable to highlight its data flow across the
-                  pipeline
-                </div>
               </div>
             )}
           </div>
@@ -1185,9 +1184,6 @@ function FlowView({
               onLeave={() => setActiveVar(null)}
             />
           ))}
-        </div>
-        <div className='text-xs text-blue-700 p-2.5 rounded-lg border border-blue-200 bg-blue-50'>
-          💡 Hover a variable to highlight its data flow across the pipeline
         </div>
       </aside>
     </div>
