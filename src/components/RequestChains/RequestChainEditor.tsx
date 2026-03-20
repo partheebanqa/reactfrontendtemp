@@ -919,15 +919,41 @@ export function RequestChainEditor({
   const getPreviewUrl = (request: APIRequest, variables: Variable[]) => {
     const replacedUrl = replaceVariables(request.url, variables);
     const baseUrl = environmentBaseUrl?.trim();
-    if (!baseUrl) return replacedUrl;
+    let finalBase: string;
     try {
       const parsedOriginal = new URL(replacedUrl);
-      const parsedBase = new URL(baseUrl);
-      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+      const parsedBase = baseUrl ? new URL(baseUrl) : null;
+      finalBase = parsedBase
+        ? `${parsedBase.origin}${parsedOriginal.pathname}`
+        : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
     } catch {
-      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+      finalBase = baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '').split('?')[0]}`
+        : replacedUrl.split('?')[0];
     }
+
+    // Use resolved params from processedRequest instead of URL query string
+    const resolvedParams = (request.params || []).filter(
+      (p) => p.enabled !== false && p.key?.trim(),
+    );
+
+    if (resolvedParams.length === 0) return finalBase;
+
+    const queryString = resolvedParams
+      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .join('&');
+
+    return `${finalBase}?${queryString}`;
   };
+  //   if (!baseUrl) return replacedUrl;
+  //   try {
+  //     const parsedOriginal = new URL(replacedUrl);
+  //     const parsedBase = new URL(baseUrl);
+  //     return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+  //   } catch {
+  //     return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+  //   }
+  // };
 
   const getAllVariablesForRequestAtRuntime = (
     requestIndex: number,
@@ -1148,7 +1174,6 @@ export function RequestChainEditor({
     const payload = buildRequestPayload(processedRequest, variables);
     const previewUrl = getPreviewUrl(processedRequest, variables);
     payload.request.url = previewUrl;
-
     const currentAssertions =
       assertionsByRequest[request.id] || requestAssertions || [];
 
@@ -1754,7 +1779,10 @@ export function RequestChainEditor({
       const chainDataForBackend = {
         ...formData,
         chainRequests: formData.chainRequests?.map((request, index) => {
-          const token = request.authToken?.trim() || '';
+          const token =
+            request.authToken?.trim() ||
+            request.authorization?.token?.trim() ||
+            '';
           const authorization: any = {};
           let authorizationType = request.authorizationType || 'none';
 
@@ -1762,7 +1790,7 @@ export function RequestChainEditor({
             authorization.token = token;
             authorizationType = 'bearer';
           } else {
-            authorizationType = 'none';
+            authorizationType = request.authorizationType || 'none';
           }
 
           const isExistingRequest =
@@ -1780,14 +1808,18 @@ export function RequestChainEditor({
             allStoredAssertions[request.id].length > 0
           ) {
             requestAssertions = allStoredAssertions[request.id];
+          } else if (
+            request.assertions &&
+            Array.isArray(request.assertions) &&
+            request.assertions.length > 0
+          ) {
+            requestAssertions = request.assertions;
           }
 
-          const allAssertions = requestAssertions
-            .filter((a) => a.enabled !== false)
-            .map((assertion) => ({
-              ...assertion,
-              enabled: true,
-            }));
+          const allAssertions = requestAssertions.map((assertion) => ({
+            ...assertion,
+            enabled: assertion.enabled ?? true,
+          }));
 
           if (isExistingRequest) {
             return {

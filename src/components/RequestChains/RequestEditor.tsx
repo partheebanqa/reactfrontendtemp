@@ -1046,16 +1046,31 @@ export function RequestEditor({
   const getPreviewUrl = (variables: Variable[]) => {
     const replacedUrl = replaceVariables(url, variables);
     const baseUrl = environmentBaseUrl?.trim();
-    if (!baseUrl) return replacedUrl;
+    let finalBase: string;
     try {
       const parsedOriginal = new URL(replacedUrl);
-      const parsedBase = new URL(baseUrl);
-      return `${parsedBase.origin}${parsedOriginal.pathname}${parsedOriginal.search}${parsedOriginal.hash}`;
+      const parsedBase = baseUrl ? new URL(baseUrl) : null;
+      finalBase = parsedBase
+        ? `${parsedBase.origin}${parsedOriginal.pathname}`
+        : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
     } catch {
-      return `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '')}`;
+      finalBase = baseUrl
+        ? `${baseUrl.replace(/\/$/, '')}/${replacedUrl.replace(/^\//, '').split('?')[0]}`
+        : replacedUrl.split('?')[0];
     }
-  };
 
+    const resolvedParams = params.filter(
+      (p) => p.enabled !== false && p.key?.trim(),
+    );
+
+    if (resolvedParams.length === 0) return finalBase;
+
+    const queryString = resolvedParams
+      .map((p) => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`)
+      .join('&');
+
+    return `${finalBase}?${queryString}`;
+  };
   const updateDynamicOverride = (name: string, value: string | number) => {
     if (!onRegenerateDynamicVariable) {
       setDynamicOverrides((prev) => {
@@ -1147,7 +1162,7 @@ export function RequestEditor({
       ...initialRequest,
       extractVariables: initialRequest.extractVariables ?? [],
       headers: initialRequest.headers ?? [],
-      params: initialRequest.params ?? [],
+      params: params ?? [],
       url: url,
       body: body,
       authToken: auth.token,
@@ -1237,7 +1252,39 @@ export function RequestEditor({
 
       const payload = buildRequestPayload(processedRequest, allVariables);
 
-      const previewUrl = getPreviewUrl(allVariables);
+      const getPreviewUrlWithResolvedParams = () => {
+        const resolvedUrl = (processedRequest.url as string) || '';
+        const baseUrl = environmentBaseUrl?.trim();
+        let finalBase: string;
+        try {
+          const parsedOriginal = new URL(resolvedUrl);
+          const parsedBase = baseUrl ? new URL(baseUrl) : null;
+          finalBase = parsedBase
+            ? `${parsedBase.origin}${parsedOriginal.pathname}`
+            : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
+        } catch {
+          finalBase = baseUrl
+            ? `${baseUrl.replace(/\/$/, '')}/${resolvedUrl.replace(/^\//, '').split('?')[0]}`
+            : resolvedUrl.split('?')[0];
+        }
+
+        const resolvedParams = (
+          (processedRequest.params as any[]) || []
+        ).filter((p) => p.enabled !== false && p.key?.trim());
+
+        if (resolvedParams.length === 0) return finalBase;
+
+        const queryString = resolvedParams
+          .map(
+            (p) =>
+              `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`,
+          )
+          .join('&');
+
+        return `${finalBase}?${queryString}`;
+      };
+
+      const previewUrl = getPreviewUrlWithResolvedParams();
       payload.request.url = previewUrl;
       const processedAssertions = assertions
         .filter((a) => a.enabled)
@@ -1403,7 +1450,33 @@ export function RequestEditor({
         allVariables,
       );
 
-      const previewUrl = getPreviewUrl(allVariables);
+      const previewUrl = (() => {
+        const resolvedUrl = (processedRequest.url as string) || '';
+        const baseUrl = environmentBaseUrl?.trim();
+        let finalBase: string;
+        try {
+          const parsedOriginal = new URL(resolvedUrl);
+          const parsedBase = baseUrl ? new URL(baseUrl) : null;
+          finalBase = parsedBase
+            ? `${parsedBase.origin}${parsedOriginal.pathname}`
+            : `${parsedOriginal.origin}${parsedOriginal.pathname}`;
+        } catch {
+          finalBase = baseUrl
+            ? `${baseUrl.replace(/\/$/, '')}/${resolvedUrl.replace(/^\//, '').split('?')[0]}`
+            : resolvedUrl.split('?')[0];
+        }
+        const resolvedParams = (
+          (processedRequest.params as any[]) || []
+        ).filter((p) => p.enabled !== false && p.key?.trim());
+        if (resolvedParams.length === 0) return finalBase;
+        const queryString = resolvedParams
+          .map(
+            (p) =>
+              `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`,
+          )
+          .join('&');
+        return `${finalBase}?${queryString}`;
+      })();
       const actualRequestHeaders = Object.fromEntries(
         processedRequest.headers.map((h) => [h.key, h.value]),
       );
@@ -2756,7 +2829,6 @@ export function RequestEditor({
       inlinePickerTarget?.field === field &&
       (index === undefined || inlinePickerTarget?.index === index) &&
       (inlinePickerTarget?.subField ?? 'value') === subField;
-
     const allVars = getAllAvailableVariables();
 
     return (
@@ -3309,7 +3381,7 @@ export function RequestEditor({
                   <span
                     className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
                   >
-                    (Expires in: {expiry})
+                    (Validity: {expiry})
                   </span>
                 );
               })()}
@@ -4020,7 +4092,7 @@ export function RequestEditor({
                     <span
                       className={`text-sm font-normal ${isExpired ? 'text-red-500' : 'text-gray-500 dark:text-gray-400'}`}
                     >
-                      (Expires in: {expiry})
+                      (Validity: {expiry})
                     </span>
                   );
                 })()}
