@@ -1331,6 +1331,7 @@ export function RequestChainEditor({
           headers: result.headers,
           body: result.body,
           size: result.metrics.bytesReceived,
+          responseTime: result.metrics.responseTime,
           cookies: parseCookies(result.headers?.['set-cookie'] ?? ''),
           assertions: assertionResult,
           requestCurl: result.requestCurl,

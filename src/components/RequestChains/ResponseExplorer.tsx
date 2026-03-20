@@ -44,6 +44,7 @@ interface ResponseExplorerProps {
     headers: Record<string, string>;
     body: any;
     size?: number;
+    responseTime?: number;
     cookies?: Array<{ name: string; value: string }>;
     assertions?: any[];
     requestId?: string;
@@ -178,6 +179,8 @@ export function ResponseExplorer({
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
+
+  console.log('response111:', response);
 
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
@@ -1340,7 +1343,7 @@ export function ResponseExplorer({
 
           <div className='flex items-center gap-4'>
             <div className='flex items-center gap-2'>
-              <Button
+              {/* <Button
                 onClick={handleAutoGenerateAssertions}
                 disabled={!response || isGenerating}
                 variant='outline'
@@ -1358,7 +1361,7 @@ export function ResponseExplorer({
                     Auto-Generate
                   </>
                 )}
-              </Button>
+              </Button> */}
               <button
                 onClick={() => setShowAssertionUI(true)}
                 className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
@@ -1386,11 +1389,10 @@ export function ResponseExplorer({
                   </span>
                 )} */}
 
-                {response.assertions &&
-                  response.assertions.length > 0 &&
-                  response.assertions[0].responseTime && (
+                {response?.responseTime != null &&
+                  response.responseTime > 0 && (
                     <span className='font-medium'>
-                      {response?.responseTime}ms
+                      {response.responseTime}ms
                     </span>
                   )}
 
