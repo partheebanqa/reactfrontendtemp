@@ -94,7 +94,6 @@ import { useDataManagementStore } from '@/store/dataManagementStore';
 import { generateAssertions } from '@/utils/assertionGenerator';
 import { storageManager } from '@/utils/storage-manager';
 import { secureStorage } from '@/utils/secure-storage';
-import { debounce } from 'lodash';
 import { useDataManagement } from '@/hooks/useDataManagement';
 import { RequestAnalyzer } from './RequestAnalyzer';
 import { AddRequestMenu } from './AddRequestMenu';
@@ -134,8 +133,6 @@ export function RequestChainEditor({
   const [dynamicOverrides, setDynamicOverrides] = useState<
     DynamicVariableOverride[]
   >([]);
-
-  console.log('dynamicOverrides123:', dynamicOverrides);
 
   const [assertionsByRequest, setAssertionsByRequest] = useState<
     Record<string, any[]>
@@ -222,16 +219,7 @@ export function RequestChainEditor({
 
   const [showDynamicEditor, setShowDynamicEditor] = useState(false);
 
-  const [globalVariables, setGlobalVariables] = useState<Variable[]>([
-    {
-      id: '1',
-      name: 'baseUrl',
-      value: 'https://api.example.com',
-      type: 'string',
-    },
-    { id: '2', name: 'apiKey', value: 'your-api-key', type: 'string' },
-    { id: '3', name: 'timeout', value: '5000', type: 'number' },
-  ]);
+  const [globalVariables, setGlobalVariables] = useState<Variable[]>([]);
 
   const initializedRef = useRef(false);
 
@@ -262,6 +250,7 @@ export function RequestChainEditor({
 
   const lastSyncedChainUpdatedAt = useRef<string | undefined>(undefined);
   const lastSyncedRequestIdsRef = useRef<string>('');
+  const skipNextPersistRef = useRef(false);
 
   useEffect(() => {
     if (!chain) return;
@@ -295,62 +284,7 @@ export function RequestChainEditor({
     setTags(chain.tags || []);
   }, [chain?.updatedAt]);
 
-  useEffect(() => {
-    try {
-      const loadedAssertions: Record<string, any[]> = {};
-
-      formData.chainRequests?.forEach((request) => {
-        if (
-          request.assertions &&
-          Array.isArray(request.assertions) &&
-          request.assertions.length > 0
-        ) {
-          loadedAssertions[request.id] = request.assertions;
-        }
-      });
-
-      // const raw = encrypted.getItem('lastExecutionByRequest');
-      const raw = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-
-      if (raw && typeof raw === 'object') {
-        const currentRequestIds = new Set(
-          formData.chainRequests?.map((r) => r.id) || [],
-        );
-
-        Object.entries(raw).forEach(([requestId, log]: [string, any]) => {
-          if (
-            currentRequestIds.has(requestId) &&
-            log.assertions &&
-            Array.isArray(log.assertions) &&
-            log.assertions.length > 0 &&
-            !loadedAssertions[requestId]
-          ) {
-            loadedAssertions[requestId] = log.assertions;
-          }
-        });
-      }
-
-      if (Object.keys(loadedAssertions).length > 0) {
-        setAssertionsByRequest(loadedAssertions);
-      }
-    } catch (e) {
-      console.error('Failed to load persisted assertions:', e);
-    }
-  }, [formData.chainRequests]);
-
-  useEffect(() => {
-    const saveAssertions = async () => {
-      if (Object.keys(assertionsByRequest).length > 0) {
-        await Promise.all(
-          Object.entries(assertionsByRequest).map(([requestId, assertions]) =>
-            persistAssertionsToStorage(requestId, assertions),
-          ),
-        );
-      }
-    };
-    saveAssertions();
-  }, [assertionsByRequest]);
-
+  // P0 Fix: Consolidated assertion loading — runs when request IDs change
   useEffect(() => {
     const currentRequestIds =
       formData.chainRequests
@@ -361,52 +295,85 @@ export function RequestChainEditor({
     if (currentRequestIds === lastSyncedRequestIdsRef.current) return;
     lastSyncedRequestIdsRef.current = currentRequestIds;
 
-    const syncAssertionsFromStorage = async () => {
+    const loadAllAssertions = async () => {
       try {
-        const requestIds = new Set(
-          formData.chainRequests?.map((r) => r.id) || [],
-        );
-
         const loadedAssertions: Record<string, any[]> = {};
 
-        for (const requestId of requestIds) {
-          let assertions = await storageManager.getAssertions(requestId);
-
-          if (!assertions) {
-            const encrypted = secureStorage.loadEncrypted(
-              `assertions_${requestId}`,
-            );
-            if (encrypted) {
-              assertions = encrypted.assertions;
-            }
+        for (const request of formData.chainRequests || []) {
+          // Priority 1: assertions already on the request object
+          if (
+            request.assertions &&
+            Array.isArray(request.assertions) &&
+            request.assertions.length > 0
+          ) {
+            loadedAssertions[request.id] = request.assertions;
+            continue;
           }
 
-          if (assertions && assertions.length > 0) {
-            loadedAssertions[requestId] = assertions;
+          // Priority 2: IndexedDB (primary persistent store)
+          const fromIDB = await storageManager.getAssertions(request.id);
+          if (fromIDB && fromIDB.length > 0) {
+            loadedAssertions[request.id] = fromIDB;
+            continue;
+          }
+
+          // Priority 3: secureStorage fallback (legacy/encrypted localStorage)
+          const fromSecure = secureStorage.loadEncrypted(
+            `assertions_${request.id}`,
+          );
+          if (fromSecure?.assertions?.length > 0) {
+            loadedAssertions[request.id] = fromSecure.assertions;
+            continue;
+          }
+
+          // Priority 4: lastExecutionByRequest map
+          const execMap =
+            secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+          if (
+            execMap[request.id]?.assertions &&
+            Array.isArray(execMap[request.id].assertions) &&
+            execMap[request.id].assertions.length > 0
+          ) {
+            loadedAssertions[request.id] = execMap[request.id].assertions;
           }
         }
 
         if (Object.keys(loadedAssertions).length > 0) {
+          skipNextPersistRef.current = true;
           setAssertionsByRequest((prev) => ({
             ...prev,
             ...loadedAssertions,
           }));
         }
       } catch (e) {
-        console.error('[RequestChainEditor] Failed to sync assertions:', e);
+        console.error('[RequestChainEditor] Failed to load assertions:', e);
       }
     };
 
-    syncAssertionsFromStorage();
+    loadAllAssertions();
+  }, [formData.chainRequests?.map((r) => r.id).join(',')]);
 
-    const debouncedSync = debounce(syncAssertionsFromStorage, 2000);
-    window.addEventListener('storage', debouncedSync);
+  // P0 Fix: Debounced assertion persistence — avoids cascading writes
+  useEffect(() => {
+    if (skipNextPersistRef.current) {
+      skipNextPersistRef.current = false;
+      return;
+    }
 
-    return () => {
-      window.removeEventListener('storage', debouncedSync);
-      debouncedSync.cancel();
-    };
-  }, [formData.chainRequests?.length]);
+    if (Object.keys(assertionsByRequest).length === 0) return;
+
+    const timer = setTimeout(async () => {
+      for (const [requestId, assertions] of Object.entries(
+        assertionsByRequest,
+      )) {
+        if (assertions.length > 0) {
+          await persistAssertionsToStorage(requestId, assertions);
+        }
+      }
+    }, 1000);
+
+    return;
+  }, [assertionsByRequest]);
 
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
@@ -1330,9 +1297,20 @@ export function RequestChainEditor({
         );
 
         if (matchingExisting) {
+          const isUserEdited =
+            matchingExisting.source === 'manual' ||
+            (matchingExisting.enabled &&
+              matchingExisting.expectedValue !== undefined &&
+              matchingExisting.expectedValue !== newAssertion.expectedValue);
+
           return {
             ...newAssertion,
             enabled: matchingExisting.enabled ?? true,
+            ...(isUserEdited && {
+              expectedValue: matchingExisting.expectedValue,
+              source: matchingExisting.source,
+              operator: matchingExisting.operator ?? newAssertion.operator,
+            }),
           };
         } else {
           return {
@@ -1341,7 +1319,6 @@ export function RequestChainEditor({
           };
         }
       });
-
       const customAssertions = existingAssertions.filter(
         (assertion) =>
           !mergedAssertions.some((merged) =>
@@ -1412,13 +1389,6 @@ export function RequestChainEditor({
         };
 
         secureStorage.saveEncrypted('lastExecutionByRequest', map);
-
-        // Verify sanitization worked
-        const verified = secureStorage.loadEncrypted('lastExecutionByRequest');
-        console.log(
-          'map123_verified:',
-          JSON.stringify(verified?.[request.id]?.response?.body),
-        );
       } catch (e) {
         console.error('Failed to persist lastExecutionByRequest:', e);
       }
@@ -1552,19 +1522,16 @@ export function RequestChainEditor({
             requestAssertions = request.assertions;
           } else {
             try {
-              // const raw = encrypted.getItem('lastExecutionByRequest');
-              const raw =
+              // P0 Fix: loadEncrypted already returns parsed object, no JSON.parse needed
+              const map =
                 secureStorage.loadEncrypted('lastExecutionByRequest') || {};
 
-              if (raw) {
-                const map = JSON.parse(raw);
-                if (
-                  map[request.id]?.assertions &&
-                  Array.isArray(map[request.id].assertions) &&
-                  map[request.id].assertions.length > 0
-                ) {
-                  requestAssertions = map[request.id].assertions;
-                }
+              if (
+                map[request.id]?.assertions &&
+                Array.isArray(map[request.id].assertions) &&
+                map[request.id].assertions.length > 0
+              ) {
+                requestAssertions = map[request.id].assertions;
               }
             } catch (e) {
               console.error('Failed to read assertions from encrypted:', e);
@@ -2804,6 +2771,7 @@ export function RequestChainEditor({
     }
   };
 
+  // P0 Fix: Single source of truth — IndexedDB only, no redundant secureStorage write
   const persistAssertionsToStorage = async (
     requestId: string,
     assertions: any[],
@@ -2815,15 +2783,7 @@ export function RequestChainEditor({
         chain?.id,
       );
 
-      if (success) return;
-
-      console.warn('[Storage] IndexedDB failed, using encrypted encrypted');
-      const encrypted = secureStorage.saveEncrypted(`assertions_${requestId}`, {
-        requestId,
-        assertions,
-      });
-
-      if (!encrypted) {
+      if (!success) {
         toast({
           title: 'Storage Warning',
           description:
