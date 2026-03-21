@@ -17,12 +17,12 @@ class SecureStorage {
    * Get or create session encryption key
    */
   private getOrCreateSessionKey(): string {
-    let key = sessionStorage.getItem(this.SESSION_KEY_NAME);
+    let key = localStorage.getItem(this.SESSION_KEY_NAME);
 
     if (!key) {
       // Generate random key for this session
       key = CryptoJS.lib.WordArray.random(32).toString();
-      sessionStorage.setItem(this.SESSION_KEY_NAME, key);
+      localStorage.setItem(this.SESSION_KEY_NAME, key);
     }
 
     return key;
@@ -146,10 +146,10 @@ class SecureStorage {
    */
   saveEncrypted(key: string, data: any): boolean {
     try {
-      const sanitized = this.sanitizeObject(data);
+      // const sanitized = this.sanitizeObject(data);
       const sessionKey = this.getOrCreateSessionKey();
       const encrypted = CryptoJS.AES.encrypt(
-        JSON.stringify(sanitized),
+        JSON.stringify(data),
         sessionKey,
       ).toString();
 
