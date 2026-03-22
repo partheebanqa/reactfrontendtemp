@@ -683,11 +683,32 @@ function AssertionModal({
 
     // GENERAL: stage current input
     if (activeTab === 'general' && generalType && generalValue) {
+      const generalTpl = generalAssertions.find((a) => a.id === generalType);
+      const compLabel =
+        generalComparison === 'less' ? 'less than' : 'more than';
+      const unitSuffix =
+        generalType === 'response_time'
+          ? 'ms'
+          : generalType === 'payload_size'
+            ? 'KB'
+            : '';
+      const richDesc = generalTpl?.hasComparison
+        ? `Response ${generalType === 'response_time' ? 'time' : 'payload size'} should be ${compLabel} ${generalValue}${unitSuffix}`
+        : generalType === 'status_equals'
+          ? `Response status code should be ${generalValue}`
+          : generalType === 'contains_text'
+            ? `Response body should contain the text "${generalValue}"`
+            : generalType === 'contains_static' ||
+                generalType === 'contains_dynamic' ||
+                generalType === 'contains_extracted'
+              ? `Response body should contain variable ${generalValue}`
+              : `${generalTpl?.label ?? generalType} should equal ${generalValue}`;
       const newMap = new Map(selectedGeneralAssertions);
       newMap.set(generalType, {
         value: generalValue,
         comparison: generalComparison,
-      });
+        _richDescription: richDesc,
+      } as any);
       setSelectedGeneralAssertions(newMap);
       setGeneralType('');
       setGeneralValue('');
@@ -702,6 +723,10 @@ function AssertionModal({
       return manualValue && !NO_VALUE_OPERATORS.includes(selectedOperator);
     if (activeTab === 'general') return generalType && generalValue;
     return false;
+  };
+
+  const canSaveAssertion = () => {
+    return hasChanges || canAddAssertion();
   };
 
   // ── handleFinalSave ──
@@ -766,11 +791,32 @@ function AssertionModal({
         }
       }
       if (hasUnsubmittedGeneral) {
+        const generalTpl = generalAssertions.find((a) => a.id === generalType);
+        const compLabel =
+          generalComparison === 'less' ? 'less than' : 'more than';
+        const unitSuffix =
+          generalType === 'response_time'
+            ? 'ms'
+            : generalType === 'payload_size'
+              ? 'KB'
+              : '';
+        const richDesc = generalTpl?.hasComparison
+          ? `Response ${generalType === 'response_time' ? 'time' : 'payload size'} should be ${compLabel} ${generalValue}${unitSuffix}`
+          : generalType === 'status_equals'
+            ? `Response status code should be ${generalValue}`
+            : generalType === 'contains_text'
+              ? `Response body should contain the text "${generalValue}"`
+              : generalType === 'contains_static' ||
+                  generalType === 'contains_dynamic' ||
+                  generalType === 'contains_extracted'
+                ? `Response body should contain variable ${generalValue}`
+                : `${generalTpl?.label ?? generalType} should equal ${generalValue}`;
         const newMap = new Map(selectedGeneralAssertions);
         newMap.set(generalType, {
           value: generalValue,
           comparison: generalComparison,
-        });
+          _richDescription: richDesc,
+        } as any);
         setSelectedGeneralAssertions(newMap);
       }
 
@@ -894,7 +940,7 @@ function AssertionModal({
                 <TooltipTrigger asChild>
                   <button
                     type='button'
-                    onClick={handleCloseWithSave}
+                    onClick={onClose}
                     className='flex-shrink-0 p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#136fb0]'
                     aria-label='Close'
                   >
@@ -1192,7 +1238,7 @@ function AssertionModal({
                   </div>
                 </div>
 
-                {pendingAssertions.length === 0 ? (
+                {/* {pendingAssertions.length === 0 ? (
                   <p className='text-sm text-center text-gray-400 dark:text-gray-500 py-4'>
                     No manual assertions yet — add one above.
                   </p>
@@ -1228,7 +1274,7 @@ function AssertionModal({
                       </div>
                     ))}
                   </div>
-                )}
+                )} */}
               </div>
             )}
 
@@ -1333,6 +1379,12 @@ function AssertionModal({
 
                         <div className='flex flex-col sm:flex-row gap-2'>
                           <div className='relative flex-1 min-w-0'>
+                            {(generalType === 'response_time' ||
+                              generalType === 'payload_size') && (
+                              <span className='absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-gray-400 pointer-events-none z-10'>
+                                {generalType === 'response_time' ? 'ms' : 'KB'}
+                              </span>
+                            )}
                             {generalType === 'contains_static' ? (
                               <select
                                 value={generalValue}
@@ -1382,7 +1434,7 @@ function AssertionModal({
                                   handleAddAssertion()
                                 }
                                 placeholder={`Enter ${tpl.inputLabel}`}
-                                className='w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#136fb0] placeholder-gray-400'
+                                className={`w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#136fb0] placeholder-gray-400 ${generalType === 'response_time' || generalType === 'payload_size' ? 'pr-12' : ''}`}
                                 autoFocus
                               />
                             )}
@@ -1408,87 +1460,6 @@ function AssertionModal({
                       </div>
                     );
                   })()}
-
-                {selectedGeneralAssertions.size === 0 && !generalType ? (
-                  <p className='text-sm text-center text-gray-400 dark:text-gray-500 py-4'>
-                    No general assertions yet — add one above.
-                  </p>
-                ) : (
-                  selectedGeneralAssertions.size > 0 && (
-                    <div className='space-y-2'>
-                      <p className='text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider'>
-                        Active ({selectedGeneralAssertions.size})
-                      </p>
-                      {Array.from(selectedGeneralAssertions.entries()).map(
-                        ([gType, data]) => {
-                          const assertion = generalAssertions.find(
-                            (a) => a.id === gType,
-                          );
-                          if (!assertion) return null;
-                          let displayValue = data.value;
-                          if (assertion.hasComparison) {
-                            displayValue = `${data.comparison === 'less' ? '< ' : '> '}${data.value}${gType === 'response_time' ? 'ms' : gType === 'payload_size' ? 'KB' : ''}`;
-                          }
-                          return (
-                            <div
-                              key={gType}
-                              className='flex items-center justify-between gap-2 border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-white dark:bg-gray-900'
-                            >
-                              <p className='text-sm text-gray-700 dark:text-gray-300 flex-1 min-w-0 leading-snug'>
-                                {assertion.label}:{' '}
-                                <span className='font-medium text-[#136fb0]'>
-                                  {displayValue}
-                                </span>
-                              </p>
-                              <div className='flex gap-1 flex-shrink-0'>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      type='button'
-                                      onClick={() => {
-                                        setGeneralType(gType);
-                                        setGeneralValue(data.value);
-                                        setGeneralComparison(
-                                          data.comparison || 'less',
-                                        );
-                                      }}
-                                      className='p-1.5 text-gray-400 hover:text-[#136fb0] hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors'
-                                    >
-                                      <Pencil className='w-3.5 h-3.5' />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side='top'>
-                                    Edit
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button
-                                      type='button'
-                                      onClick={() => {
-                                        const m = new Map(
-                                          selectedGeneralAssertions,
-                                        );
-                                        m.delete(gType);
-                                        setSelectedGeneralAssertions(m);
-                                      }}
-                                      className='p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors'
-                                    >
-                                      <Trash2 className='w-3.5 h-3.5' />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent side='top'>
-                                    Delete
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                            </div>
-                          );
-                        },
-                      )}
-                    </div>
-                  )
-                )}
               </div>
             )}
 
@@ -1517,8 +1488,9 @@ function AssertionModal({
                           className='flex items-center justify-between p-3 bg-purple-50 border border-purple-200 rounded-lg'
                         >
                           <div className='flex-1 min-w-0'>
-                            <p className='text-sm font-medium text-purple-900 truncate'>
-                              {assertion.label}: {displayValue}
+                            <p className='text-sm font-medium text-purple-900 leading-snug'>
+                              {(data as any)._richDescription ??
+                                `${assertion.label}: ${displayValue}`}
                             </p>
                             <p className='text-xs text-purple-600 mt-0.5'>
                               General assertion
@@ -1560,20 +1532,26 @@ function AssertionModal({
                             : 'Manual assertion'}
                         </p>
                       </div>
-                      <button
-                        onClick={() =>
-                          setPendingAssertions((prev) =>
-                            prev.filter(
-                              (a) =>
-                                (a.id || a._suggestedId) !==
-                                (assertion.id || assertion._suggestedId),
-                            ),
-                          )
-                        }
-                        className={`p-1.5 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 ${assertion._isSuggested ? 'text-blue-600' : 'text-green-600'}`}
-                      >
-                        <Trash2 className='w-4 h-4' />
-                      </button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type='button'
+                            onClick={() =>
+                              setPendingAssertions((prev) =>
+                                prev.filter(
+                                  (a) =>
+                                    (a.id || a._suggestedId) !==
+                                    (assertion.id || assertion._suggestedId),
+                                ),
+                              )
+                            }
+                            className={`p-1.5 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0 ${assertion._isSuggested ? 'text-blue-600' : 'text-green-600'}`}
+                          >
+                            <Trash2 className='w-4 h-4' />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side='top'>Remove</TooltipContent>
+                      </Tooltip>
                     </div>
                   ))}
                 </div>
@@ -1591,41 +1569,33 @@ function AssertionModal({
                     <span className='font-semibold text-gray-700 dark:text-gray-300'>
                       {totalPending}
                     </span>{' '}
-                    staged — saves on close
+                    assertion{totalPending !== 1 ? 's' : ''} active
                   </span>
                 </>
               ) : (
-                <span>No assertions staged yet</span>
+                <span>No assertions selected yet</span>
               )}
             </div>
 
             <div className='flex gap-2'>
               <button
                 type='button'
-                onClick={handleMoveToPostResponseTab}
+                onClick={onClose}
                 className='px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400
-                  bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700
-                  transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#136fb0]'
+    bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700
+    transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#136fb0]'
               >
-                Manage Assertions
+                Cancel
               </button>
-              {activeTab === 'suggested' ? (
-                <button
-                  type='button'
-                  onClick={handleCloseWithSave}
-                  className='px-6 py-2 text-sm font-medium text-white rounded-lg bg-[#136fb0] hover:bg-[#0f5d97] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#136fb0]'
-                >
-                  Add Assertion
-                </button>
-              ) : (
-                <Button
-                  onClick={handleAddAssertion}
-                  disabled={!canAddAssertion()}
-                  className='px-6 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                >
-                  Add Assertion
-                </Button>
-              )}
+              <Button
+                onClick={
+                  canAddAssertion() ? handleAddAssertion : handleCloseWithSave
+                }
+                disabled={!canSaveAssertion()}
+                className='px-6 py-2 text-sm font-medium text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+              >
+                Add Assertion
+              </Button>
             </div>
           </div>
         </div>
