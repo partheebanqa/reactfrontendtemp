@@ -1189,6 +1189,37 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
       } else {
         setResponseData(null);
       }
+
+      if (
+        activeRequest.assertions &&
+        Array.isArray(activeRequest.assertions) &&
+        activeRequest.assertions.length > 0
+      ) {
+        try {
+          const existingAssertions = activeRequest.assertions.map(
+            (assertion: any) => ({
+              id: assertion.id || `temp-${Math.random()}`,
+              category: assertion.category || 'general',
+              type: assertion.type || 'custom',
+              description: assertion.description || 'Custom assertion',
+              field: assertion.field,
+              operator: assertion.operator || 'equals',
+              expectedValue: assertion.expectedValue,
+              enabled:
+                assertion.enabled !== undefined ? assertion.enabled : true,
+              impact: assertion.impact,
+              group: assertion.group || 'custom',
+              priority: assertion.priority,
+            }),
+          );
+          setAssertions(existingAssertions);
+        } catch (error) {
+          console.error('Error loading existing assertions:', error);
+          setAssertions([]);
+        }
+      } else {
+        setAssertions([]);
+      }
     }
   }, [activeRequest?.id]);
 
