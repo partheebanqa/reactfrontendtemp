@@ -982,7 +982,7 @@ function AssertionModal({
             {/* ─── Suggested Tab ─── */}
             {activeTab === 'suggested' && (
               <div className='space-y-2'>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-3 flex items-start gap-1.5'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-start gap-1.5 bg-blue-100 dark:bg-blue-950/30 rounded px-2 py-1'>
                   <Info className='w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#136fb0]' />
                   Toggle assertions on or off. They will be saved when you
                   close.
@@ -1281,12 +1281,11 @@ function AssertionModal({
             {/* ─── General Tab ─── */}
             {activeTab === 'general' && (
               <div className='space-y-4'>
-                <p className='text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1.5'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-start gap-1.5 bg-blue-100 dark:bg-blue-950/30 rounded px-2 py-1'>
                   <Info className='w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#136fb0]' />
                   Global assertions that apply to the entire response, not a
                   specific field.
                 </p>
-
                 {!generalType && (
                   <div className='flex flex-wrap gap-2'>
                     {generalAssertions.map((a) => {
@@ -1496,16 +1495,24 @@ function AssertionModal({
                               General assertion
                             </p>
                           </div>
-                          <button
-                            onClick={() => {
-                              const m = new Map(selectedGeneralAssertions);
-                              m.delete(gType);
-                              setSelectedGeneralAssertions(m);
-                            }}
-                            className='p-1.5 text-purple-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0'
-                          >
-                            <Trash2 className='w-4 h-4' />
-                          </button>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  const m = new Map(selectedGeneralAssertions);
+                                  m.delete(gType);
+                                  setSelectedGeneralAssertions(m);
+                                }}
+                                className='p-1.5 text-purple-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all flex-shrink-0'
+                              >
+                                <Trash2 className='w-4 h-4' />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side='top'>
+                              Remove Assertion
+                            </TooltipContent>
+                          </Tooltip>
                         </div>
                       );
                     },
@@ -1550,7 +1557,9 @@ function AssertionModal({
                             <Trash2 className='w-4 h-4' />
                           </button>
                         </TooltipTrigger>
-                        <TooltipContent side='top'>Remove</TooltipContent>
+                        <TooltipContent side='top'>
+                          Remove Assertion
+                        </TooltipContent>
                       </Tooltip>
                     </div>
                   ))}
@@ -1569,7 +1578,7 @@ function AssertionModal({
                     <span className='font-semibold text-gray-700 dark:text-gray-300'>
                       {totalPending}
                     </span>{' '}
-                    assertion{totalPending !== 1 ? 's' : ''} active
+                    assertion{totalPending !== 1 ? 's' : ''} Selected
                   </span>
                 </>
               ) : (
