@@ -12,7 +12,7 @@ import {
 import { FetchEnvironmentsResponse } from '@/shared/types/datamanagement';
 
 export const fetchEnvironments = async (
-  workspaceId: string
+  workspaceId: string,
 ): Promise<FetchEnvironmentsResponse> => {
   const response = await apiRequest(
     'GET',
@@ -21,7 +21,7 @@ export const fetchEnvironments = async (
       headers: {
         'X-Workspace-ID': workspaceId,
       },
-    }
+    },
   );
   if (!response.ok) {
     throw new Error('Failed to fetch environments');
@@ -31,11 +31,14 @@ export const fetchEnvironments = async (
 };
 
 export const fetchVariables = async (
-  workspaceId: string
+  workspaceId: string,
 ): Promise<FetchVariablesResponse> => {
+  const page = 1;
+  const pageSize = 50;
+  0;
   const response = await apiRequest(
     'GET',
-    `${API_VARIABLES}?ws=${workspaceId}`
+    `${API_VARIABLES}?ws=${workspaceId}&page=${page}&pageSize=${pageSize}`,
   );
   if (!response.ok) {
     throw new Error('Failed to fetch variables');
@@ -44,11 +47,13 @@ export const fetchVariables = async (
 };
 
 export const fetchDynamicVariables = async (
-  workspaceId: string
+  workspaceId: string,
 ): Promise<FetchVariablesResponse> => {
+  const page = 1;
+  const pageSize = 50;
   const response = await apiRequest(
     'GET',
-    `${API_VARIABLES_NEW}/dynamic?ws=${workspaceId}`
+    `${API_VARIABLES_NEW}/dynamic?ws=${workspaceId}&page=${page}&pageSize=${pageSize}`,
   );
   if (!response.ok) {
     throw new Error('Failed to fetch variables');
@@ -94,7 +99,7 @@ export const updateEnvironment = async (environment): Promise<Environment> => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(environment),
-    }
+    },
   );
   if (!response.ok) {
     throw new Error('Failed to update environment');
@@ -103,7 +108,7 @@ export const updateEnvironment = async (environment): Promise<Environment> => {
 };
 
 export const updatePrimaryEnvironment = async (
-  environment: any
+  environment: any,
 ): Promise<Environment> => {
   const { id, ws, setPrimary } = environment;
 
@@ -117,7 +122,7 @@ export const updatePrimaryEnvironment = async (
       `${API_ENVIRONMENT}/${id}/set-primary?ws=${ws}`,
       {
         headers: { 'Content-Type': 'application/json' },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -136,7 +141,7 @@ export const updatePrimaryEnvironment = async (
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(environment),
-    }
+    },
   );
 
   if (!response.ok) {
@@ -149,7 +154,7 @@ export const updatePrimaryEnvironment = async (
 export const deleteEnvironment = async (environmentId: string) => {
   const response = await apiRequest(
     'DELETE',
-    `${API_ENVIRONMENT}/${environmentId}`
+    `${API_ENVIRONMENT}/${environmentId}`,
   );
   return environmentId;
 };
@@ -205,7 +210,7 @@ export const updateDynamicVariable = async (variable: any): Promise<any> => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(variable),
-    }
+    },
   );
   if (!response.ok) {
     throw new Error('Failed to update dynamic variable');
@@ -222,11 +227,11 @@ export const deleteVariable = async (variableId: string): Promise<any> => {
 };
 
 export const deleteDynamicVariable = async (
-  variableId: string
+  variableId: string,
 ): Promise<any> => {
   const response = await apiRequest(
     'DELETE',
-    `${API_VARIABLES_NEW}/dynamic/${variableId}`
+    `${API_VARIABLES_NEW}/dynamic/${variableId}`,
   );
   if (!response.ok) {
     throw new Error('Failed to delete variable');

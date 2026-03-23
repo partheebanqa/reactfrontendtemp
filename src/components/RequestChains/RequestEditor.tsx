@@ -37,7 +37,9 @@ import type {
   DataExtraction,
   ExecutionLog,
 } from '@/shared/types/requestChain.model';
-import { ResponseExplorer } from './ResponseExplorer';
+import { useAssertionState } from '@/hooks/useAssertionState';
+import { ExecutionResultPanel } from './ExecutionResultPanel';
+
 import { useToast } from '@/hooks/use-toast';
 import { parseCookies } from '@/lib/cookieUtils';
 import {
@@ -232,7 +234,6 @@ export function RequestEditor({
     | 'settings'
   >('params');
 
-  const [assertions, setAssertions] = useState<any[]>([]);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState<ExecutionLog | null>(
     null,
@@ -542,19 +543,14 @@ export function RequestEditor({
   const handleAssertionsUpdate = (newAssertions: any[]) => {
     setAssertions(newAssertions);
 
+    // Persist to IndexedDB immediately (don't wait for debounce)
+    if (initialRequest.id) {
+      persistAssertionsToStorage(initialRequest.id, newAssertions);
+    }
+
+    // Also write to execution cache map
     if (initialRequest.id) {
       try {
-        // const raw = localStorage.getItem('lastExecutionByRequest');
-        const existing = secureStorage.loadEncrypted('lastExecutionByRequest');
-
-        // const map = existing ? JSON.parse(existing) : {};
-
-        // if (!map[initialRequest.id]) {
-        //   map[initialRequest.id] = {};
-        // }
-
-        // map[initialRequest.id].assertions = newAssertions;
-        // localStorage.setItem('lastExecutionByRequest', JSON.stringify(map));
         const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
         if (!map[initialRequest.id]) {
           map[initialRequest.id] = {};
@@ -635,6 +631,45 @@ export function RequestEditor({
     'body' | 'cookies' | 'headers' | 'test-results'
   >('body');
   const { toast } = useToast();
+
+  const {
+    assertionsByRequest,
+    setAssertionsByRequest,
+    persistAssertionsToStorage,
+  } = useAssertionState({
+    chainRequests: initialRequest.id
+      ? [initialRequest as APIRequest]
+      : undefined,
+    chainId: chainId,
+  });
+
+  // Derive the single-request assertions from the map
+  const assertions = assertionsByRequest[initialRequest.id ?? ''] ?? [];
+
+  const setAssertions = (newAssertions: any[] | ((prev: any[]) => any[])) => {
+    const resolved =
+      typeof newAssertions === 'function'
+        ? newAssertions(assertions)
+        : newAssertions;
+    setAssertionsByRequest((prev) => ({
+      ...prev,
+      [initialRequest.id ?? '']: resolved,
+    }));
+  };
+
+  useEffect(() => {
+    if (
+      requestAssertions &&
+      Array.isArray(requestAssertions) &&
+      requestAssertions.length > 0 &&
+      initialRequest.id
+    ) {
+      setAssertionsByRequest((prev) => ({
+        ...prev,
+        [initialRequest.id]: requestAssertions,
+      }));
+    }
+  }, [requestAssertions, initialRequest.id]);
 
   const [processedRequest, setProcessedRequest] =
     useState<APIRequest>(initialRequest);
@@ -2698,58 +2733,6 @@ export function RequestEditor({
   }, [params]);
 
   useEffect(() => {
-    if (
-      requestAssertions &&
-      Array.isArray(requestAssertions) &&
-      requestAssertions.length > 0
-    ) {
-      setAssertions(requestAssertions);
-      return;
-    }
-
-    try {
-      // const raw = localStorage.getItem('lastExecutionByRequest');
-      const raw = secureStorage.loadEncrypted('lastExecutionByRequest');
-      if (raw && typeof raw === 'object' && initialRequest.id) {
-        const saved = raw?.[initialRequest.id];
-
-        if (
-          saved?.assertions &&
-          Array.isArray(saved.assertions) &&
-          saved.assertions.length > 0
-        ) {
-          setAssertions(saved.assertions);
-          return;
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load assertions from localStorage:', e);
-    }
-
-    setAssertions([]);
-  }, [requestAssertions, initialRequest.id]);
-
-  useEffect(() => {
-    return () => {
-      if (initialRequest.id) {
-        const currentAssertions = [...assertions];
-        if (currentAssertions.length > 0) {
-          try {
-            const map =
-              secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-            if (map[initialRequest.id]) {
-              map[initialRequest.id].assertions = currentAssertions;
-              secureStorage.saveEncrypted('lastExecutionByRequest', map);
-            }
-          } catch (e) {
-            console.error('Failed to save assertions on cleanup:', e);
-          }
-        }
-      }
-    };
-  }, [initialRequest.id]);
-
-  useEffect(() => {
     function handleOutside(e: MouseEvent) {
       if (
         inlinePickerRef.current &&
@@ -3665,32 +3648,29 @@ export function RequestEditor({
       {hideResponseExplorer &&
         executionResult &&
         (executionResult.response || executionResult.error) && (
-          <div className='border-t border-gray-200 p-2'>
-            <ResponseExplorer
-              response={{
-                ...executionResult.response,
-                requestId: executionResult.requestId,
-              }}
-              onExtractVariable={handleExtractVariable}
-              extractedVariables={extractedVariables}
-              existingExtractions={initialRequest.extractVariables}
-              onRemoveExtraction={handleRemoveExtraction}
-              handleCopy={handleCopy}
-              copied={copied}
-              chainId={chainId || requestChainId || ''}
-              actualRequestUrl={executionResult.request.url}
-              actualRequestHeaders={executionResult.request.headers}
-              actualRequestBody={executionResult.request.body}
-              actualRequestMethod={executionResult.request.method}
-              executionStatus={executionResult.status}
-              errorMessage={executionResult.error}
-              allAssertions={assertions}
-              onAssertionsUpdate={handleAssertionsUpdate}
-              variables={usedRequestVariables.staticVars}
-              dynamicVariables={usedRequestVariables.dynamicVars}
-              requestExtractedVariables={extractedVariables}
-            />
-          </div>
+          <ExecutionResultPanel
+            executionLog={executionResult}
+            chainId={chainId ?? requestChainId ?? ''}
+            requestIndex={requestIndex}
+            chainRequests={formData?.chainRequests || []}
+            extractedVariablesByRequest={extractedVariablesByRequest}
+            extractedVariablesArray={extractedVariablesArray}
+            allAssertions={assertions}
+            copiedState={copied}
+            usedStaticVars={usedRequestVariables.staticVars}
+            usedDynamicVars={usedRequestVariables.dynamicVars}
+            onExtractVariable={(requestId, extraction) =>
+              handleExtractVariable(extraction)
+            }
+            onRemoveExtraction={(requestId, variableName) =>
+              handleRemoveExtraction(variableName)
+            }
+            onCopy={(requestId, value) => handleCopy(value)}
+            onAssertionsUpdate={async (requestId, newAssertions) => {
+              handleAssertionsUpdate(newAssertions);
+            }}
+            onApplyToAllRequests={() => {}}
+          />
         )}
       {showVariablesPopup &&
         typeof document !== 'undefined' &&

@@ -199,8 +199,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
                 key={assertion.id}
                 className='flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors'
               >
-                <div className='flex-1'>
-                  <p className='text-sm font-medium text-gray-900'>
+                <div className='flex-1 min-w-0 mr-2'>
+                  <p className='text-sm font-medium text-gray-900 truncate'>
                     {assertion.description}
                   </p>
                   <div className='flex gap-2 mt-2'>
