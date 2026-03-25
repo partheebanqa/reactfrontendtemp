@@ -28,6 +28,10 @@ import { HelpModal } from '../HelpModal/HelpModal';
 import EnvironmentDropdown from './EnvirementDropdown';
 import { Environment } from '@/shared/types/datamanagement';
 import { logoutClientSide } from '@/lib/logoutClientSide';
+import NotificationBell from './Notifications/NotificationBell';
+import { useFeatureGate } from '@/hooks/useFeatureGate';
+import { useCurrentPlan } from '@/context/CurrentPlanContext';
+import { Badge } from '../ui/badge';
 
 interface HeaderProps {
   isDrawerOpen?: boolean;
@@ -36,6 +40,11 @@ interface HeaderProps {
 
 export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
   const { user } = useAuth();
+
+  const { currentPlan } = useCurrentPlan();
+
+  console.log(user, "user");
+
   const {
     currentWorkspace,
     workspaces,
@@ -120,8 +129,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
       return true;
     } catch (error) {
       console.error(
-        `Error ${
-          workspaceModalState.mode === 'add' ? 'creating' : 'updating'
+        `Error ${workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
         error,
       );
@@ -239,9 +247,21 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
             </div>
           )}
 
-          {/* <div className=' xs:block'>
-            <NotificationBell />
-          </div> */}
+          <div >
+            <Badge
+              style={{
+                background: "linear-gradient(90deg, #2563eb, #ec4899)",
+                color: "white",
+                padding: "6px 14px",
+                borderRadius: "30px",
+                fontWeight: 500,
+              }}
+            >
+              {currentPlan?.PlanName} {currentPlan?.IsTrial && (
+                <>Trial</>
+              )}
+            </Badge>
+          </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div className='flex items-center cursor-pointer'>

@@ -138,9 +138,9 @@ const computeOverall = (data: any) => {
   const avgDuration =
     tcs.length > 0
       ? Math.round(
-          tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
-            tcs.length,
-        )
+        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+        tcs.length,
+      )
       : Number.isFinite(data?.duration)
         ? Number(data.duration)
         : 0;
@@ -307,6 +307,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
   const [jiraLoading, setJiraLoading] = useState(false);
 
   const { toast } = useToast();
+
   const handleJiraSubmit = async (e: any) => {
     e.preventDefault();
     try {
@@ -407,7 +408,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                   <FileText className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Download HTML File</TooltipContent>
+              <TooltipContent>Download HTML Report</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -419,7 +420,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                   <Download className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Download PDF File</TooltipContent>
+              <TooltipContent>Download PDF Summary</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
