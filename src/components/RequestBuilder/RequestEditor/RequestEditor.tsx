@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
-import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  lazy,
+  Suspense,
+} from 'react';
 import { Play, Save, FolderPlus, Info, Key, Loader2 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import { useCollection } from '@/hooks/useCollection';
@@ -600,15 +608,24 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
     }
   }, [showSaveModal, activeCollection?.id]);
 
+  // P0-C: Stable save handler using a ref so onRegisterSave always calls the
+  // latest handleUpdateRequest without stale closures or re-registrations.
+  // We declare the ref here (before the effect), then assign .current after
+  // handleUpdateRequest is defined further below.
+  const handleUpdateContentRequestRef = useRef<() => Promise<void>>(
+    async () => {},
+  );
+
   useEffect(() => {
     if (onRegisterSave) {
+      // Register a stable wrapper that always delegates to the latest ref.
       onRegisterSave(async () => {
-        if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
-          await handleUpdateContentRequest();
-        }
+        await handleUpdateContentRequestRef.current();
       });
     }
-  }, [activeRequest, onRegisterSave]);
+    // Intentionally only re-register when onRegisterSave identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRegisterSave]);
 
   useEffect(() => {
     const loadFolders = async () => {
@@ -1189,38 +1206,38 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
       } else {
         setResponseData(null);
       }
-
-      if (
-        activeRequest.assertions &&
-        Array.isArray(activeRequest.assertions) &&
-        activeRequest.assertions.length > 0
-      ) {
-        try {
-          const existingAssertions = activeRequest.assertions.map(
-            (assertion: any) => ({
-              id: assertion.id || `temp-${Math.random()}`,
-              category: assertion.category || 'general',
-              type: assertion.type || 'custom',
-              description: assertion.description || 'Custom assertion',
-              field: assertion.field,
-              operator: assertion.operator || 'equals',
-              expectedValue: assertion.expectedValue,
-              enabled:
-                assertion.enabled !== undefined ? assertion.enabled : true,
-              impact: assertion.impact,
-              group: assertion.group || 'custom',
-              priority: assertion.priority,
-            }),
-          );
-          setAssertions(existingAssertions);
-        } catch (error) {
-          console.error('Error loading existing assertions:', error);
-          setAssertions([]);
-        }
-      } else {
-        setAssertions([]);
-      }
     }
+  }, [activeRequest?.id]);
+
+  // P0-B: Load assertions from IndexedDB when switching to a different request.
+  // Falls back to assertions already on the request object.
+  useEffect(() => {
+    if (!activeRequest?.id) return;
+
+    const loadAssertions = async () => {
+      try {
+        // Priority 1: IndexedDB (primary persistent store)
+        const fromIDB = await storageManager.getAssertions(activeRequest.id);
+        if (fromIDB && fromIDB.length > 0) {
+          setAssertions(fromIDB as any);
+          return;
+        }
+        // Priority 2: assertions already baked into the request object
+        if (
+          Array.isArray((activeRequest as any).assertions) &&
+          (activeRequest as any).assertions.length > 0
+        ) {
+          setAssertions((activeRequest as any).assertions);
+          return;
+        }
+        // No stored assertions — start clean
+        setAssertions([]);
+      } catch (e) {
+        console.error('[RequestEditor] Failed to load assertions from IDB:', e);
+      }
+    };
+
+    loadAssertions();
   }, [activeRequest?.id]);
 
   // useEffect(() => {
@@ -2210,190 +2227,245 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
     [activeRequest, setUrl, setParams],
   );
 
-  const handleUpdateRequest = async (overrideName?: string) => {
-    try {
-      console.log('coming to handle update method');
+  // P0-C: Wrap in useCallback so handleUpdateContentRequest (above) and the
+  // onRegisterSave ref always execute this function's latest snapshot.
+  const handleUpdateRequest = useCallback(
+    async (overrideName?: string) => {
+      try {
+        console.log('coming to handle update method');
 
-      setIsSaving(true);
-      if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
-        showError(
-          'Invalid Request',
-          'Cannot update a temporary request. Please save it first.',
-        );
-        return;
-      }
+        setIsSaving(true);
+        if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
+          showError(
+            'Invalid Request',
+            'Cannot update a temporary request. Please save it first.',
+          );
+          return;
+        }
 
-      if (!url.trim()) {
-        showError(
-          'URL Required',
-          'Please enter a URL before saving the request.',
-        );
-        return;
-      }
+        if (!url.trim()) {
+          showError(
+            'URL Required',
+            'Please enter a URL before saving the request.',
+          );
+          return;
+        }
 
-      if (activeCollection) {
-        await fetchCollectionRequests.mutateAsync(activeCollection.id);
-      }
+        if (activeCollection) {
+          await fetchCollectionRequests.mutateAsync(activeCollection.id);
+        }
 
-      let effectiveAuthType = authType;
+        let effectiveAuthType = authType;
 
-      if (
-        authData?.token &&
-        authData.token.trim() !== '' &&
-        (!authType || authType === 'none')
-      ) {
-        effectiveAuthType = 'bearer';
-      }
+        if (
+          authData?.token &&
+          authData.token.trim() !== '' &&
+          (!authType || authType === 'none')
+        ) {
+          effectiveAuthType = 'bearer';
+        }
 
-      if (!authData?.token || authData.token.trim() === '') {
-        effectiveAuthType = 'none';
-      }
+        if (!authData?.token || authData.token.trim() === '') {
+          effectiveAuthType = 'none';
+        }
 
-      const selectedAssertions = Array.isArray(assertions)
-        ? assertions
-            .filter((assertion) => assertion.enabled)
-            .map((assertion) => ({
-              ...assertion,
-              requestId: activeRequest.id,
-              expectedValue:
-                assertion.expectedValue !== undefined &&
-                assertion.expectedValue !== null
-                  ? typeof assertion.expectedValue === 'string'
-                    ? assertion.expectedValue
-                    : JSON.stringify(assertion.expectedValue)
-                  : '',
-            }))
-        : [];
+        const selectedAssertions = Array.isArray(assertions)
+          ? assertions
+              .filter((assertion) => assertion.enabled)
+              .map((assertion) => ({
+                ...assertion,
+                requestId: activeRequest.id,
+                expectedValue:
+                  assertion.expectedValue !== undefined &&
+                  assertion.expectedValue !== null
+                    ? typeof assertion.expectedValue === 'string'
+                      ? assertion.expectedValue
+                      : JSON.stringify(assertion.expectedValue)
+                    : '',
+              }))
+          : [];
 
-      const effectiveFolderId =
-        activeRequest?.folderId || selectedFolderId || undefined;
+        const effectiveFolderId =
+          activeRequest?.folderId || selectedFolderId || undefined;
 
-      const requestData: any = {
-        workspaceId: currentWorkspace?.id,
-        description: '',
-        name: overrideName || activeRequest.name || 'New Request',
-        method,
-        url,
-        ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
-        bodyType: bodyType,
-        bodyFormData:
-          bodyType === 'form-data'
-            ? formFields
-                .filter((f) => f.enabled)
-                .reduce((acc: Record<string, any>, field) => {
-                  if (field.key) {
-                    if (field.type === 'file' && field.value instanceof File) {
-                      acc[field.key] = field.value;
-                    } else {
-                      acc[field.key] = String(field.value);
+        const requestData: any = {
+          workspaceId: currentWorkspace?.id,
+          description: '',
+          name: overrideName || activeRequest.name || 'New Request',
+          method,
+          url,
+          ...(effectiveFolderId ? { folderId: effectiveFolderId } : {}),
+          bodyType: bodyType,
+          bodyFormData:
+            bodyType === 'form-data'
+              ? formFields
+                  .filter((f) => f.enabled)
+                  .reduce((acc: Record<string, any>, field) => {
+                    if (field.key) {
+                      if (
+                        field.type === 'file' &&
+                        field.value instanceof File
+                      ) {
+                        acc[field.key] = field.value;
+                      } else {
+                        acc[field.key] = String(field.value);
+                      }
                     }
+                    return acc;
+                  }, {})
+              : [],
+          bodyRawContent:
+            bodyType === 'raw' || bodyType === 'json'
+              ? bodyContent
+              : bodyType === 'x-www-form-urlencoded'
+                ? new URLSearchParams(
+                    urlEncodedFields
+                      .filter((f) => f.enabled)
+                      .reduce(
+                        (acc, field) => {
+                          if (field.key) acc[field.key] = field.value;
+                          return acc;
+                        },
+                        {} as Record<string, string>,
+                      ),
+                  ).toString()
+                : '',
+          authorizationType: effectiveAuthType,
+          authorization: {
+            token: authData.token,
+            username: effectiveAuthType === 'basic' ? authData.username : '',
+            password: effectiveAuthType === 'basic' ? authData.password : '',
+            key: effectiveAuthType === 'apiKey' ? authData.key : '',
+            value: effectiveAuthType === 'apiKey' ? authData.value : '',
+            addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
+            oauth1:
+              effectiveAuthType === 'oauth1'
+                ? {
+                    consumerKey: authData.oauth1.consumerKey,
+                    consumerSecret: authData.oauth1.consumerSecret,
+                    token: authData.oauth1.token,
+                    tokenSecret: authData.oauth1.tokenSecret,
+                    signatureMethod: authData.oauth1.signatureMethod,
+                    version: '1.0',
+                    realm: authData.oauth1.realm,
+                    nonce: authData.oauth1.nonce,
+                    timestamp: authData.oauth1.timestamp,
                   }
-                  return acc;
-                }, {})
-            : [],
-        bodyRawContent:
-          bodyType === 'raw' || bodyType === 'json'
-            ? bodyContent
-            : bodyType === 'x-www-form-urlencoded'
-              ? new URLSearchParams(
-                  urlEncodedFields
-                    .filter((f) => f.enabled)
-                    .reduce(
-                      (acc, field) => {
-                        if (field.key) acc[field.key] = field.value;
-                        return acc;
-                      },
-                      {} as Record<string, string>,
-                    ),
-                ).toString()
-              : '',
-        authorizationType: effectiveAuthType,
-        authorization: {
-          token: authData.token,
-          username: effectiveAuthType === 'basic' ? authData.username : '',
-          password: effectiveAuthType === 'basic' ? authData.password : '',
-          key: effectiveAuthType === 'apiKey' ? authData.key : '',
-          value: effectiveAuthType === 'apiKey' ? authData.value : '',
-          addTo: effectiveAuthType === 'apiKey' ? authData.addTo : 'header',
-          oauth1:
-            effectiveAuthType === 'oauth1'
-              ? {
-                  consumerKey: authData.oauth1.consumerKey,
-                  consumerSecret: authData.oauth1.consumerSecret,
-                  token: authData.oauth1.token,
-                  tokenSecret: authData.oauth1.tokenSecret,
-                  signatureMethod: authData.oauth1.signatureMethod,
-                  version: '1.0',
-                  realm: authData.oauth1.realm,
-                  nonce: authData.oauth1.nonce,
-                  timestamp: authData.oauth1.timestamp,
-                }
-              : undefined,
-          oauth2:
-            effectiveAuthType === 'oauth2'
-              ? {
-                  clientId: authData.oauth2.clientId,
-                  clientSecret: authData.oauth2.clientSecret,
-                  accessToken: authData.oauth2.accessToken,
-                  tokenType: authData.oauth2.tokenType,
-                  refreshToken: authData.oauth2.refreshToken,
-                  scope: authData.oauth2.scope,
-                  grantType: authData.oauth2.grantType,
-                  redirectUri: authData.oauth2.redirectUri,
-                }
-              : undefined,
-        },
-        params,
-        headers: headers.filter((h) => h.enabled),
-        assertions: selectedAssertions,
-      };
+                : undefined,
+            oauth2:
+              effectiveAuthType === 'oauth2'
+                ? {
+                    clientId: authData.oauth2.clientId,
+                    clientSecret: authData.oauth2.clientSecret,
+                    accessToken: authData.oauth2.accessToken,
+                    tokenType: authData.oauth2.tokenType,
+                    refreshToken: authData.oauth2.refreshToken,
+                    scope: authData.oauth2.scope,
+                    grantType: authData.oauth2.grantType,
+                    redirectUri: authData.oauth2.redirectUri,
+                  }
+                : undefined,
+          },
+          params,
+          headers: headers.filter((h) => h.enabled),
+          assertions: selectedAssertions,
+        };
 
-      if (selectedVariable && selectedVariable.length > 0) {
-        requestData.variable = selectedVariable;
-      }
-      if (existingExtractions.length > 0) {
-        requestData.extractVariables = existingExtractions;
-      }
-      if (!activeRequest.id) {
-        showError('Missing ID', 'Cannot update a request without an id.');
-        return;
-      }
+        if (selectedVariable && selectedVariable.length > 0) {
+          requestData.variable = selectedVariable;
+        }
+        if (existingExtractions.length > 0) {
+          requestData.extractVariables = existingExtractions;
+        }
+        if (!activeRequest.id) {
+          showError('Missing ID', 'Cannot update a request without an id.');
+          return;
+        }
 
-      await updateRequestMutation.mutateAsync({
-        requestId: activeRequest.id,
-        requestData,
-      });
-
-      if (overrideName) {
-        setActiveRequest({
-          ...activeRequest,
-          name: overrideName,
+        await updateRequestMutation.mutateAsync({
+          requestId: activeRequest.id,
+          requestData,
         });
-        collectionActions.updateOpenedRequest({
-          ...activeRequest,
-          name: overrideName,
+
+        // P0-B: Persist assertions to IndexedDB immediately after API save succeeds.
+        // This ensures they survive a page reload even if the backend roundtrip is slow.
+        if (selectedAssertions.length > 0) {
+          try {
+            await storageManager.saveAssertions(
+              activeRequest.id,
+              selectedAssertions,
+              activeCollection?.id,
+            );
+          } catch (idbErr) {
+            console.warn('[RequestEditor] IDB assertion save failed:', idbErr);
+          }
+        }
+
+        if (overrideName) {
+          setActiveRequest({
+            ...activeRequest,
+            name: overrideName,
+          });
+          collectionActions.updateOpenedRequest({
+            ...activeRequest,
+            name: overrideName,
+          });
+        }
+
+        collectionActions.markSaved(activeRequest.id);
+
+        toast({
+          title: overrideName
+            ? 'Request renamed successfully!'
+            : 'Request updated successfully!',
+          duration: 3000,
         });
+      } catch (error) {
+        console.error('Error updating request:', error);
+        showError('Save Failed', 'An error occurred while saving the request.');
+        setError({
+          title: 'Save Failed',
+          description: 'An error occurred while saving the request.',
+        });
+      } finally {
+        setIsSaving(false);
       }
+    },
+    [
+      activeRequest,
+      activeCollection?.id,
+      url,
+      method,
+      headers,
+      bodyType,
+      bodyContent,
+      formFields,
+      urlEncodedFields,
+      authType,
+      authData,
+      params,
+      selectedVariable,
+      existingExtractions,
+      assertions,
+      currentWorkspace,
+      fetchCollectionRequests,
+      updateRequestMutation,
+      setActiveRequest,
+      toast,
+      showError,
+      setError,
+    ],
+  );
 
-      collectionActions.markSaved(activeRequest.id);
-
-      toast({
-        title: overrideName
-          ? 'Request renamed successfully!'
-          : 'Request updated successfully!',
-        duration: 3000,
-      });
-    } catch (error) {
-      console.error('Error updating request:', error);
-      showError('Save Failed', 'An error occurred while saving the request.');
-      setError({
-        title: 'Save Failed',
-        description: 'An error occurred while saving the request.',
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  // P0-C: Keep the ref current so it always delegates to the latest version of
+  // handleUpdateRequest (which captures url, method, assertions, etc. via its own deps).
+  useEffect(() => {
+    handleUpdateContentRequestRef.current = async () => {
+      if (activeRequest && !activeRequest.id?.startsWith('temp-')) {
+        await handleUpdateRequest();
+      }
+    };
+  });
 
   const handleConfirmSave = async () => {
     try {

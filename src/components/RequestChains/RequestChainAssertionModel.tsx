@@ -740,17 +740,15 @@ function AssertionModal({
 
   const handleFinalSave = () => {
     if (!onSelect) return;
+
     const suggestedToAdd = pendingAssertions
       .filter((a) => a._isSuggested)
       .map(({ _isSuggested, _suggestedId, _label, ...rest }) => rest);
+
     const manualToAdd = pendingAssertions.filter((a) => !a._isSuggested);
     const toRemove = Array.from(assertionsToRemove);
-    if (suggestedToAdd.length > 0 || toRemove.length > 0) {
-      onSelect('suggested-multiple', {
-        assertions: suggestedToAdd,
-        assertionsToRemove: toRemove,
-      });
-    }
+
+    const generalToAdd: any[] = [];
     selectedGeneralAssertions.forEach((data, gType) => {
       const assertion = generalAssertions.find((a) => a.id === gType);
       const config: any = {
@@ -766,11 +764,20 @@ function AssertionModal({
       } else {
         config.operator = 'equals';
       }
-      onSelect(gType, config);
+      generalToAdd.push({
+        gType,
+        config,
+        richDescription: (data as any)._richDescription,
+      });
     });
-    manualToAdd.forEach((assertion) =>
-      onSelect('manual-direct', { assertion }),
-    );
+
+    onSelect('batch-all', {
+      suggestedAssertions: suggestedToAdd,
+      assertionsToRemove: toRemove,
+      manualAssertions: manualToAdd,
+      generalAssertions: generalToAdd,
+    });
+
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
     setPendingAssertions([]);
@@ -784,32 +791,78 @@ function AssertionModal({
       !NO_VALUE_OPERATORS.includes(selectedOperator);
     const hasUnsubmittedGeneral =
       activeTab === 'general' && generalType && generalValue;
-    if (hasUnsubmittedManual || hasUnsubmittedGeneral || hasChanges) {
-      if (hasUnsubmittedManual) {
-        const config = buildManualConfig(selectedOperator, manualValue);
-        setPendingAssertions((prev) => [...prev, config]);
-      }
-      if (hasUnsubmittedGeneral) {
-        const richDesc = buildRichDescription(
-          generalType,
-          generalValue,
-          generalComparison,
-        );
-        const newMap = new Map(selectedGeneralAssertions);
-        newMap.set(generalType, {
-          value: generalValue,
-          comparison: generalComparison,
-          _richDescription: richDesc,
-        } as any);
-        setSelectedGeneralAssertions(newMap);
-      }
-      setTimeout(() => {
-        handleFinalSave();
-        onClose();
-      }, 0);
-    } else {
-      onClose();
+
+    // Build the final pending + general maps synchronously before dispatching
+    let finalPending = [...pendingAssertions];
+    let finalGeneralMap = new Map(selectedGeneralAssertions);
+
+    if (hasUnsubmittedManual) {
+      const config = buildManualConfig(selectedOperator, manualValue);
+      finalPending = [...finalPending, config];
     }
+
+    if (hasUnsubmittedGeneral) {
+      const richDesc = buildRichDescription(
+        generalType,
+        generalValue,
+        generalComparison,
+      );
+      finalGeneralMap.set(generalType, {
+        value: generalValue,
+        comparison: generalComparison,
+        _richDescription: richDesc,
+      } as any);
+    }
+
+    const hasSomethingToSave =
+      finalPending.length > 0 ||
+      finalGeneralMap.size > 0 ||
+      assertionsToRemove.size > 0;
+
+    if (hasSomethingToSave) {
+      if (!onSelect) {
+        onClose();
+        return;
+      }
+
+      const suggestedToAdd = finalPending
+        .filter((a) => a._isSuggested)
+        .map(({ _isSuggested, _suggestedId, _label, ...rest }) => rest);
+      const manualToAdd = finalPending.filter((a) => !a._isSuggested);
+      const toRemove = Array.from(assertionsToRemove);
+
+      const generalToAdd: any[] = [];
+      finalGeneralMap.forEach((data, gType) => {
+        const assertion = generalAssertions.find((a) => a.id === gType);
+        const config: any = {
+          isGeneral: true,
+          value: data.value,
+          comparison: data.comparison,
+        };
+        if (assertion?.hasComparison) {
+          config.operator =
+            data.comparison === 'less' ? 'less_than' : 'greater_than';
+          if (gType === 'response_time') config.expectedTime = data.value;
+          if (gType === 'payload_size') config.expectedSize = data.value;
+        } else {
+          config.operator = 'equals';
+        }
+        generalToAdd.push({
+          gType,
+          config,
+          richDescription: (data as any)._richDescription,
+        });
+      });
+
+      onSelect('batch-all', {
+        suggestedAssertions: suggestedToAdd,
+        assertionsToRemove: toRemove,
+        manualAssertions: manualToAdd,
+        generalAssertions: generalToAdd,
+      });
+    }
+
+    onClose();
   };
 
   const canAddAssertion = () => {

@@ -119,7 +119,10 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
         self.findIndex(
           (a) =>
             a.description === assertion.description &&
-            a.category === assertion.category,
+            a.category === assertion.category &&
+            a.type === assertion.type &&
+            a.expectedValue === assertion.expectedValue &&
+            a.field === assertion.field,
         ),
     );
 

@@ -646,6 +646,8 @@ export function RequestEditor({
   // Derive the single-request assertions from the map
   const assertions = assertionsByRequest[initialRequest.id ?? ''] ?? [];
 
+  console.log('assertions123:', assertions);
+
   const setAssertions = (newAssertions: any[] | ((prev: any[]) => any[])) => {
     const resolved =
       typeof newAssertions === 'function'

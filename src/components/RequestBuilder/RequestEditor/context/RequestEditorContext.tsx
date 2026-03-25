@@ -361,12 +361,12 @@ export const RequestEditorProvider: React.FC<RequestEditorProviderProps> = ({
       pendingSubstitutions,
       dynamicVarTrigger,
       activeRequestId,
-      // addParam,
-      // updateParam,
-      // removeParam,
-      // addHeader,
-      // updateHeader,
-      // removeHeader,
+      addParam,
+      updateParam,
+      removeParam,
+      addHeader,
+      updateHeader,
+      removeHeader,
     ],
   );
 
