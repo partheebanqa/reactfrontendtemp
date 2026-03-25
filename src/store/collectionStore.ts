@@ -192,9 +192,8 @@ export const collectionActions = {
       const merged = existingOpen
         ? {
             ...existingOpen,
-            assertions: request.assertions?.length
-              ? request.assertions
-              : existingOpen.assertions,
+
+            assertions: request.assertions ?? existingOpen.assertions,
             extractVariables: request.extractVariables?.length
               ? request.extractVariables
               : existingOpen.extractVariables,
@@ -214,9 +213,7 @@ export const collectionActions = {
       const merged = existingOpen
         ? {
             ...existingOpen,
-            assertions: request.assertions?.length
-              ? request.assertions
-              : existingOpen.assertions,
+            assertions: request.assertions ?? existingOpen.assertions,
             extractVariables: request.extractVariables?.length
               ? request.extractVariables
               : existingOpen.extractVariables,

@@ -1674,6 +1674,112 @@ export function ResponseExplorer({
           }
           extractedVariables={getExtractedVariablesForAssertion()}
           onSelect={(assertionType: string, config?: any) => {
+            if (assertionType === 'batch-all') {
+              const {
+                suggestedAssertions: suggestedToAdd = [],
+                assertionsToRemove: toRemoveIds = [],
+                manualAssertions: manualToAdd = [],
+                generalAssertions: generalToAdd = [],
+              } = config;
+
+              // Start from a single snapshot — no stale closure problem
+              let updated = [...normalizedAssertions];
+
+              // 1. Removals
+              if (toRemoveIds.length > 0) {
+                updated = updated.map((a: any) =>
+                  toRemoveIds.includes(a.id) ? { ...a, enabled: false } : a,
+                );
+              }
+
+              // 2. Suggested
+              suggestedToAdd.forEach((assertion: any) => {
+                const idx = updated.findIndex(
+                  (a: any) => a.id === assertion.id,
+                );
+                if (idx !== -1) {
+                  updated[idx] = { ...updated[idx], enabled: true };
+                } else {
+                  updated.push({
+                    ...assertion,
+                    id: generateUUID(),
+                    enabled: true,
+                  });
+                }
+              });
+
+              // 3. Manual
+              manualToAdd.forEach((assertion: any) => {
+                updated.push({ ...assertion, enabled: true });
+              });
+
+              // 4. General
+              generalToAdd.forEach(
+                ({ gType, config: gConfig, richDescription }: any) => {
+                  let description = richDescription ?? '';
+                  let finalType = gType;
+
+                  if (!description) {
+                    switch (gType) {
+                      case 'response_time':
+                        description = `Response time should be ${gConfig.comparison === 'less' ? 'less than' : 'more than'} ${gConfig.value}ms`;
+                        break;
+                      case 'payload_size':
+                        description = `Payload size should be ${gConfig.comparison === 'less' ? 'less than' : 'more than'} ${gConfig.value}KB`;
+                        break;
+                      case 'status_equals':
+                        description = `Response status should be ${gConfig.value}`;
+                        break;
+                      case 'contains_text':
+                      case 'contains_static':
+                      case 'contains_dynamic':
+                      case 'contains_extracted':
+                        description = `Response should contain: "${gConfig.value}"`;
+                        finalType = 'contains';
+                        break;
+                      default:
+                        description = `${gType}: ${gConfig.value}`;
+                    }
+                  }
+
+                  if (
+                    [
+                      'contains_text',
+                      'contains_static',
+                      'contains_dynamic',
+                      'contains_extracted',
+                    ].includes(gType)
+                  ) {
+                    finalType = 'contains';
+                  }
+
+                  updated.push({
+                    id: generateUUID(),
+                    type: finalType,
+                    displayType: gType,
+                    category: 'general',
+                    description,
+                    enabled: true,
+                    isGeneral: true,
+                    operator: gConfig.operator,
+                    value: gConfig.value,
+                    expectedValue: gConfig.value,
+                    ...(gConfig.expectedTime && {
+                      expectedTime: gConfig.expectedTime,
+                    }),
+                    ...(gConfig.expectedSize && {
+                      expectedSize: gConfig.expectedSize,
+                    }),
+                    comparison: gConfig.comparison,
+                  });
+                },
+              );
+
+              if (onAssertionsUpdate) onAssertionsUpdate(updated);
+              setAssertionModalOpen(false);
+              setSelectedAssertion(null);
+              return;
+            }
             // Handle suggested-multiple — add each assertion INDIVIDUALLY
             if (assertionType === 'suggested-multiple' && config?.assertions) {
               const assertionsToEnable: any[] = config.assertions;

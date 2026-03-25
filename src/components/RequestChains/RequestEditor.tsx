@@ -646,6 +646,8 @@ export function RequestEditor({
   // Derive the single-request assertions from the map
   const assertions = assertionsByRequest[initialRequest.id ?? ''] ?? [];
 
+  console.log('assertions123:', assertions);
+
   const setAssertions = (newAssertions: any[] | ((prev: any[]) => any[])) => {
     const resolved =
       typeof newAssertions === 'function'
@@ -763,9 +765,13 @@ export function RequestEditor({
         setCurrentRequestExtractedVars(saved.extractedVariables ?? {});
 
         if (saved.assertions && Array.isArray(saved.assertions)) {
-          setAssertions(saved.assertions);
-          if (onAssertionsUpdate) {
-            onAssertionsUpdate(saved.assertions);
+          // Only restore from cache if backend didn't provide more assertions
+          const backendCount = requestAssertions?.length ?? 0;
+          if (saved.assertions.length > backendCount) {
+            setAssertions(saved.assertions);
+            if (onAssertionsUpdate) {
+              onAssertionsUpdate(saved.assertions);
+            }
           }
         }
 

@@ -408,6 +408,8 @@ const ResponseViewer = ({
   onRemoveExtraction,
 }: ResponseViewerProps) => {
   const { responseData, assertions, setAssertions } = useRequest();
+  console.log('assertions1231:', assertions);
+
   const { activeCollection, activeRequest } = useCollection();
 
   const [activeTab, setActiveTab] = useState<
@@ -727,6 +729,105 @@ const ResponseViewer = ({
 
   const handleAssertionSelect = useCallback(
     (assertionType: string, config?: any) => {
+      if (assertionType === 'batch-all') {
+        const {
+          suggestedAssertions: suggestedToAdd = [],
+          assertionsToRemove: toRemoveIds = [],
+          manualAssertions: manualToAdd = [],
+          generalAssertions: generalToAdd = [],
+        } = config;
+
+        let updated = [...assertions];
+
+        // 1. Removals
+        if (toRemoveIds.length > 0) {
+          updated = updated.map((a: any) =>
+            toRemoveIds.includes(a.id) ? { ...a, enabled: false } : a,
+          );
+        }
+
+        // 2. Suggested
+        suggestedToAdd.forEach((assertion: any) => {
+          const idx = updated.findIndex((a: any) => a.id === assertion.id);
+          if (idx !== -1) {
+            updated[idx] = { ...updated[idx], enabled: true };
+          } else {
+            updated.push({ ...assertion, enabled: true });
+          }
+        });
+
+        // 3. Manual
+        manualToAdd.forEach((assertion: any) => {
+          updated.push({ ...assertion, enabled: true });
+        });
+
+        // 4. General
+        generalToAdd.forEach(
+          ({ gType, config: gConfig, richDescription }: any) => {
+            let description = richDescription ?? '';
+            let finalType = gType;
+
+            if (!description) {
+              switch (gType) {
+                case 'response_time':
+                  description = `Response time should be ${gConfig.comparison === 'less' ? 'less than' : 'more than'} ${gConfig.value}ms`;
+                  break;
+                case 'payload_size':
+                  description = `Payload size should be ${gConfig.comparison === 'less' ? 'less than' : 'more than'} ${gConfig.value}KB`;
+                  break;
+                case 'status_equals':
+                  description = `Response status should be ${gConfig.value}`;
+                  break;
+                case 'contains_text':
+                case 'contains_static':
+                case 'contains_dynamic':
+                case 'contains_extracted':
+                  description = `Response should contain: "${gConfig.value}"`;
+                  finalType = 'contains';
+                  break;
+                default:
+                  description = `${gType}: ${gConfig.value}`;
+              }
+            }
+
+            if (
+              [
+                'contains_text',
+                'contains_static',
+                'contains_dynamic',
+                'contains_extracted',
+              ].includes(gType)
+            ) {
+              finalType = 'contains';
+            }
+
+            updated.push({
+              id: `general-${gType}-${Date.now()}-${Math.random()}`,
+              type: finalType,
+              displayType: gType,
+              category: getCategoryForAssertionType(finalType),
+              description,
+              enabled: true,
+              isGeneral: true,
+              operator: gConfig.operator,
+              value: gConfig.value,
+              expectedValue: gConfig.value,
+              ...(gConfig.expectedTime && {
+                expectedTime: gConfig.expectedTime,
+              }),
+              ...(gConfig.expectedSize && {
+                expectedSize: gConfig.expectedSize,
+              }),
+              comparison: gConfig.comparison,
+            });
+          },
+        );
+
+        setAssertions(removeDuplicateAssertions(updated));
+        handleModalClose();
+        return;
+      }
+
       if (assertionType === 'suggested-multiple' && config?.assertions) {
         const assertionsToEnable: any[] = config.assertions;
         const toRemoveIds: string[] = config.assertionsToRemove || [];
@@ -754,6 +855,14 @@ const ResponseViewer = ({
         });
 
         setAssertions(removeDuplicateAssertions(updatedAssertions));
+      } else if (assertionType === 'manual-batch' && config?.assertions) {
+        const newAssertions = config.assertions.map((a: any) => ({
+          ...a,
+          enabled: true,
+        }));
+        setAssertions(
+          removeDuplicateAssertions([...assertions, ...newAssertions]),
+        );
       } else if (assertionType === 'manual-direct' && config?.assertion) {
         const assertion = { ...config.assertion, enabled: true };
         setAssertions(removeDuplicateAssertions([...assertions, assertion]));
@@ -879,23 +988,36 @@ const ResponseViewer = ({
           path: extractionModal.path,
         };
 
-        if (isAuthToken) {
-          const saved = secureStorage.saveEncrypted(storageKey, payload);
-          if (!saved) {
-            localStorage.setItem(storageKey, JSON.stringify(payload));
-          } else {
-            console.log(`[Security] Encrypted storage: ${finalVariableName}`);
-          }
-        } else {
+        // P1-A: IndexedDB is the primary store for ALL extracted variables.
+        // Uses the generic key-value store so IDB quota is respected instead of
+        // saturating localStorage with potentially large response values.
+        try {
+          await storageManager.saveGeneric(storageKey, payload);
+        } catch (idbErr) {
+          console.warn(
+            '[Storage] IDB save failed, falling back to localStorage:',
+            idbErr,
+          );
           try {
             localStorage.setItem(storageKey, JSON.stringify(payload));
-          } catch (e: any) {
-            if (e.name === 'QuotaExceededError') {
-              console.warn('[Storage] localStorage quota exceeded');
+          } catch (lsErr: any) {
+            if (lsErr.name === 'QuotaExceededError') {
+              console.warn(
+                '[Storage] localStorage quota exceeded — variable value not persisted',
+              );
             } else {
-              console.error('[Storage] Failed to save:', e);
+              console.error(
+                '[Storage] Failed to save extracted variable:',
+                lsErr,
+              );
             }
           }
+        }
+
+        // Additionally encrypt auth-sensitive variables in secureStorage
+        // so they are never readable in plain-text from IDB/localStorage.
+        if (isAuthToken) {
+          secureStorage.saveEncrypted(storageKey, payload);
         }
 
         onExtractVariable({

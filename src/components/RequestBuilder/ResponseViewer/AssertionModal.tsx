@@ -165,6 +165,7 @@ function AssertionModal({
   // ── selectedSuggestedAssertions: toggled but NOT yet staged ──
   const [selectedSuggestedAssertions, setSelectedSuggestedAssertions] =
     useState<Set<string>>(new Set());
+
   // ── assertionsToRemove: already-enabled ones marked for removal ──
   const [assertionsToRemove, setAssertionsToRemove] = useState<Set<string>>(
     new Set(),
@@ -319,7 +320,7 @@ function AssertionModal({
     const isNonZeroIndex = /\[([1-9]\d*)\]/.test(fieldPath);
     let assertionsToFilter = allAssertions;
 
-    if (isNonZeroIndex && onGenerateForPath) {
+    if (onGenerateForPath) {
       const dynamicAssertions = onGenerateForPath(fieldPath, fieldValue);
       const newOnes = dynamicAssertions.map((a: any) => ({
         ...a,
@@ -523,6 +524,8 @@ function AssertionModal({
     (a) => a.showForTypes.includes('all') || a.showForTypes.includes(valueType),
   );
 
+  console.log('generalAssertions123:', generalAssertions);
+
   const staticVariables = variables.filter((v) => v.name.startsWith('S_'));
   const filteredDynamicVariables = dynamicVariables.filter((v) =>
     v.name.startsWith('D_'),
@@ -709,6 +712,9 @@ function AssertionModal({
         comparison: generalComparison,
         _richDescription: richDesc,
       } as any);
+
+      console.log('newMap11:', newMap);
+
       setSelectedGeneralAssertions(newMap);
       setGeneralType('');
       setGeneralValue('');
@@ -734,16 +740,14 @@ function AssertionModal({
     const suggestedToAdd = pendingAssertions
       .filter((a) => a._isSuggested)
       .map(({ _isSuggested, _suggestedId, _label, ...rest }) => rest);
+
     const manualToAdd = pendingAssertions.filter((a) => !a._isSuggested);
+
     const toRemove = Array.from(assertionsToRemove);
 
-    if (suggestedToAdd.length > 0 || toRemove.length > 0) {
-      onSelect('suggested-multiple', {
-        assertions: suggestedToAdd,
-        assertionsToRemove: toRemove,
-      });
-    }
-
+    // Build general assertions into plain assertion objects here
+    // instead of dispatching separate onSelect calls per general item
+    const generalToAdd: any[] = [];
     selectedGeneralAssertions.forEach((data, gType) => {
       const assertion = generalAssertions.find((a) => a.id === gType);
       const config: any = {
@@ -759,12 +763,20 @@ function AssertionModal({
       } else {
         config.operator = 'equals';
       }
-      onSelect(gType, config);
+      generalToAdd.push({
+        gType,
+        config,
+        richDescription: (data as any)._richDescription,
+      });
     });
 
-    manualToAdd.forEach((assertion) =>
-      onSelect('manual-direct', { assertion }),
-    );
+    // Single dispatch with everything
+    onSelect('batch-all', {
+      suggestedAssertions: suggestedToAdd,
+      assertionsToRemove: toRemove,
+      manualAssertions: manualToAdd,
+      generalAssertions: generalToAdd,
+    });
 
     setSelectedSuggestedAssertions(new Set());
     setAssertionsToRemove(new Set());
@@ -918,7 +930,7 @@ function AssertionModal({
             <div className='flex items-start justify-between px-4 pt-2 sm:pt-4 pb-2 gap-2'>
               <div className='min-w-0 flex-1'>
                 <h2 className='text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight'>
-                  Add Assertions
+                  Add Assertion
                 </h2>
                 <div className='flex items-center gap-1.5 mt-1 flex-wrap'>
                   <span
@@ -1424,14 +1436,25 @@ function AssertionModal({
                               <input
                                 type={tpl.inputType || 'text'}
                                 value={generalValue}
-                                onChange={(e) =>
-                                  setGeneralValue(e.target.value)
-                                }
-                                onKeyDown={(e) =>
-                                  e.key === 'Enter' &&
-                                  canAddAssertion() &&
-                                  handleAddAssertion()
-                                }
+                                onChange={(e) => {
+                                  const value = e.target.value;
+
+                                  // Prevent negative numbers
+                                  if (value.includes('-')) return;
+
+                                  setGeneralValue(value);
+                                }}
+                                onKeyDown={(e) => {
+                                  // Block '-' key
+                                  if (e.key === '-') {
+                                    e.preventDefault();
+                                    return;
+                                  }
+
+                                  if (e.key === 'Enter' && canAddAssertion()) {
+                                    handleAddAssertion();
+                                  }
+                                }}
                                 placeholder={`Enter ${tpl.inputLabel}`}
                                 className={`w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#136fb0] placeholder-gray-400 ${generalType === 'response_time' || generalType === 'payload_size' ? 'pr-12' : ''}`}
                                 autoFocus

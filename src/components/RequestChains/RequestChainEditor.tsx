@@ -269,8 +269,6 @@ export function RequestChainEditor({
     setTags(chain.tags || []);
   }, [chain?.updatedAt]);
 
-  // P1-D: assertion state + effects moved to useAssertionState hook (declared below, after formData)
-
   const handleEnvironmentChange = (environmentId: string) => {
     setSelectedEnvironment(environmentId);
     const selectedEnv = environments.find((env) => env.id === environmentId);
@@ -1734,10 +1732,12 @@ export function RequestChainEditor({
             requestAssertions = request.assertions;
           }
 
-          const allAssertions = requestAssertions.map((assertion) => ({
-            ...assertion,
-            enabled: assertion.enabled ?? true,
-          }));
+          const allAssertions = requestAssertions
+            .filter((assertion) => assertion.enabled === true)
+            .map((assertion) => ({
+              ...assertion,
+              enabled: true,
+            }));
 
           if (isExistingRequest) {
             return {

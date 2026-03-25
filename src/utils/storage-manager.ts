@@ -424,6 +424,34 @@ class StorageManager {
       return false;
     }
   }
+  /**
+   * Save an arbitrary JSON-serialisable value to the metadata store.
+   * Used by ResponseViewer to persist extracted variables to IDB (P1-A).
+   */
+  async saveGeneric(key: string, value: any): Promise<boolean> {
+    try {
+      const db = await this.init();
+      await (db as any).put('metadata', { key, value, timestamp: Date.now() });
+      return true;
+    } catch (error) {
+      console.error('[Storage] saveGeneric failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Retrieve a previously saved generic value from the metadata store.
+   */
+  async getGeneric(key: string): Promise<any | null> {
+    try {
+      const db = await this.init();
+      const record = (await db.get('metadata', key)) as any;
+      return record?.value ?? null;
+    } catch (error) {
+      console.error('[Storage] getGeneric failed:', error);
+      return null;
+    }
+  }
 }
 
 // Export singleton instance

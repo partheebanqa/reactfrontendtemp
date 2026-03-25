@@ -73,37 +73,35 @@ export function useAssertionState({
         const loadedAssertions: Record<string, any[]> = {};
 
         for (const request of chainRequests || []) {
-          if (
-            request.assertions &&
-            Array.isArray(request.assertions) &&
-            request.assertions.length > 0
-          ) {
-            loadedAssertions[request.id] = request.assertions;
-            continue;
+          const candidates: any[][] = [];
+
+          if (request.assertions?.length > 0) {
+            candidates.push(request.assertions);
           }
 
           const fromIDB = await storageManager.getAssertions(request.id);
-          if (fromIDB && fromIDB.length > 0) {
-            loadedAssertions[request.id] = fromIDB;
-            continue;
+          if (fromIDB?.length > 0) {
+            candidates.push(fromIDB);
           }
 
           const fromSecure = secureStorage.loadEncrypted(
             `assertions_${request.id}`,
           );
           if (fromSecure?.assertions?.length > 0) {
-            loadedAssertions[request.id] = fromSecure.assertions;
-            continue;
+            candidates.push(fromSecure.assertions);
           }
 
           const execMap =
             secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-          if (
-            execMap[request.id]?.assertions &&
-            Array.isArray(execMap[request.id].assertions) &&
-            execMap[request.id].assertions.length > 0
-          ) {
-            loadedAssertions[request.id] = execMap[request.id].assertions;
+          if (execMap[request.id]?.assertions?.length > 0) {
+            candidates.push(execMap[request.id].assertions);
+          }
+
+          if (candidates.length > 0) {
+            // Pick the source with the most assertions
+            loadedAssertions[request.id] = candidates.reduce((best, current) =>
+              current.length > best.length ? current : best,
+            );
           }
         }
 
@@ -114,8 +112,13 @@ export function useAssertionState({
             for (const [requestId, loaded] of Object.entries(
               loadedAssertions,
             )) {
-              // Only load from storage if we don't already have assertions in memory
-              if (!prev[requestId] || prev[requestId].length === 0) {
+              const existing = prev[requestId];
+              // Take whichever has more assertions
+              if (
+                !existing ||
+                existing.length === 0 ||
+                loaded.length > existing.length
+              ) {
                 merged[requestId] = loaded;
               }
             }
@@ -142,9 +145,13 @@ export function useAssertionState({
       for (const [requestId, assertions] of Object.entries(
         assertionsByRequest,
       )) {
-        if (assertions.length > 0) {
-          await persistAssertionsToStorage(requestId, assertions);
-        }
+        if (assertions.length === 0) continue;
+
+        // Don't overwrite storage with fewer assertions than what's already saved
+        const existing = await storageManager.getAssertions(requestId);
+        if (existing && existing.length > assertions.length) continue;
+
+        await persistAssertionsToStorage(requestId, assertions);
       }
     }, 1000);
 
