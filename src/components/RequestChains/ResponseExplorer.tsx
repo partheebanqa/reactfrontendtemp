@@ -1276,7 +1276,7 @@ export function ResponseExplorer({
             {[
               {
                 id: 'body',
-                label: 'Response Body',
+                label: 'Body',
                 count: 0,
               },
               {
@@ -1331,13 +1331,13 @@ export function ResponseExplorer({
                   )}
 
                   {tab.id === 'assertions' && count > 0 && (
-                    <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 ml-px'>
+                    <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 ml-px'>
                       {count}
                     </span>
                   )}
 
                   {showCountBadge && (
-                    <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 ml-px'>
+                    <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 ml-px'>
                       {count}
                     </span>
                   )}

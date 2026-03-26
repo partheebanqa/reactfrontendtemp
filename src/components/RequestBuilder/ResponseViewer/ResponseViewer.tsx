@@ -1405,7 +1405,7 @@ const ResponseViewer = ({
                       {tab.label}
                       {tab.id === 'test-results' &&
                         executedAssertionCount > 0 && (
-                          <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
+                          <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
                             {executedAssertionCount}
                           </span>
                         )}
