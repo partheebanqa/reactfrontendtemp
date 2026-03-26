@@ -138,9 +138,9 @@ const computeOverall = (data: any) => {
   const avgDuration =
     tcs.length > 0
       ? Math.round(
-          tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
-            tcs.length,
-        )
+        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+        tcs.length,
+      )
       : Number.isFinite(data?.duration)
         ? Number(data.duration)
         : 0;
@@ -307,6 +307,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
   const [jiraLoading, setJiraLoading] = useState(false);
 
   const { toast } = useToast();
+
   const handleJiraSubmit = async (e: any) => {
     e.preventDefault();
     try {
@@ -325,6 +326,8 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
       setJiraLoading(false);
     }
   };
+
+  const [, navigate] = useLocation()
 
   return (
     <div id='report-content'>
@@ -407,7 +410,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                   <FileText className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Download HTML File</TooltipContent>
+              <TooltipContent>Download HTML Report</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -419,7 +422,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                   <Download className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Download PDF File</TooltipContent>
+              <TooltipContent>Download PDF Summary</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -434,16 +437,32 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               <TooltipContent>Share Report</TooltipContent>
             </Tooltip>
 
+
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  onClick={() => setOpenJiraModal(true)}
-                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors'
+                  onClick={() => {
+                    if (jiraIntegration) {
+                      setOpenJiraModal(true);
+                    } else {
+                      navigate("/settings/account?tab=external-tools");
+                    }
+                  }}
+                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1"
                 >
                   <JiraIcon />
+
+                  {!jiraIntegration && (
+                    <span className="text-xs text-red-500">Not Configured</span>
+                  )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>Create Jira issue</TooltipContent>
+
+              <TooltipContent>
+                {jiraIntegration ? "Create Jira issue" : "Configure Jira"}
+              </TooltipContent>
             </Tooltip>
           </TooltipProvider>
           <JiraIntegrationModal

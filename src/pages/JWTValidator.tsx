@@ -173,7 +173,7 @@ export function JWTValidator() {
                                     </Alert>
                                 ) : (
                                     <>
-                                        <Alert
+                                        {/* <Alert
                                             variant={validationResult.isValidForNext2Mins ? 'default' : 'destructive'}
                                             className={
                                                 validationResult.isValidForNext2Mins
@@ -193,7 +193,7 @@ export function JWTValidator() {
                                                         ? 'Token is currently valid but will expire within 2 minutes'
                                                         : 'Token has expired'}
                                             </AlertDescription>
-                                        </Alert>
+                                        </Alert> */}
 
                                         {validationResult.expiryDate && (
                                             <div className="space-y-3 rounded-lg border bg-slate-50 dark:bg-slate-900 p-4">
