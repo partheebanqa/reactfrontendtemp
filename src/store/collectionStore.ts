@@ -198,11 +198,13 @@ export const collectionActions = {
       const existingOpen = state.openedRequests.find(
         (r) => r.id === request.id,
       );
+      const isUnsaved = !!request.id && state.unsavedChanges.has(request.id);
       const merged = existingOpen
         ? {
             ...existingOpen,
-
-            assertions: request.assertions,
+            assertions: isUnsaved
+              ? existingOpen.assertions // local buffer wins
+              : (request.assertions ?? existingOpen.assertions), // backend wins when clean
             extractVariables: request.extractVariables?.length
               ? request.extractVariables
               : existingOpen.extractVariables,
@@ -214,15 +216,20 @@ export const collectionActions = {
       };
     });
   },
+
+  // AFTER
   openRequest: (request: CollectionRequest) => {
     collectionStore.setState((state) => {
       const existingOpen = state.openedRequests.find(
         (r) => r.id === request.id,
       );
+      const isUnsaved = !!request.id && state.unsavedChanges.has(request.id);
       const merged = existingOpen
         ? {
             ...existingOpen,
-            assertions: request.assertions,
+            assertions: isUnsaved
+              ? existingOpen.assertions // local buffer wins
+              : (request.assertions ?? existingOpen.assertions), // backend wins when clean
             extractVariables: request.extractVariables?.length
               ? request.extractVariables
               : existingOpen.extractVariables,

@@ -144,7 +144,7 @@ export const useCollectionRequestsQuery = () => {
 
   return useMutation({
     mutationFn: getCollectionRequests,
-    onSuccess: (payload, collectionId) => {
+    onSuccess: async (payload, collectionId) => {
       const rootRequests = Array.isArray(payload?.requests)
         ? payload.requests
         : [];
@@ -193,27 +193,60 @@ export const useCollectionRequestsQuery = () => {
 
       const currentActive = collectionStore.state.activeRequest;
 
-      const updatedOpenedRequests = collectionStore.state.openedRequests.map(
-        (openedReq) => {
+      const unsavedIds = collectionStore.state.unsavedChanges;
+
+      const updatedOpenedRequests = await Promise.all(
+        collectionStore.state.openedRequests.map(async (openedReq) => {
           const fresh = fetchedAll.find((f) => f.id === openedReq.id);
           if (!fresh) return openedReq;
+
+          const isUnsaved = !!openedReq.id && unsavedIds.has(openedReq.id);
+          let resolvedAssertions: any[];
+
+          if (isUnsaved) {
+            const idbAssertions = await storageManager.getAssertions(
+              openedReq.id!,
+            );
+            resolvedAssertions = idbAssertions ?? openedReq.assertions ?? [];
+          } else {
+            resolvedAssertions = fresh.assertions ?? openedReq.assertions ?? [];
+          }
+
           return {
             ...openedReq,
-            assertions: fresh.assertions ?? [], // backend always wins
+            assertions: resolvedAssertions,
             extractVariables: fresh.extractVariables?.length
               ? fresh.extractVariables
               : openedReq.extractVariables,
           };
-        },
+        }),
       );
 
+      // Resolve active request assertions BEFORE entering setState (can't await inside setState)
+      const freshActive = fetchedAll.find((f) => f.id === currentActive?.id);
+      let resolvedActiveAssertions = currentActive?.assertions ?? [];
+
+      if (freshActive && currentActive) {
+        const isActiveUnsaved =
+          !!currentActive.id && unsavedIds.has(currentActive.id);
+        if (isActiveUnsaved) {
+          const idbAssertions = await storageManager.getAssertions(
+            currentActive.id!,
+          );
+          resolvedActiveAssertions =
+            idbAssertions ?? currentActive.assertions ?? [];
+        } else {
+          resolvedActiveAssertions =
+            freshActive.assertions ?? currentActive.assertions ?? [];
+        }
+      }
+
       collectionStore.setState((state) => {
-        const freshActive = fetchedAll.find((f) => f.id === currentActive?.id);
         const updatedActive =
           freshActive && currentActive
             ? {
                 ...currentActive,
-                assertions: freshActive.assertions ?? [], // backend always wins
+                assertions: resolvedActiveAssertions, // pre-resolved above
                 extractVariables: freshActive.extractVariables?.length
                   ? freshActive.extractVariables
                   : currentActive.extractVariables,
@@ -227,6 +260,26 @@ export const useCollectionRequestsQuery = () => {
         };
       });
 
+      // collectionStore.setState((state) => {
+      //   const freshActive = fetchedAll.find((f) => f.id === currentActive?.id);
+      //   const updatedActive =
+      //     freshActive && currentActive
+      //       ? {
+      //           ...currentActive,
+      //           assertions: freshActive.assertions ?? [], // backend always wins
+      //           extractVariables: freshActive.extractVariables?.length
+      //             ? freshActive.extractVariables
+      //             : currentActive.extractVariables,
+      //         }
+      //       : currentActive;
+
+      //   return {
+      //     ...state,
+      //     openedRequests: updatedOpenedRequests,
+      //     activeRequest: updatedActive,
+      //   };
+      // });
+
       // Sync fresh backend assertions to IDB in the background
       // so page reload always gets the latest data
       Promise.allSettled(
@@ -235,7 +288,8 @@ export const useCollectionRequestsQuery = () => {
             (req) =>
               req.id &&
               Array.isArray(req.assertions) &&
-              req.assertions.length > 0,
+              req.assertions.length > 0 &&
+              !unsavedIds.has(req.id),
           )
           .map((req) =>
             storageManager.saveAssertions(
@@ -244,9 +298,7 @@ export const useCollectionRequestsQuery = () => {
               collectionId as string,
             ),
           ),
-      ).catch(() => {
-        // non-critical
-      });
+      ).catch(() => {});
 
       return fetchedAll;
     },
