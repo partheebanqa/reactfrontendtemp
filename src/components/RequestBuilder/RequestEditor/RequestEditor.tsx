@@ -1216,30 +1216,50 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
 
     const loadAssertions = async () => {
       try {
-        // Priority 1: IndexedDB (primary persistent store)
+        const requestAssertions = Array.isArray(
+          (activeRequest as any).assertions,
+        )
+          ? (activeRequest as any).assertions
+          : [];
+
+        // If the request object already has assertions from the backend
+        // (populated via fetchCollectionRequests), use them as source of truth
+        // and sync to IDB.
+        if (requestAssertions.length > 0) {
+          try {
+            await storageManager.saveAssertions(
+              activeRequest.id,
+              requestAssertions,
+              activeCollection?.id,
+            );
+          } catch (idbErr) {
+            console.warn('[RequestEditor] IDB sync failed:', idbErr);
+          }
+          setAssertions(requestAssertions);
+          return;
+        }
+
+        // Request has no assertions on the object — could be because:
+        // 1. It's a fresh page load and sessionStorage stripped assertions
+        // 2. The request genuinely has no assertions
+        // Check IDB first before assuming empty.
         const fromIDB = await storageManager.getAssertions(activeRequest.id);
         if (fromIDB && fromIDB.length > 0) {
+          // IDB has data — use it as temporary state until backend fetch completes
           setAssertions(fromIDB as any);
           return;
         }
-        // Priority 2: assertions already baked into the request object
-        if (
-          Array.isArray((activeRequest as any).assertions) &&
-          (activeRequest as any).assertions.length > 0
-        ) {
-          setAssertions((activeRequest as any).assertions);
-          return;
-        }
-        // No stored assertions — start clean
+
+        // Neither the request object nor IDB has assertions — truly empty
         setAssertions([]);
       } catch (e) {
-        console.error('[RequestEditor] Failed to load assertions from IDB:', e);
+        console.error('[RequestEditor] Failed to load assertions:', e);
+        setAssertions([]);
       }
     };
 
     loadAssertions();
-  }, [activeRequest?.id]);
-
+  }, [activeRequest?.id, activeCollection?.id]);
   // useEffect(() => {
   //   if (activeRequest?.id && activeCollection?.id) {
   //     const collection = collections.find((c) => c.id === activeCollection.id);
@@ -1942,11 +1962,15 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
           a.type === b.type &&
           a.operator === b.operator;
 
+        // Use current assertions state (which reflects the last save) as source of truth
+        // for enabled/disabled status — never pull from IDB here
         const mergedAssertions = generatedAssertions.map((newA) => {
           const existing = assertions.find((ex) => assertionsMatch(ex, newA));
           if (existing) {
-            return { ...newA, enabled: existing.enabled ?? true };
+            // Preserve the enabled state from the current saved assertions
+            return { ...newA, enabled: existing.enabled ?? false };
           }
+          // New assertion from response — default to disabled
           return { ...newA, enabled: false };
         });
 
@@ -1963,7 +1987,21 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
           return false;
         });
 
-        setAssertions([...mergedAssertions, ...preservedAssertions]);
+        const finalAssertions = [...mergedAssertions, ...preservedAssertions];
+        setAssertions(finalAssertions);
+
+        // Immediately sync the merged result to IDB so next reload gets this state
+        if (activeRequest?.id) {
+          try {
+            await storageManager.saveAssertions(
+              activeRequest.id,
+              finalAssertions,
+              activeCollection?.id,
+            );
+          } catch (idbErr) {
+            console.warn('[RequestEditor] IDB sync after send failed:', idbErr);
+          }
+        }
       }
     } catch (error: any) {
       if (error.name === 'AbortError' || error.message?.includes('abort')) {
@@ -2390,10 +2428,12 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         // P0-B: Persist assertions to IndexedDB immediately after API save succeeds.
         // This ensures they survive a page reload even if the backend roundtrip is slow.
         if (selectedAssertions.length > 0) {
+          // Always sync to IDB after an explicit save, including when all assertions
+          // are removed. This is safe because the user explicitly saved this state.
           try {
             await storageManager.saveAssertions(
               activeRequest.id,
-              selectedAssertions,
+              assertions,
               activeCollection?.id,
             );
           } catch (idbErr) {
@@ -2413,6 +2453,32 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         }
 
         collectionActions.markSaved(activeRequest.id);
+        const updatedRequest = {
+          ...activeRequest,
+          name: overrideName || activeRequest.name,
+          method,
+          url,
+          params,
+          headers: headers.filter((h) => h.enabled),
+          bodyType,
+          bodyRawContent: bodyContent,
+          bodyFormData:
+            bodyType === 'form-data' ? formFields.filter((f) => f.enabled) : [],
+          authorizationType: effectiveAuthType,
+          authorization: {
+            token: authData.token,
+            username: authData.username,
+            password: authData.password,
+            key: authData.key,
+            value: authData.value,
+            addTo: authData.addTo,
+            oauth1: authData.oauth1,
+            oauth2: authData.oauth2,
+          },
+        };
+
+        setActiveRequest(updatedRequest);
+        collectionActions.updateOpenedRequest(updatedRequest);
 
         toast({
           title: overrideName
@@ -2774,6 +2840,42 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
       });
 
       collectionActions.markSaved(activeRequest.id);
+      try {
+        await storageManager.saveAssertions(
+          activeRequest.id,
+          assertions,
+          activeCollection?.id,
+        );
+      } catch (idbErr) {
+        console.warn('[RequestEditor] IDB assertion save failed:', idbErr);
+      }
+
+      const updatedRequest = {
+        ...activeRequest,
+        name: activeRequest.name,
+        method,
+        url,
+        params,
+        headers: headers.filter((h) => h.enabled),
+        bodyType,
+        bodyRawContent: bodyContent,
+        bodyFormData:
+          bodyType === 'form-data' ? formFields.filter((f) => f.enabled) : [],
+        authorizationType: effectiveAuthType,
+        authorization: {
+          token: authData.token,
+          username: authData.username,
+          password: authData.password,
+          key: authData.key,
+          value: authData.value,
+          addTo: authData.addTo,
+          oauth1: authData.oauth1,
+          oauth2: authData.oauth2,
+        },
+      };
+
+      setActiveRequest(updatedRequest);
+      collectionActions.updateOpenedRequest(updatedRequest);
 
       toast({
         title: 'Request updated successfully!',
@@ -3403,7 +3505,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                       tab.id === 'schemas') &&
                       (tab.count ?? 0) > 0 && (
                         <span
-                          className='ml-1 inline-block w-1.5 h-1.5 rounded-full'
+                          className='relative -top-1.5 ml-0.5 inline-block w-1.5 h-1.5 rounded-full'
                           style={{
                             backgroundColor:
                               'rgb(19 111 176 / var(--tw-bg-opacity, 1))',
@@ -3416,7 +3518,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                       tab.id !== 'schemas' &&
                       tab.count !== undefined &&
                       tab.count > 0 && (
-                        <span className='ml-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-full px-2 py-0.5 text-xs'>
+                        <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
                           {tab.count}
                         </span>
                       )}

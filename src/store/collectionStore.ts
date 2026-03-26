@@ -103,12 +103,21 @@ export const initialCollectionState: CollectionState = {
 const STORAGE_KEY = 'collection-store-tabs';
 
 function serializeTabState(state: CollectionState) {
+  // Strip assertions from persisted tab state — IDB is the single source
+  // of truth for assertions. Storing them here causes stale data to resurface
+  // on page reload before IDB is consulted.
+  const stripAssertions = (req: CollectionRequest) => {
+    const { assertions, ...rest } = req as any;
+    return rest;
+  };
+
   return JSON.stringify({
-    openedRequests: state.openedRequests,
-    activeRequest: state.activeRequest,
+    openedRequests: state.openedRequests.map(stripAssertions),
+    activeRequest: state.activeRequest
+      ? stripAssertions(state.activeRequest)
+      : null,
   });
 }
-
 function loadTabState(): Partial<CollectionState> {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -193,7 +202,7 @@ export const collectionActions = {
         ? {
             ...existingOpen,
 
-            assertions: request.assertions ?? existingOpen.assertions,
+            assertions: request.assertions,
             extractVariables: request.extractVariables?.length
               ? request.extractVariables
               : existingOpen.extractVariables,
@@ -213,7 +222,7 @@ export const collectionActions = {
       const merged = existingOpen
         ? {
             ...existingOpen,
-            assertions: request.assertions ?? existingOpen.assertions,
+            assertions: request.assertions,
             extractVariables: request.extractVariables?.length
               ? request.extractVariables
               : existingOpen.extractVariables,

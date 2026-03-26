@@ -19,6 +19,7 @@ import {
 import { workspaceStore } from '../workspaceStore';
 import type { CollectionRequest } from '@/shared/types/collection';
 import { queryClient } from '@/lib/queryClient';
+import { storageManager } from '@/utils/storage-manager';
 
 export const useCollectionQuery = (enabled = true) => {
   const currentWorkspace = workspaceStore.state.currentWorkspace;
@@ -189,16 +190,16 @@ export const useCollectionRequestsQuery = () => {
       );
 
       collectionActions.setCollections(updatedCollection);
+
       const currentActive = collectionStore.state.activeRequest;
+
       const updatedOpenedRequests = collectionStore.state.openedRequests.map(
         (openedReq) => {
           const fresh = fetchedAll.find((f) => f.id === openedReq.id);
           if (!fresh) return openedReq;
           return {
             ...openedReq,
-            assertions: fresh.assertions?.length
-              ? fresh.assertions
-              : openedReq.assertions,
+            assertions: fresh.assertions ?? [], // backend always wins
             extractVariables: fresh.extractVariables?.length
               ? fresh.extractVariables
               : openedReq.extractVariables,
@@ -212,9 +213,7 @@ export const useCollectionRequestsQuery = () => {
           freshActive && currentActive
             ? {
                 ...currentActive,
-                assertions: freshActive.assertions?.length
-                  ? freshActive.assertions
-                  : currentActive.assertions,
+                assertions: freshActive.assertions ?? [], // backend always wins
                 extractVariables: freshActive.extractVariables?.length
                   ? freshActive.extractVariables
                   : currentActive.extractVariables,
@@ -227,6 +226,28 @@ export const useCollectionRequestsQuery = () => {
           activeRequest: updatedActive,
         };
       });
+
+      // Sync fresh backend assertions to IDB in the background
+      // so page reload always gets the latest data
+      Promise.allSettled(
+        fetchedAll
+          .filter(
+            (req) =>
+              req.id &&
+              Array.isArray(req.assertions) &&
+              req.assertions.length > 0,
+          )
+          .map((req) =>
+            storageManager.saveAssertions(
+              req.id,
+              req.assertions,
+              collectionId as string,
+            ),
+          ),
+      ).catch(() => {
+        // non-critical
+      });
+
       return fetchedAll;
     },
   });

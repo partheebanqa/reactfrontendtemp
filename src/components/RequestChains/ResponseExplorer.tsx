@@ -1302,13 +1302,15 @@ export function ResponseExplorer({
               },
               {
                 id: 'assertions',
-                label: 'Assertions(R)',
+                label:
+                  response?.assertions?.length === 1
+                    ? 'Assertion'
+                    : 'Assertions',
                 count: response?.assertions ? response.assertions.length : 0,
               },
             ].map((tab) => {
               const count = tab.count ?? 0;
-              const showBlueDot =
-                ['assertions', 'actualRequest'].includes(tab.id) && count > 0;
+              const showBlueDot = tab.id === 'actualRequest' && count > 0;
               const showCountBadge =
                 ['headers', 'cookies'].includes(tab.id) && count > 0;
 
@@ -1325,14 +1327,17 @@ export function ResponseExplorer({
                   <span>{tab.label}</span>
 
                   {showBlueDot && (
-                    <span
-                      className='inline-block w-1.5 h-1.5 rounded-full bg-[#136fb0]'
-                      aria-label={`${count} item${count !== 1 ? 's' : ''}`}
-                    />
+                    <span className='relative -top-1.5 inline-block w-1.5 h-1.5 rounded-full bg-[#136fb0]' />
+                  )}
+
+                  {tab.id === 'assertions' && count > 0 && (
+                    <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 ml-px'>
+                      {count}
+                    </span>
                   )}
 
                   {showCountBadge && (
-                    <span className='ml-1 bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs'>
+                    <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 ml-px'>
                       {count}
                     </span>
                   )}

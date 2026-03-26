@@ -1307,6 +1307,11 @@ const ResponseViewer = ({
   // Tabs config
   // ---------------------------------------------------------------------------
 
+  const executedAssertionCount = useMemo(
+    () => responseData?.assertionLogs?.length ?? 0,
+    [responseData?.assertionLogs],
+  );
+
   const tabs = useMemo(
     () => [
       { id: 'body', label: 'Body' },
@@ -1314,10 +1319,8 @@ const ResponseViewer = ({
       { id: 'cookies', label: 'Cookies' },
       {
         id: 'test-results',
-        label: 'Assertions(R)',
-        hasIndicator:
-          !!responseData?.assertionLogs &&
-          responseData.assertionLogs.length > 0,
+        label: executedAssertionCount === 1 ? 'Assertion' : 'Assertions',
+        hasIndicator: false,
       },
       {
         id: 'schema',
@@ -1396,10 +1399,20 @@ const ResponseViewer = ({
                         : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                     }`}
                   >
-                    <span className='text-xs md:text-sm'>{tab.label}</span>
-                    {tab.hasIndicator && (
-                      <span className='w-1.5 h-1.5 bg-blue-500 rounded-full' />
-                    )}
+                    {/* <span className='text-xs md:text-sm'>{tab.label}</span> */}
+
+                    <span className='text-xs md:text-sm'>
+                      {tab.label}
+                      {tab.id === 'test-results' &&
+                        executedAssertionCount > 0 && (
+                          <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
+                            {executedAssertionCount}
+                          </span>
+                        )}
+                      {tab.hasIndicator && (
+                        <span className='relative -top-1.5 ml-0.5 inline-block w-1.5 h-1.5 bg-blue-500 rounded-full' />
+                      )}
+                    </span>
                   </button>
                 );
 
