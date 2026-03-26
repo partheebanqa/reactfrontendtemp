@@ -1392,36 +1392,29 @@ export function RequestChainEditor({
         try {
           let requestAssertions: any[] = [];
 
-          if (
-            assertionsByRequest[request.id] &&
-            Array.isArray(assertionsByRequest[request.id]) &&
-            assertionsByRequest[request.id].length > 0
-          ) {
-            requestAssertions = assertionsByRequest[request.id];
-          } else if (
-            request.assertions &&
-            Array.isArray(request.assertions) &&
-            request.assertions.length > 0
-          ) {
-            requestAssertions = request.assertions;
-          } else {
-            try {
-              // P0 Fix: loadEncrypted already returns parsed object, no JSON.parse needed
-              const map =
-                secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+          const backendAssertions = request.assertions ?? [];
+          const cachedAssertions = assertionsByRequest[request.id] ?? [];
 
-              if (
-                map[request.id]?.assertions &&
-                Array.isArray(map[request.id].assertions) &&
-                map[request.id].assertions.length > 0
-              ) {
-                requestAssertions = map[request.id].assertions;
-              }
-            } catch (e) {
-              console.error('Failed to read assertions from encrypted:', e);
-            }
+          let storedAssertions: any[] = [];
+          try {
+            const map =
+              secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+            storedAssertions = map[request.id]?.assertions ?? [];
+          } catch (e) {
+            console.error('Failed to read assertions from encrypted:', e);
           }
 
+          // Backend always wins if it has more assertions than local cache
+          if (
+            backendAssertions.length >= cachedAssertions.length &&
+            backendAssertions.length >= storedAssertions.length
+          ) {
+            requestAssertions = backendAssertions;
+          } else if (cachedAssertions.length >= storedAssertions.length) {
+            requestAssertions = cachedAssertions;
+          } else {
+            requestAssertions = storedAssertions;
+          }
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id,
           );
@@ -1712,32 +1705,14 @@ export function RequestChainEditor({
           const isExistingRequest =
             request.id && originalRequestIds.has(request.id);
 
-          let requestAssertions: any[] = [];
+          const requestAssertions: any[] =
+            assertionsByRequest[request.id] ?? request.assertions ?? [];
+          const allAssertions = requestAssertions.map((assertion) => ({
+            ...assertion,
+            enabled: assertion.enabled === true,
+          }));
 
-          if (
-            assertionsByRequest[request.id] &&
-            assertionsByRequest[request.id].length > 0
-          ) {
-            requestAssertions = assertionsByRequest[request.id];
-          } else if (
-            allStoredAssertions[request.id] &&
-            allStoredAssertions[request.id].length > 0
-          ) {
-            requestAssertions = allStoredAssertions[request.id];
-          } else if (
-            request.assertions &&
-            Array.isArray(request.assertions) &&
-            request.assertions.length > 0
-          ) {
-            requestAssertions = request.assertions;
-          }
-
-          const allAssertions = requestAssertions
-            .filter((assertion) => assertion.enabled === true)
-            .map((assertion) => ({
-              ...assertion,
-              enabled: true,
-            }));
+          console.log('allAssertions111:', allAssertions);
 
           if (isExistingRequest) {
             return {
@@ -1997,188 +1972,6 @@ export function RequestChainEditor({
     });
     setExpandedRequests(new Set([...expandedRequests, tempId]));
   };
-
-  // const saveChainToAPI = async (): Promise<RequestChain | null> => {
-  //   if (!formData.name?.trim()) {
-  //     toast({
-  //       title: 'Validation Error',
-  //       description: 'Chain name is required',
-  //       variant: 'destructive',
-  //     });
-  //     return null;
-  //   }
-
-  //   try {
-  //     setIsSaving(true);
-  //     const originalRequestIds = new Set(
-  //       chain?.chainRequests?.map((r) => r.id) || [],
-  //     );
-
-  //     const allStoredAssertions: Record<string, any[]> = {};
-  //     try {
-  //       const raw = encrypted.getItem('lastExecutionByRequest');
-  //       if (raw) {
-  //         const map = JSON.parse(raw);
-  //         Object.keys(map).forEach((requestId) => {
-  //           if (
-  //             map[requestId]?.assertions &&
-  //             Array.isArray(map[requestId].assertions)
-  //           ) {
-  //             allStoredAssertions[requestId] = map[requestId].assertions;
-  //           }
-  //         });
-  //       }
-  //     } catch (e) {
-  //       console.error('Failed to read stored assertions:', e);
-  //     }
-
-  //     const chainDataForBackend = {
-  //       ...formData,
-  //       chainRequests: formData.chainRequests?.map((request, index) => {
-  //         const token = request.authToken?.trim() || '';
-  //         const authorization: any = {};
-  //         let authorizationType = request.authorizationType || 'none';
-
-  //         if (token) {
-  //           authorization.token = token;
-  //           authorizationType = 'bearer';
-  //         } else {
-  //           authorizationType = 'none';
-  //         }
-
-  //         const isExistingRequest =
-  //           request.id && originalRequestIds.has(request.id);
-
-  //         let requestAssertions: any[] = [];
-
-  //         if (
-  //           assertionsByRequest[request.id] &&
-  //           assertionsByRequest[request.id].length > 0
-  //         ) {
-  //           requestAssertions = assertionsByRequest[request.id];
-  //         } else if (
-  //           allStoredAssertions[request.id] &&
-  //           allStoredAssertions[request.id].length > 0
-  //         ) {
-  //           requestAssertions = allStoredAssertions[request.id];
-  //         }
-
-  //         const allAssertions = requestAssertions
-  //           .filter((a) => a.enabled !== false)
-  //           .map((assertion) => ({
-  //             ...assertion,
-  //             enabled: true,
-  //           }));
-
-  //         if (isExistingRequest) {
-  //           return {
-  //             ...request,
-  //             order: index + 1,
-  //             authorizationType,
-  //             authorization,
-  //             assertions: allAssertions,
-  //             variables: request.variables || [],
-  //             tags: tags ?? [],
-  //             headers:
-  //               request.headers?.map((h) =>
-  //                 h.id && !h.id.startsWith('temp_')
-  //                   ? h
-  //                   : { ...h, id: undefined },
-  //               ) || [],
-  //             params:
-  //               request.params?.map((p) =>
-  //                 p.id && !p.id.startsWith('temp_')
-  //                   ? p
-  //                   : { ...p, id: undefined },
-  //               ) || [],
-  //           };
-  //         } else {
-  //           return {
-  //             ...request,
-  //             id: undefined,
-  //             order: index + 1,
-  //             authorizationType,
-  //             authorization,
-  //             assertions: allAssertions,
-  //             variables: request.variables || [],
-  //             headers:
-  //               request.headers?.map((h) => ({ ...h, id: undefined })) || [],
-  //             params:
-  //               request.params?.map((p) => ({ ...p, id: undefined })) || [],
-  //           };
-  //         }
-  //       }),
-  //     };
-
-  //     const transformedRequests = chainDataForBackend.chainRequests.map(
-  //       transformRequestForSave,
-  //     );
-
-  //     const chainData: RequestChain = {
-  //       id: requestChainId || chain?.id || '',
-  //       workspaceId: formData.workspaceId || currentWorkspace?.id || '',
-  //       name: formData.name,
-  //       description: formData.description || '',
-  //       environmentId: selectedEnvironment,
-  //       chainRequests: transformedRequests,
-  //       variables: formData.variables || [],
-  //       enabled: formData.enabled ?? true,
-  //       createdAt: chain?.createdAt || new Date().toISOString(),
-  //       updatedAt: new Date().toISOString(),
-  //       lastExecuted: chain?.lastExecuted,
-  //       executionCount: chain?.executionCount || 0,
-  //       successRate: chain?.successRate || 0,
-  //       tags: tags ?? ['untagged', 'new'],
-  //     };
-
-  //     const savedChain =
-  //       chainData.id === ''
-  //         ? await saveRequestChain(chainData)
-  //         : await updateRequestChain(chainData, chainData.id);
-
-  //     setFormData((prev) => ({ ...prev, id: savedChain.id }));
-
-  //     if (formData.variables && formData.variables.length > 0) {
-  //       saveVariablesSecurely(formData.variables);
-  //     }
-
-  //     secureStorage.saveEncrypted(`chain_backup_${savedChain.id}`, {
-  //       ...chainData,
-  //       savedAt: new Date().toISOString(),
-  //     });
-
-  //     toast({
-  //       title: chainData.id === '' ? 'Chain Saved' : 'Chain Updated',
-  //       description:
-  //         chainData.id === ''
-  //           ? 'Your request chain has been saved successfully with assertions.'
-  //           : 'Your request chain has been updated successfully with assertions.',
-  //     });
-
-  //     return savedChain;
-  //   } catch (error) {
-  //     console.error('Failed to save chain:', error);
-  //     toast({
-  //       title: chain?.id ? 'Update Failed' : 'Save Failed',
-  //       description:
-  //         error instanceof Error
-  //           ? error.message
-  //           : `Failed to ${chain?.id ? 'update' : 'save'} request chain`,
-  //       variant: 'destructive',
-  //     });
-  //     return null;
-  //   } finally {
-  //     setIsSaving(false);
-  //   }
-  // };
-
-  // const handleSave = async () => {
-  //   const saved = await saveChainToAPI();
-  //   if (saved) {
-  //     onSave(saved);
-  //   }
-  //   return saved;
-  // };
 
   const handleImportRequests = async (importedRequests: ExtendedRequest[]) => {
     try {

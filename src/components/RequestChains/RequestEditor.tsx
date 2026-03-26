@@ -763,18 +763,20 @@ export function RequestEditor({
         setExecutionResult(saved);
         setShowResponse(true);
         setCurrentRequestExtractedVars(saved.extractedVariables ?? {});
-
         if (saved.assertions && Array.isArray(saved.assertions)) {
-          // Only restore from cache if backend didn't provide more assertions
           const backendCount = requestAssertions?.length ?? 0;
-          if (saved.assertions.length > backendCount) {
+          const cachedCount = saved.assertions.length;
+
+          // Backend always wins — only use cache if backend sent nothing
+          if (backendCount === 0 && cachedCount > 0) {
             setAssertions(saved.assertions);
             if (onAssertionsUpdate) {
               onAssertionsUpdate(saved.assertions);
             }
           }
+          // If backend has assertions (even 1), skip cache — the requestAssertions
+          // useEffect will set them correctly
         }
-
         if (
           saved.extractedVariables &&
           typeof saved.extractedVariables === 'object'
@@ -3162,7 +3164,7 @@ export function RequestEditor({
 
                   {/* Count badge for other tabs */}
                   {showCountBadge && (
-                    <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 ml-px'>
+                    <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 ml-px'>
                       {count}
                     </span>
                   )}

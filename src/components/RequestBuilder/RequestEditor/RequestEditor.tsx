@@ -91,6 +91,7 @@ import {
   useRequestEditor,
 } from './context/RequestEditorContext';
 import { isModifierPressed, shortcuts } from '@/utils/keyboardShortcuts';
+import { removeDuplicateAssertions } from '@/lib/assertion-utils';
 
 const TabLoader = () => (
   <div className='flex items-center justify-center p-8'>
@@ -1967,27 +1968,20 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         const mergedAssertions = generatedAssertions.map((newA) => {
           const existing = assertions.find((ex) => assertionsMatch(ex, newA));
           if (existing) {
-            // Preserve the enabled state from the current saved assertions
             return { ...newA, enabled: existing.enabled ?? false };
           }
-          // New assertion from response — default to disabled
           return { ...newA, enabled: false };
         });
 
         const preservedAssertions = assertions.filter((a) => {
-          if (mergedAssertions.some((m) => assertionsMatch(m, a))) return false;
-
-          const isDynamic = a.id && String(a.id).startsWith('dynamic-');
-          const isManual = a.id && String(a.id).startsWith('manual-');
-          const isCustomGroup = a.isCustom === true || a.group === 'custom';
-          if (isDynamic) return true;
-          if (isManual) return true;
-          if (isCustomGroup) return true;
-
-          return false;
+          // Already represented in mergedAssertions — don't duplicate
+          return !mergedAssertions.some((m) => assertionsMatch(m, a));
         });
 
-        const finalAssertions = [...mergedAssertions, ...preservedAssertions];
+        const finalAssertions = removeDuplicateAssertions([
+          ...mergedAssertions,
+          ...preservedAssertions,
+        ]);
         setAssertions(finalAssertions);
 
         // Immediately sync the merged result to IDB so next reload gets this state
@@ -3518,7 +3512,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                       tab.id !== 'schemas' &&
                       tab.count !== undefined &&
                       tab.count > 0 && (
-                        <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
+                        <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
                           {tab.count}
                         </span>
                       )}

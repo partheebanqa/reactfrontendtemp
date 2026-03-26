@@ -824,6 +824,7 @@ const ResponseViewer = ({
         );
 
         setAssertions(removeDuplicateAssertions(updated));
+        if (activeRequest?.id) collectionActions.markUnsaved(activeRequest.id);
         handleModalClose();
         return;
       }
@@ -855,6 +856,7 @@ const ResponseViewer = ({
         });
 
         setAssertions(removeDuplicateAssertions(updatedAssertions));
+        if (activeRequest?.id) collectionActions.markUnsaved(activeRequest.id);
       } else if (assertionType === 'manual-batch' && config?.assertions) {
         const newAssertions = config.assertions.map((a: any) => ({
           ...a,
@@ -863,9 +865,11 @@ const ResponseViewer = ({
         setAssertions(
           removeDuplicateAssertions([...assertions, ...newAssertions]),
         );
+        if (activeRequest?.id) collectionActions.markUnsaved(activeRequest.id);
       } else if (assertionType === 'manual-direct' && config?.assertion) {
         const assertion = { ...config.assertion, enabled: true };
         setAssertions(removeDuplicateAssertions([...assertions, assertion]));
+        if (activeRequest?.id) collectionActions.markUnsaved(activeRequest.id);
       } else {
         let description = '';
         let finalType = assertionType;
@@ -947,6 +951,7 @@ const ResponseViewer = ({
             : { ...baseAssertion, field: normalizeFieldPath(activeFieldPath) };
 
         setAssertions(removeDuplicateAssertions([...assertions, newAssertion]));
+        if (activeRequest?.id) collectionActions.markUnsaved(activeRequest.id);
       }
 
       handleModalClose();
@@ -1405,7 +1410,7 @@ const ResponseViewer = ({
                       {tab.label}
                       {tab.id === 'test-results' &&
                         executedAssertionCount > 0 && (
-                          <span className='relative -top-1.5 text-[0.6rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
+                          <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
                             {executedAssertionCount}
                           </span>
                         )}
