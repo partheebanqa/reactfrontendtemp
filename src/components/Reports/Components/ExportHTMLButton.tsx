@@ -688,7 +688,7 @@ export default function ExportHTMLButton({
             <FileText className='w-5 h-5' />
           </button>
         </TooltipTrigger>
-        <TooltipContent>Download HTML File</TooltipContent>
+        <TooltipContent>Download HTML Report</TooltipContent>
       </Tooltip>
     </TooltipProvider>
   );

@@ -143,7 +143,6 @@ function sanitizeVariableName(name: string): string {
     .replace(/_+/g, '_');
 }
 
-/** Recursively flattens a JSON value into a list of JsonNode objects. */
 function parseJsonToNodes(
   obj: any,
   parentPath = 'root',
