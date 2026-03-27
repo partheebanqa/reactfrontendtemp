@@ -1431,7 +1431,8 @@ export function RequestChainEditor({
         try {
           let requestAssertions: any[] = [];
 
-          requestAssertions = assertionsByRequest[request.id] ?? [];
+          requestAssertions =
+            assertionsByRequest[request.id] ?? request.assertions ?? [];
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id,
           );
