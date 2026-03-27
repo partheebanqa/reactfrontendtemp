@@ -223,6 +223,7 @@ export function RequestEditor({
   const isSyncingRef = useRef(false);
   const isInitialMount = useRef(true);
   const [helpOpen, setHelpOpen] = useState(false);
+  console.log('requestAssertions100:', requestAssertions);
 
   const [activeTab, setActiveTab] = useState<
     | 'params'
@@ -642,6 +643,8 @@ export function RequestEditor({
       : undefined,
     chainId: chainId,
   });
+
+  console.log('assertionsByRequest111:', assertionsByRequest);
 
   // Derive the single-request assertions from the map
   const assertions = assertionsByRequest[initialRequest.id ?? ''] ?? [];
@@ -1408,22 +1411,36 @@ export function RequestEditor({
         extractedVariablesArray,
       );
 
-      const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {
-        const matchingExisting = assertions.find((existing) =>
-          assertionsMatch(existing, newAssertion),
-        );
+      const explicitlyDisabled = new Set(
+        assertions
+          .filter((a) => a.enabled === false)
+          .map(
+            (a) =>
+              `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
+          ),
+      );
 
-        if (matchingExisting) {
-          return {
-            ...newAssertion,
-            enabled: matchingExisting.enabled ?? true,
-          };
-        } else {
-          return {
-            ...newAssertion,
-            enabled: false,
-          };
+      const liveByFingerprint = new Map<string, any>(
+        assertions.map((a) => [
+          `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
+          a,
+        ]),
+      );
+
+      const mergedAssertions = allGeneratedAssertions.map((newAssertion) => {
+        const fingerprint = `${newAssertion.description}||${newAssertion.category}||${newAssertion.type}||${newAssertion.operator}||${newAssertion.field ?? ''}`;
+
+        if (explicitlyDisabled.has(fingerprint)) {
+          return { ...newAssertion, enabled: false };
         }
+
+        const existing = liveByFingerprint.get(fingerprint);
+        if (existing) {
+          return { ...newAssertion, enabled: existing.enabled ?? true };
+        }
+
+        // New assertion never seen before — default off
+        return { ...newAssertion, enabled: false };
       });
 
       const customAssertions = assertions.filter(
@@ -1559,6 +1576,7 @@ export function RequestEditor({
 
       try {
         const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+
         map[initialRequest.id] = errorLog;
         secureStorage.saveEncrypted('lastExecutionByRequest', map);
       } catch (e) {

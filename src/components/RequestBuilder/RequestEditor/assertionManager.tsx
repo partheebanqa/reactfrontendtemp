@@ -38,6 +38,8 @@ const AssertionManager: React.FC<AssertionManagerProps> = ({
   const [tempAssertions, setTempAssertions] = useState<Assertion[]>([]);
   const { toast } = useToast();
 
+  console.log('assertionsInmanager:', assertions);
+
   useEffect(() => {
     if (showDialog) {
       setTempAssertions(assertions);

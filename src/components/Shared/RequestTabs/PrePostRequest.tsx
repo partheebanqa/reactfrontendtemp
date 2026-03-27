@@ -53,11 +53,15 @@ export default function PrePostRequest({
   extractedVariables = [],
   onRemoveExtraction,
 }: PrePostRequestProps) {
+  console.log('assertionsinprepost:', assertions);
+
   const [postResponseScript, setPostResponseScript] = useState('');
   const [activeSubTab, setActiveSubTab] = useState<'assertions' | 'extracted'>(
     'assertions',
   );
   const enabledCount = assertions.filter((a) => a.enabled === true).length;
+
+  console.log('enabled:', enabledCount);
 
   const [deleteTargetPath, setDeleteTargetPath] = useState<string | null>(null);
   const [deleteTargetExtracted, setDeleteTargetExtracted] = useState<

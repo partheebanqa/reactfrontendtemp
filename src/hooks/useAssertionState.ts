@@ -36,6 +36,8 @@ export function useAssertionState({
   const persistAssertionsToStorage = useCallback(
     async (requestId: string, assertions: any[]) => {
       try {
+        console.log('assertionsinstate:', assertions);
+
         const success = await storageManager.saveAssertions(
           requestId,
           assertions,
@@ -98,9 +100,25 @@ export function useAssertionState({
           }
 
           if (candidates.length > 0) {
-            // Pick the source with the most assertions
-            loadedAssertions[request.id] = candidates.reduce((best, current) =>
-              current.length > best.length ? current : best,
+            // Pick the source with the most ENABLED assertions
+            // This respects user removals (disabled assertions) rather than raw count
+            loadedAssertions[request.id] = candidates.reduce(
+              (best, current) => {
+                const bestEnabled = best.filter(
+                  (a: any) => a.enabled !== false,
+                ).length;
+                const currentEnabled = current.filter(
+                  (a: any) => a.enabled !== false,
+                ).length;
+                // Prefer more enabled assertions; on tie, prefer fewer total (user removed some)
+                if (currentEnabled > bestEnabled) return current;
+                if (
+                  currentEnabled === bestEnabled &&
+                  current.length < best.length
+                )
+                  return current;
+                return best;
+              },
             );
           }
         }
@@ -113,14 +131,21 @@ export function useAssertionState({
               loadedAssertions,
             )) {
               const existing = prev[requestId];
-              // Take whichever has more assertions
-              if (
-                !existing ||
-                existing.length === 0 ||
-                loaded.length > existing.length
-              ) {
+              if (!existing || existing.length === 0) {
+                merged[requestId] = loaded;
+                continue;
+              }
+              // Compare by enabled count — respect user's removals
+              const existingEnabled = existing.filter(
+                (a: any) => a.enabled !== false,
+              ).length;
+              const loadedEnabled = loaded.filter(
+                (a: any) => a.enabled !== false,
+              ).length;
+              if (loadedEnabled > existingEnabled) {
                 merged[requestId] = loaded;
               }
+              // If in-memory already has same or more enabled assertions, keep it
             }
             return merged;
           });
@@ -146,14 +171,9 @@ export function useAssertionState({
         assertionsByRequest,
       )) {
         if (assertions.length === 0) continue;
-
-        // Don't overwrite storage with fewer assertions than what's already saved
-        const existing = await storageManager.getAssertions(requestId);
-        if (existing && existing.length > assertions.length) continue;
-
         await persistAssertionsToStorage(requestId, assertions);
       }
-    }, 1000);
+    }, 100);
 
     return () => clearTimeout(timer);
   }, [assertionsByRequest, persistAssertionsToStorage]);
