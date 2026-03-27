@@ -1431,44 +1431,7 @@ export function RequestChainEditor({
         try {
           let requestAssertions: any[] = [];
 
-          const backendAssertions = request.assertions ?? [];
-          const cachedAssertions = assertionsByRequest[request.id] ?? [];
-
-          let storedAssertions: any[] = [];
-          try {
-            const map =
-              secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-            storedAssertions = map[request.id]?.assertions ?? [];
-          } catch (e) {
-            console.error('Failed to read assertions from encrypted:', e);
-          }
-
-          // Backend always wins if it has more assertions than local cache
-          const countEnabled = (arr: any[]) =>
-            arr.filter((a) => a.enabled !== false).length;
-
-          const backendEnabled = countEnabled(backendAssertions);
-          const cachedEnabled = countEnabled(cachedAssertions);
-          const storedEnabled = countEnabled(storedAssertions);
-
-          // Prefer the source with the MOST explicitly-enabled assertions.
-          // On a tie, prefer the source with the FEWEST total entries
-          // (the user removed some, so fewer total = more intentional).
-          const sources = [
-            { assertions: backendAssertions, enabled: backendEnabled },
-            { assertions: cachedAssertions, enabled: cachedEnabled },
-            { assertions: storedAssertions, enabled: storedEnabled },
-          ];
-
-          requestAssertions = sources.reduce((best, current) => {
-            if (current.enabled > best.enabled) return current;
-            if (
-              current.enabled === best.enabled &&
-              current.assertions.length < best.assertions.length
-            )
-              return current;
-            return best;
-          }, sources[0]).assertions;
+          requestAssertions = assertionsByRequest[request.id] ?? [];
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id,
           );
@@ -1491,6 +1454,20 @@ export function RequestChainEditor({
             );
 
             allLogs.push(log);
+            try {
+              const map =
+                secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+              map[log.requestId] = {
+                ...log,
+                assertions: requestAssertions, // write back what was actually used
+              };
+              secureStorage.saveEncrypted('lastExecutionByRequest', map);
+            } catch (e) {
+              console.error(
+                'Failed to sync assertions to storage after run:',
+                e,
+              );
+            }
           }
 
           if (log.extractedVariables) {
