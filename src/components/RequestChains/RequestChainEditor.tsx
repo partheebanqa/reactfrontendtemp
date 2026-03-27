@@ -1151,6 +1151,8 @@ export function RequestChainEditor({
       const existingAssertions =
         assertionsByRequest[request.id] || requestAssertions || [];
 
+      console.log('existingAssertions123:', existingAssertions);
+
       const formattedAssertionFormat = {
         status: result?.statusCode ?? null,
         statusText: '',
@@ -1185,25 +1187,62 @@ export function RequestChainEditor({
         );
       };
 
-      const mergedAssertions = newAssertions.map((newAssertion) => {
-        const matchingExisting = existingAssertions.find((existing) =>
-          assertionsMatch(existing, newAssertion),
-        );
+      // Track which assertion IDs have been explicitly removed (enabled: false by user)
+      // const explicitlyDisabled = new Set(
+      //   existingAssertions
+      //     .filter((a) => a.enabled === false)
+      //     .map(
+      //       (a) =>
+      //         `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
+      //     ),
+      // );
 
-        if (matchingExisting) {
-          return {
-            ...newAssertion,
-            enabled: matchingExisting.enabled ?? true,
-          };
-        } else {
-          return {
-            ...newAssertion,
-            enabled: false,
-          };
+      const liveAssertions: any[] =
+        assertionsByRequest[request.id] ?? existingAssertions;
+
+      const explicitlyDisabled = new Set(
+        liveAssertions
+          .filter((a) => a.enabled === false)
+          .map(
+            (a) =>
+              `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
+          ),
+      );
+
+      // Track which fingerprints exist at all in liveAssertions
+      // so we know whether to honour an existing enabled/disabled state
+      const liveAssertionsByFingerprint = new Map<string, any>(
+        liveAssertions.map((a) => [
+          `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
+          a,
+        ]),
+      );
+
+      const hadPriorExecution = liveAssertions.length > 0;
+
+      const mergedAssertions = newAssertions.map((newAssertion) => {
+        const fingerprint = `${newAssertion.description}||${newAssertion.category}||${newAssertion.type}||${newAssertion.operator}||${newAssertion.field ?? ''}`;
+
+        // User explicitly disabled this — keep it off
+        if (explicitlyDisabled.has(fingerprint)) {
+          return { ...newAssertion, enabled: false };
         }
+
+        const existing = liveAssertionsByFingerprint.get(fingerprint);
+
+        if (existing) {
+          // Carry forward whatever enabled state the user last set
+          return { ...newAssertion, enabled: existing.enabled ?? true };
+        }
+
+        // Brand-new assertion (never seen before):
+        // If this request has been run before, keep new assertions OFF by default
+        // so the user's deliberate removals aren't silently re-added.
+        // If this is the very first run, default to OFF (user can enable what they want).
+        return { ...newAssertion, enabled: false };
       });
 
-      const customAssertions = existingAssertions.filter(
+      const customAssertions = liveAssertions.filter(
         (assertion) =>
           !mergedAssertions.some((merged) =>
             assertionsMatch(merged, assertion),
@@ -1392,29 +1431,8 @@ export function RequestChainEditor({
         try {
           let requestAssertions: any[] = [];
 
-          const backendAssertions = request.assertions ?? [];
-          const cachedAssertions = assertionsByRequest[request.id] ?? [];
-
-          let storedAssertions: any[] = [];
-          try {
-            const map =
-              secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-            storedAssertions = map[request.id]?.assertions ?? [];
-          } catch (e) {
-            console.error('Failed to read assertions from encrypted:', e);
-          }
-
-          // Backend always wins if it has more assertions than local cache
-          if (
-            backendAssertions.length >= cachedAssertions.length &&
-            backendAssertions.length >= storedAssertions.length
-          ) {
-            requestAssertions = backendAssertions;
-          } else if (cachedAssertions.length >= storedAssertions.length) {
-            requestAssertions = cachedAssertions;
-          } else {
-            requestAssertions = storedAssertions;
-          }
+          requestAssertions =
+            assertionsByRequest[request.id] ?? request.assertions ?? [];
           const existingLog = allLogs.find(
             (log) => log.requestId === request.id,
           );
@@ -1437,6 +1455,20 @@ export function RequestChainEditor({
             );
 
             allLogs.push(log);
+            try {
+              const map =
+                secureStorage.loadEncrypted('lastExecutionByRequest') || {};
+              map[log.requestId] = {
+                ...log,
+                assertions: requestAssertions, // write back what was actually used
+              };
+              secureStorage.saveEncrypted('lastExecutionByRequest', map);
+            } catch (e) {
+              console.error(
+                'Failed to sync assertions to storage after run:',
+                e,
+              );
+            }
           }
 
           if (log.extractedVariables) {
@@ -1707,11 +1739,15 @@ export function RequestChainEditor({
 
           const requestAssertions: any[] =
             assertionsByRequest[request.id] ?? request.assertions ?? [];
-          const allAssertions = requestAssertions.map((assertion) => ({
-            ...assertion,
-            enabled: assertion.enabled === true,
-          }));
 
+          console.log('requestAssertions:', requestAssertions);
+
+          const allAssertions = requestAssertions
+            .filter((assertion) => assertion.enabled === true)
+            .map((assertion) => ({
+              ...assertion,
+              enabled: true,
+            }));
           console.log('allAssertions111:', allAssertions);
 
           if (isExistingRequest) {
@@ -2460,6 +2496,8 @@ export function RequestChainEditor({
     chainRequests: formData.chainRequests as any,
     chainId: chain?.id,
   });
+
+  console.log('assertionsByRequestInchain:', assertionsByRequest);
 
   useEffect(() => {
     const hasRequests = (formData.chainRequests?.length ?? 0) > 0;

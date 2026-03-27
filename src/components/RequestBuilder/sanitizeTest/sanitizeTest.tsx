@@ -1003,7 +1003,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             workspaceId: currentWorkspace?.id,
             name: req.name,
             method: req.method,
-            url: finalUrl,
+            url: req.url,
             bodyType: req.bodyType,
             bodyRawContent: req.bodyRawContent || '',
             bodyFormData: req.bodyFormData || [],

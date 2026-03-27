@@ -1493,7 +1493,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                         <div className='group'>
                           <div className='rounded-md'>
                             <div
-                              className='flex items-center justify-between p-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
+                              className='flex items-center justify-between p-1.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer group'
                               onDoubleClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
