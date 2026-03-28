@@ -33,6 +33,7 @@ interface PrePostRequestProps {
   dynamicVariables?: { name: string; value: string }[];
   extractedVariables?: Record<string, any>;
   onRemoveExtraction?: (name: string) => void;
+  onAssertionsChange?: (assertions: any[]) => void;
 }
 
 export default function PrePostRequest({
@@ -52,6 +53,7 @@ export default function PrePostRequest({
   dynamicVariables = [],
   extractedVariables = [],
   onRemoveExtraction,
+  onAssertionsChange,
 }: PrePostRequestProps) {
   console.log('assertionsinprepost:', assertions);
 
@@ -235,7 +237,10 @@ export default function PrePostRequest({
                 <div>
                   <AssertionManager
                     assertions={assertions}
-                    setAssertions={setAssertions}
+                    setAssertions={(newAssertions) => {
+                      setAssertions?.(newAssertions);
+                      onAssertionsChange?.(newAssertions);
+                    }}
                     responseData={responseData}
                     activeRequest={activeRequest}
                     currentWorkspace={currentWorkspace}

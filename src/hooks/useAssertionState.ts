@@ -75,52 +75,50 @@ export function useAssertionState({
         const loadedAssertions: Record<string, any[]> = {};
 
         for (const request of chainRequests || []) {
-          const candidates: any[][] = [];
+          // ─── FIX 2 & 3: Explicit priority order — IDB is the single source of
+          // truth because it's the only store we write to on every user edit
+          // (including deletions). Falling back to the chain model covers the
+          // very first load before anything has been persisted. secureStorage
+          // is a last-resort for the single-request editor path.
+          //
+          // The previous "most enabled" race between all four candidates
+          // (model, IDB, secureStorage, lastExecutionByRequest) meant that a
+          // stale execution-cache entry could always win over a shorter,
+          // user-trimmed list — causing deleted assertions to reappear.
+          //
+          // lastExecutionByRequest is intentionally excluded: it records
+          // run results for display purposes, not the user's intended
+          // assertion list. Reading it here was the primary resurrection path.
 
-          if (request.assertions?.length > 0) {
-            candidates.push(request.assertions);
-          }
-
+          // 1. IDB — reflects every persisted user edit, including deletions.
+          //    getAssertions returns null when no entry exists yet (first load),
+          //    and [] when the user has deleted everything — both are meaningful.
           const fromIDB = await storageManager.getAssertions(request.id);
-          if (fromIDB?.length > 0) {
-            candidates.push(fromIDB);
+          if (fromIDB !== null && fromIDB !== undefined) {
+            loadedAssertions[request.id] = fromIDB; // [] is a valid "cleared" state
+            continue;
           }
 
+          // 2. Chain model — used only on the very first load before IDB has
+          //    any entry for this request.
+          if (request.assertions?.length > 0) {
+            loadedAssertions[request.id] = request.assertions;
+            continue;
+          }
+
+          // 3. secureStorage — fallback for the single-request editor, which
+          //    persists via `assertions_<id>` rather than IDB.
           const fromSecure = secureStorage.loadEncrypted(
             `assertions_${request.id}`,
           );
           if (fromSecure?.assertions?.length > 0) {
-            candidates.push(fromSecure.assertions);
+            loadedAssertions[request.id] = fromSecure.assertions;
           }
 
-          const execMap =
-            secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-          if (execMap[request.id]?.assertions?.length > 0) {
-            candidates.push(execMap[request.id].assertions);
-          }
-
-          if (candidates.length > 0) {
-            // Pick the source with the most ENABLED assertions
-            // This respects user removals (disabled assertions) rather than raw count
-            loadedAssertions[request.id] = candidates.reduce(
-              (best, current) => {
-                const bestEnabled = best.filter(
-                  (a: any) => a.enabled !== false,
-                ).length;
-                const currentEnabled = current.filter(
-                  (a: any) => a.enabled !== false,
-                ).length;
-                // Prefer more enabled assertions; on tie, prefer fewer total (user removed some)
-                if (currentEnabled > bestEnabled) return current;
-                if (
-                  currentEnabled === bestEnabled &&
-                  current.length < best.length
-                )
-                  return current;
-                return best;
-              },
-            );
-          }
+          // NOTE: lastExecutionByRequest is intentionally NOT used as a load
+          // source. It stores post-run generated assertions for result display
+          // and will always contain a superset of the user's trimmed list,
+          // which caused deleted assertions to be resurrected on every run.
         }
 
         if (Object.keys(loadedAssertions).length > 0) {
@@ -131,21 +129,22 @@ export function useAssertionState({
               loadedAssertions,
             )) {
               const existing = prev[requestId];
-              if (!existing || existing.length === 0) {
+
+              // If nothing is in memory yet, take whatever we loaded from storage.
+              if (!existing) {
                 merged[requestId] = loaded;
                 continue;
               }
-              // Compare by enabled count — respect user's removals
-              const existingEnabled = existing.filter(
-                (a: any) => a.enabled !== false,
-              ).length;
-              const loadedEnabled = loaded.filter(
-                (a: any) => a.enabled !== false,
-              ).length;
-              if (loadedEnabled > existingEnabled) {
-                merged[requestId] = loaded;
-              }
-              // If in-memory already has same or more enabled assertions, keep it
+
+              // In-memory state already exists — it reflects the most recent
+              // user interaction (e.g. a deletion that happened before this
+              // effect re-ran). Trust it and do not overwrite with the
+              // (potentially stale) loaded value.
+              //
+              // The previous logic compared enabled-assertion counts and would
+              // replace in-memory state with a loaded source that had "more
+              // enabled" assertions — exactly the wrong behaviour after a
+              // deletion, where the user intentionally reduced the count.
             }
             return merged;
           });
@@ -170,7 +169,15 @@ export function useAssertionState({
       for (const [requestId, assertions] of Object.entries(
         assertionsByRequest,
       )) {
-        if (assertions.length === 0) continue;
+        // ─── FIX 1: Always persist, even when assertions is [].
+        //
+        // The previous `if (assertions.length === 0) continue` guard meant
+        // that deleting all assertions for a request never wrote an empty
+        // array back to IDB. The next loadAllAssertions call would then find
+        // the old (non-empty) IDB entry and restore the deleted assertions.
+        //
+        // Writing [] to IDB is the correct deletion signal — storageManager
+        // already handles empty arrays gracefully.
         await persistAssertionsToStorage(requestId, assertions);
       }
     }, 100);
