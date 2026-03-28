@@ -122,7 +122,9 @@ export function RequestChainEditor({
   const dragItem = useRef<number | null>(null);
   const dragOverItem = useRef<number | null>(null);
   const { currentWorkspace } = useWorkspace();
-
+  const deletedAssertionFingerprintsRef = useRef<Record<string, Set<string>>>(
+    {},
+  );
   const [tags, setTags] = useState<string[]>([]);
 
   const { variables: storeVariables, dynamicVariables } =
@@ -1004,6 +1006,8 @@ export function RequestChainEditor({
     };
   }, [formData.chainRequests, storeVariables, dynamicStructured]);
 
+  const deletedAssertionIdsRef = useRef<Record<string, Set<string>>>({});
+
   const executeSingleRequest = async (
     request: APIRequest,
     variables: Variable[],
@@ -1187,69 +1191,55 @@ export function RequestChainEditor({
         );
       };
 
-      // Track which assertion IDs have been explicitly removed (enabled: false by user)
-      // const explicitlyDisabled = new Set(
-      //   existingAssertions
-      //     .filter((a) => a.enabled === false)
-      //     .map(
-      //       (a) =>
-      //         `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
-      //     ),
-      // );
-
       const liveAssertions: any[] =
         assertionsByRequest[request.id] ?? existingAssertions;
 
-      const explicitlyDisabled = new Set(
-        liveAssertions
-          .filter((a) => a.enabled === false)
-          .map(
-            (a) =>
-              `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
-          ),
+      const deletedIds =
+        deletedAssertionIdsRef.current[request.id] ?? new Set<string>();
+
+      // Ids explicitly disabled (enabled: false) in the live list
+      const disabledIds = new Set<string>(
+        liveAssertions.filter((a) => a.enabled === false).map((a) => a.id),
       );
 
-      // Track which fingerprints exist at all in liveAssertions
-      // so we know whether to honour an existing enabled/disabled state
-      const liveAssertionsByFingerprint = new Map<string, any>(
-        liveAssertions.map((a) => [
-          `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`,
-          a,
-        ]),
+      // Map of id → assertion for carry-forward of enabled state
+      const liveById = new Map<string, any>(
+        liveAssertions.map((a) => [a.id, a]),
       );
 
-      const hadPriorExecution = liveAssertions.length > 0;
+      const mergedAssertions = newAssertions
+        .map((newAssertion) => {
+          // User physically deleted this — never bring it back
+          if (deletedIds.has(newAssertion.id)) {
+            return null; // filter out below
+          }
 
-      const mergedAssertions = newAssertions.map((newAssertion) => {
-        const fingerprint = `${newAssertion.description}||${newAssertion.category}||${newAssertion.type}||${newAssertion.operator}||${newAssertion.field ?? ''}`;
+          // User disabled this — keep it off
+          if (disabledIds.has(newAssertion.id)) {
+            return { ...newAssertion, enabled: false };
+          }
 
-        // User explicitly disabled this — keep it off
-        if (explicitlyDisabled.has(fingerprint)) {
+          const existing = liveById.get(newAssertion.id);
+          if (existing) {
+            // Carry forward whatever enabled state the user last set
+            return { ...newAssertion, enabled: existing.enabled ?? true };
+          }
+
+          // Brand new assertion never seen before — default off
           return { ...newAssertion, enabled: false };
-        }
+        })
+        .filter(Boolean); // remove nulls (deleted ones)
 
-        const existing = liveAssertionsByFingerprint.get(fingerprint);
-
-        if (existing) {
-          // Carry forward whatever enabled state the user last set
-          return { ...newAssertion, enabled: existing.enabled ?? true };
-        }
-
-        // Brand-new assertion (never seen before):
-        // If this request has been run before, keep new assertions OFF by default
-        // so the user's deliberate removals aren't silently re-added.
-        // If this is the very first run, default to OFF (user can enable what they want).
-        return { ...newAssertion, enabled: false };
-      });
-
+      // Custom assertions user added manually that the generator won't produce
+      const generatedIds = new Set(newAssertions.map((a) => a.id));
       const customAssertions = liveAssertions.filter(
-        (assertion) =>
-          !mergedAssertions.some((merged) =>
-            assertionsMatch(merged, assertion),
-          ),
+        (a) => !generatedIds.has(a.id) && !deletedIds.has(a.id),
       );
 
       const finalAssertions = [...mergedAssertions, ...customAssertions];
+
+      // Clear deleted ids after honouring them — they're now baked into finalAssertions
+      deletedAssertionIdsRef.current[request.id] = new Set();
 
       setAssertionsByRequest((prev) => ({
         ...prev,
@@ -1303,19 +1293,6 @@ export function RequestChainEditor({
         extractedVariables: extractedData,
       };
 
-      try {
-        const map = secureStorage.loadEncrypted('lastExecutionByRequest') || {};
-
-        map[request.id] = {
-          ...log,
-          assertions: finalAssertions,
-        };
-
-        secureStorage.saveEncrypted('lastExecutionByRequest', map);
-      } catch (e) {
-        console.error('Failed to persist lastExecutionByRequest:', e);
-      }
-
       return log;
     } catch (error) {
       const endTime = Date.now();
@@ -1345,6 +1322,26 @@ export function RequestChainEditor({
 
       throw errorLog;
     }
+  };
+
+  const getAssertionFingerprint = (a: any): string =>
+    `${a.description}||${a.category}||${a.type}||${a.operator}||${a.field ?? ''}`;
+
+  const handleAssertionsUpdate = (requestId: string, newAssertions: any[]) => {
+    const previous = assertionsByRequest[requestId] ?? [];
+    const newIds = new Set(newAssertions.map((a) => a.id));
+
+    // Any id present before but absent now = physically deleted by user
+    previous.forEach((a) => {
+      if (!newIds.has(a.id)) {
+        const set =
+          deletedAssertionIdsRef.current[requestId] ?? new Set<string>();
+        set.add(a.id);
+        deletedAssertionIdsRef.current[requestId] = set;
+      }
+    });
+
+    setAssertionsByRequest((prev) => ({ ...prev, [requestId]: newAssertions }));
   };
 
   const handleRunAll = async () => {
@@ -2399,10 +2396,7 @@ export function RequestChainEditor({
               onRegenerateDynamicVariable={regenerateDynamicVariableLocal}
               requestAssertions={assertionsByRequest[request.id] || []}
               onAssertionsUpdate={async (assertions) => {
-                setAssertionsByRequest((prev) => ({
-                  ...prev,
-                  [request.id]: assertions,
-                }));
+                handleAssertionsUpdate(request.id, assertions);
                 await persistAssertionsToStorage(request.id, assertions);
               }}
               requestIndex={requestIndex}
