@@ -181,8 +181,6 @@ export function ResponseExplorer({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
 
-  console.log('dynamicVariables123:', dynamicVariables);
-
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
   >('body');
@@ -1370,7 +1368,12 @@ export function ResponseExplorer({
               </Button> */}
               <button
                 onClick={() => setShowAssertionUI(true)}
-                className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
+                disabled={
+                  !response ||
+                  (response.statusCode ?? response.status ?? 0) < 200 ||
+                  (response.statusCode ?? response.status ?? 0) >= 300
+                }
+                className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-blue-600 disabled:hover:bg-transparent'
               >
                 <ListChecks className='w-4 h-4' />
                 <span>Manage Assertions</span>

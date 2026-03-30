@@ -39,7 +39,7 @@ const AuthTab = React.memo(
     return (
       <div className='space-y-4'>
         <div className='flex items-center justify-between'>
-          <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white flex items-center gap-2'>
+          <h4 className='text-sm sm:text-lg font-medium text-gray-700 dark:text-white flex items-center gap-2'>
             Authorization
             {(() => {
               const expiry = getTokenExpiryDisplay(authData);

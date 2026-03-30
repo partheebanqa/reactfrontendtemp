@@ -1671,7 +1671,12 @@ export function RequestEditor({
       count: getAuthCount(),
     },
     { id: 'pre-request', label: 'Pre-request', count: 0 },
-    { id: 'post-response', label: 'Post-response', count: 0 },
+    {
+      id: 'post-response',
+      label: 'Post-response',
+      count: assertions.filter((a) => a.enabled).length,
+    },
+
     { id: 'settings', label: 'Settings' },
   ];
   const formatResponseBody = (body: string, contentType?: string) => {

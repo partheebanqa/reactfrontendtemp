@@ -43,7 +43,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
 
   const { currentPlan } = useCurrentPlan();
 
-  console.log(user, "user");
+  console.log(user, 'user');
 
   const {
     currentWorkspace,
@@ -129,7 +129,8 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
       return true;
     } catch (error) {
       console.error(
-        `Error ${workspaceModalState.mode === 'add' ? 'creating' : 'updating'
+        `Error ${
+          workspaceModalState.mode === 'add' ? 'creating' : 'updating'
         } workspace:`,
         error,
       );
@@ -225,7 +226,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         </div>
 
         <div className='flex items-center gap-2 sm:gap-4'>
-          <h5 className='hidden md:flex text-md font-medium text-gray-800 dark:text-gray-200'>
+          <h5 className='hidden md:flex text-md font-medium text-gray-700 dark:text-gray-200'>
             Workspace :
           </h5>
           <WorkspaceDropdown
@@ -237,7 +238,7 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
         <div className='flex items-center gap-1 sm:gap-4 min-w-0'>
           {!shouldHideEnvironment && (
             <div className='flex items-center gap-2 sm:gap-4'>
-              <h5 className='hidden md:flex text-md font-medium text-gray-800 dark:text-gray-200'>
+              <h5 className='hidden md:flex text-md font-medium text-gray-700 dark:text-gray-200'>
                 Environment :
               </h5>
               <EnvironmentDropdown
@@ -247,19 +248,17 @@ export default function Header({ isDrawerOpen, toggleDrawer }: HeaderProps) {
             </div>
           )}
 
-          <div >
+          <div>
             <Badge
               style={{
-                background: "linear-gradient(90deg, #2563eb, #ec4899)",
-                color: "white",
-                padding: "6px 14px",
-                borderRadius: "30px",
+                background: 'linear-gradient(90deg, #2563eb, #ec4899)',
+                color: 'white',
+                padding: '6px 14px',
+                borderRadius: '30px',
                 fontWeight: 500,
               }}
             >
-              {currentPlan?.PlanName} {currentPlan?.IsTrial && (
-                <>Trial</>
-              )}
+              {currentPlan?.PlanName} {currentPlan?.IsTrial && <>Trial</>}
             </Badge>
           </div>
           <DropdownMenu>

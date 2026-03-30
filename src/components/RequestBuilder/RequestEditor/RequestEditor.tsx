@@ -1629,6 +1629,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
 
     clearError();
     setLoading(true);
+
     const newUrl = buildFinalUrl();
 
     let substitutedBodyContent = bodyContent;
@@ -1649,6 +1650,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
       let effectiveAuthType = authType;
       let effectiveToken = authData.token;
 
+      // 🔐 Pre-request token handling
       if (preRequestEnabled && activeCollection?.id) {
         const possibleTokenKeys = [
           `extracted_var_${activeCollection.id}_E_token`,
@@ -1692,6 +1694,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         effectiveAuthType = 'none';
       }
 
+      // 🔁 Variable substitution
       if (selectedVariable?.length) {
         try {
           const parsedBody = JSON.parse(bodyContent);
@@ -1800,7 +1803,8 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         abortControllerRef.current?.signal,
       );
 
-      const firstResponse = backendData?.data?.responses?.[0];
+      // ✅ FIXED RESPONSE EXTRACTION
+      const firstResponse = backendData?.data?.responses?.[0] ?? null;
 
       const backendBody =
         firstResponse?.body ??
@@ -1810,15 +1814,30 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         backendData?.data ??
         null;
 
-      const statusCode =
+      const status =
         firstResponse?.status ??
-        firstResponse?.statusCode ??
-        backendData?.data?.statusCode ??
         backendData?.status ??
+        backendData?.data?.status ??
         200;
 
       const responseHeaders =
-        firstResponse?.headers ?? backendData?.data?.headers ?? {};
+        firstResponse?.headers ??
+        backendData?.data?.headers ??
+        backendData?.headers ??
+        {};
+
+      const requestCurl =
+        firstResponse?.requestCurl ?? backendData?.data?.requestCurl ?? {};
+
+      const metrics =
+        firstResponse?.metrics ?? backendData?.data?.metrics ?? {};
+
+      const assertionLogs =
+        backendData?.data?.assertionResults ??
+        backendData?.data?.assertionLogs ??
+        [];
+
+      const schemaValidation = backendData?.data?.schemaValidation ?? null;
 
       const parsedBody = normalizeBody(backendBody);
 
@@ -1852,16 +1871,15 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
 
       const normalizedResponse = {
         requestId: activeRequest.id,
-        status: statusCode,
-        statusCode,
+        status,
         headers: responseHeaders,
-        requestCurl: firstResponse?.requestCurl ?? {},
+        requestCurl,
         actualRequest,
         body: parsedBody,
         rawBody: backendBody,
-        metrics: firstResponse?.metrics ?? {},
-        assertionLogs: backendData?.data?.assertionResults || [],
-        schemaValidation: backendData?.data?.schemaValidation || null,
+        metrics,
+        assertionLogs,
+        schemaValidation,
       };
 
       setResponseData(normalizedResponse);
@@ -1871,6 +1889,47 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
           activeRequest.id,
           normalizedResponse,
         );
+      }
+
+      // 🔥 ASSERTION GENERATION (unchanged logic)
+      const formattedResponse = formatBackendResponse(normalizedResponse);
+      const generatedAssertions = generateAssertions(formattedResponse);
+
+      const assertionsMatch = (a: any, b: any) =>
+        a.description === b.description &&
+        a.category === b.category &&
+        a.type === b.type &&
+        a.operator === b.operator;
+
+      const mergedAssertions = generatedAssertions.map((newA) => {
+        const existing = assertions.find((ex) => assertionsMatch(ex, newA));
+        if (existing) {
+          return { ...newA, enabled: existing.enabled ?? false };
+        }
+        return { ...newA, enabled: false };
+      });
+
+      const preservedAssertions = assertions.filter((a) => {
+        return !mergedAssertions.some((m) => assertionsMatch(m, a));
+      });
+
+      const finalAssertions = removeDuplicateAssertions([
+        ...mergedAssertions,
+        ...preservedAssertions,
+      ]);
+
+      setAssertions(finalAssertions);
+
+      if (activeRequest?.id) {
+        try {
+          await storageManager.saveAssertions(
+            activeRequest.id,
+            finalAssertions,
+            activeCollection?.id,
+          );
+        } catch (idbErr) {
+          console.warn('[RequestEditor] IDB sync failed:', idbErr);
+        }
       }
     } catch (error: any) {
       if (error.name === 'AbortError') {
@@ -1893,7 +1952,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
       const normalizedResponse = {
         requestId: activeRequest?.id,
         status: error?.response?.status || 500,
-        statusCode: error?.response?.status || 500,
         headers: error?.response?.headers || {},
         requestCurl: error?.response?.data?.requestCurl || {},
         actualRequest: {
@@ -3162,7 +3220,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                 <option
                   key={m}
                   value={m}
-                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+                  className='bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'
                 >
                   {m}
                 </option>
@@ -3178,7 +3236,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
             />
 
             <div className='justify-end flex space-x-2'>
-              {isLoading ? (
+              {isLoading && !isSaving ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -3224,7 +3282,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                       <Button
                         variant='active'
                         onClick={handleSendRequest}
-                        disabled={isLoading}
+                        disabled={isLoading || isSaving}
                         className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
                         aria-label='Send request'
                       >
@@ -3328,7 +3386,11 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                 { id: 'body', label: 'Body', count: getBodyCount() },
                 { id: 'auth', label: 'Auth', count: getAuthCount() },
                 { id: 'pre-request', label: 'Pre-request', count: 0 },
-                { id: 'post-response', label: 'Post-response', count: 0 },
+                {
+                  id: 'post-response',
+                  label: 'Post-response',
+                  count: assertions.filter((a) => a.enabled).length,
+                },
                 {
                   id: 'schemas',
                   label: 'Schemas',

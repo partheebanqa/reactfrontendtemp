@@ -39,7 +39,7 @@ const KeyValueEditor: React.FC<KeyValueEditorProps> = ({
   return (
     <div className='space-y-4'>
       <div className='flex items-center justify-between'>
-        <h4 className='text-sm sm:text-lg font-medium text-gray-900 dark:text-white'>
+        <h4 className='text-sm sm:text-lg font-medium text-gray-700 dark:text-white'>
           {title}
         </h4>
         <button
