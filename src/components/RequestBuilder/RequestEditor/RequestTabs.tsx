@@ -204,7 +204,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               <div key={request.id} className='flex items-center'>
                 <button
                   onClick={() => handleTabClick(request)}
-                  className={`group relative flex items-center gap-2 px-3 py-2
+                  className={`group relative flex items-center gap-1 px-1 py-1
               transition-all border-b-2 whitespace-nowrap
               ${
                 isActive
@@ -237,23 +237,30 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                           {request.name
                             ? request.name.slice(0, 15)
                             : 'Untitled'}
-                          {hasUnsaved && (
-                            <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
-                          )}
                         </span>
                       </TooltipTrigger>
+                      {hasUnsaved && (
+                        <span className='w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0 relative -top-1.5'></span>
+                      )}
                       <TooltipContent side='bottom'>
                         <p className='text-sm'>{request.name || 'Untitled'}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
 
-                  <button
-                    onClick={(e) => handleCloseTab(e, request.id)}
-                    className='p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
-                  >
-                    <X size={14} className='text-gray-500' />
-                  </button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={(e) => handleCloseTab(e, request.id)}
+                          className='relative p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                        >
+                          <X size={14} className='text-gray-500' />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side='bottom'>close</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </button>
 
                 <div className='h-5 w-px bg-gray-200'></div>

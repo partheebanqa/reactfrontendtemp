@@ -1348,15 +1348,6 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
       return;
     }
 
-    if (responseData?.statusCode !== 200 && responseData?.statusCode !== 201) {
-      toast({
-        description:
-          'Cannot verify assertions: API returned an error response.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setFailedAssertions([]);
     setIsRerunMode(false);
     setAppState('validating');
@@ -3384,15 +3375,14 @@ const ApiAssertionInterface: React.FC<ApiAssertionInterfaceProps> = ({
           )}
         </div>
       )}
-      <div className='flex flex-col md:flex-row items-center justify-center gap-4'>
+      <div className='sticky bottom-0 z-10 bg-white border-t border-gray-200 shadow-md px-4 py-3 flex flex-col md:flex-row items-center justify-center gap-4'>
+        {' '}
         {/* Left text */}
-
         {appState === 'build' && getSelectedCount() > 0 && (
           <div className='text-sm font-medium text-blue-600'>
             {getSelectedCount()} assertions are selected for validation
           </div>
         )}
-
         {/* Right controls */}
         <div className='flex items-center justify-center gap-3'>
           {appState === 'build' && (

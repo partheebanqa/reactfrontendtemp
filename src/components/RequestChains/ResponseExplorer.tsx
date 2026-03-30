@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Loader2,
   Sparkles,
+  ListChecks,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -179,8 +180,6 @@ export function ResponseExplorer({
   const { toast } = useToast();
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
-
-  console.log('dynamicVariables123:', dynamicVariables);
 
   const [activeTab, setActiveTab] = useState<
     'body' | 'headers' | 'cookies' | 'actualRequest' | 'assertions'
@@ -1369,9 +1368,14 @@ export function ResponseExplorer({
               </Button> */}
               <button
                 onClick={() => setShowAssertionUI(true)}
-                className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
+                disabled={
+                  !response ||
+                  (response.statusCode ?? response.status ?? 0) < 200 ||
+                  (response.statusCode ?? response.status ?? 0) >= 300
+                }
+                className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-blue-600 disabled:hover:bg-transparent'
               >
-                <FlaskConical className='w-4 h-4' />
+                <ListChecks className='w-4 h-4' />
                 <span>Manage Assertions</span>
               </button>
             </div>
@@ -1762,7 +1766,12 @@ export function ResponseExplorer({
                     id: generateUUID(),
                     type: finalType,
                     displayType: gType,
-                    category: 'general',
+                    category:
+                      gType === 'status_equals'
+                        ? 'status'
+                        : gType === 'response_time' || gType === 'payload_size'
+                          ? 'performance'
+                          : 'body',
                     description,
                     enabled: true,
                     isGeneral: true,
@@ -1912,7 +1921,7 @@ export function ResponseExplorer({
               type: finalType,
               displayType: assertionType,
               category: config?.isGeneral
-                ? 'general'
+                ? 'body'
                 : selectedAssertion.path.startsWith('headers.')
                   ? 'headers'
                   : 'body',

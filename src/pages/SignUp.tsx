@@ -182,7 +182,9 @@ export default function SignUp() {
             >
               <div className='grid grid-cols-2 gap-4'>
                 <div>
-                  <Label htmlFor='firstName'>First name</Label>
+                  <Label htmlFor='firstName'>
+                    First name <span className='text-red-500'>*</span>
+                  </Label>
                   <div className='relative'>
                     <User className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                     <Input
@@ -204,7 +206,9 @@ export default function SignUp() {
                 </div>
 
                 <div>
-                  <Label htmlFor='lastName'>Last name</Label>
+                  <Label htmlFor='lastName'>
+                    Last name <span className='text-red-500'>*</span>
+                  </Label>
                   <Input
                     id='lastName'
                     type='text'
@@ -223,7 +227,9 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor='email'>Email address</Label>
+                <Label htmlFor='email'>
+                  Email address <span className='text-red-500'>*</span>
+                </Label>
                 <div className='relative'>
                   <Mail className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
@@ -248,7 +254,9 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor='organization'>Organization</Label>
+                <Label htmlFor='organization'>
+                  Organization <span className='text-red-500'>*</span>
+                </Label>
                 <div className='relative'>
                   <Building className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
@@ -256,7 +264,7 @@ export default function SignUp() {
                     type='text'
                     required
                     className='pl-10'
-                    placeholder='My Organization Name'
+                    placeholder='Organization name or email id'
                     value={formData.organization}
                     onChange={(e) =>
                       setFormData({
@@ -270,7 +278,9 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor='password'>Password</Label>
+                <Label htmlFor='password'>
+                  Password <span className='text-red-500'>*</span>
+                </Label>
                 <div className='relative'>
                   <Lock className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input
@@ -303,7 +313,9 @@ export default function SignUp() {
               </div>
 
               <div>
-                <Label htmlFor='confirmPassword'>Confirm password</Label>
+                <Label htmlFor='confirmPassword'>
+                  Confirm password <span className='text-red-500'>*</span>
+                </Label>
                 <div className='relative'>
                   <Lock className='absolute left-3 top-3 h-4 w-4 text-gray-400' />
                   <Input

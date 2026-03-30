@@ -133,6 +133,35 @@ function EmptyState({
   );
 }
 
+// ─── Helper: resolve category and operator for a general assertion type ───────
+const CONTAINS_TYPES = [
+  'contains_static',
+  'contains_dynamic',
+  'contains_extracted',
+  'contains_text',
+];
+
+function getGeneralCategory(gType: string): string {
+  if (CONTAINS_TYPES.includes(gType)) return 'body';
+  if (gType === 'status_equals') return 'status';
+  if (gType === 'response_time' || gType === 'payload_size')
+    return 'performance';
+  return 'body';
+}
+
+function getGeneralOperator(
+  gType: string,
+  comparison: string | undefined,
+  hasComparison: boolean | undefined,
+): string {
+  if (hasComparison) {
+    return comparison === 'less' ? 'less_than' : 'greater_than';
+  }
+  if (CONTAINS_TYPES.includes(gType)) return 'contains';
+  return 'equals';
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 function AssertionModal({
   fieldPath,
   fieldValue,
@@ -688,6 +717,38 @@ function AssertionModal({
     return config;
   };
 
+  // ─── Shared helper to build generalToAdd from a Map ──────────────────────
+  const buildGeneralToAdd = (
+    map: Map<string, { value: string; comparison?: string }>,
+  ): any[] => {
+    const result: any[] = [];
+    map.forEach((data, gType) => {
+      const assertion = generalAssertions.find((a) => a.id === gType);
+      const config: any = {
+        isGeneral: true,
+        value: data.value,
+        comparison: data.comparison,
+        category: getGeneralCategory(gType),
+        operator: getGeneralOperator(
+          gType,
+          data.comparison,
+          assertion?.hasComparison,
+        ),
+      };
+      if (assertion?.hasComparison) {
+        if (gType === 'response_time') config.expectedTime = data.value;
+        if (gType === 'payload_size') config.expectedSize = data.value;
+      }
+      result.push({
+        gType,
+        config,
+        richDescription: (data as any)._richDescription,
+      });
+    });
+    return result;
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleAddAssertion = () => {
     if (activeTab === 'suggested' && selectedSuggestedAssertions.size > 0) {
       const newPending: any[] = [];
@@ -747,29 +808,7 @@ function AssertionModal({
 
     const manualToAdd = pendingAssertions.filter((a) => !a._isSuggested);
     const toRemove = Array.from(assertionsToRemove);
-
-    const generalToAdd: any[] = [];
-    selectedGeneralAssertions.forEach((data, gType) => {
-      const assertion = generalAssertions.find((a) => a.id === gType);
-      const config: any = {
-        isGeneral: true,
-        value: data.value,
-        comparison: data.comparison,
-      };
-      if (assertion?.hasComparison) {
-        config.operator =
-          data.comparison === 'less' ? 'less_than' : 'greater_than';
-        if (gType === 'response_time') config.expectedTime = data.value;
-        if (gType === 'payload_size') config.expectedSize = data.value;
-      } else {
-        config.operator = 'equals';
-      }
-      generalToAdd.push({
-        gType,
-        config,
-        richDescription: (data as any)._richDescription,
-      });
-    });
+    const generalToAdd = buildGeneralToAdd(selectedGeneralAssertions);
 
     onSelect('batch-all', {
       suggestedAssertions: suggestedToAdd,
@@ -792,7 +831,6 @@ function AssertionModal({
     const hasUnsubmittedGeneral =
       activeTab === 'general' && generalType && generalValue;
 
-    // Build the final pending + general maps synchronously before dispatching
     let finalPending = [...pendingAssertions];
     let finalGeneralMap = new Map(selectedGeneralAssertions);
 
@@ -830,29 +868,7 @@ function AssertionModal({
         .map(({ _isSuggested, _suggestedId, _label, ...rest }) => rest);
       const manualToAdd = finalPending.filter((a) => !a._isSuggested);
       const toRemove = Array.from(assertionsToRemove);
-
-      const generalToAdd: any[] = [];
-      finalGeneralMap.forEach((data, gType) => {
-        const assertion = generalAssertions.find((a) => a.id === gType);
-        const config: any = {
-          isGeneral: true,
-          value: data.value,
-          comparison: data.comparison,
-        };
-        if (assertion?.hasComparison) {
-          config.operator =
-            data.comparison === 'less' ? 'less_than' : 'greater_than';
-          if (gType === 'response_time') config.expectedTime = data.value;
-          if (gType === 'payload_size') config.expectedSize = data.value;
-        } else {
-          config.operator = 'equals';
-        }
-        generalToAdd.push({
-          gType,
-          config,
-          richDescription: (data as any)._richDescription,
-        });
-      });
+      const generalToAdd = buildGeneralToAdd(finalGeneralMap);
 
       onSelect('batch-all', {
         suggestedAssertions: suggestedToAdd,
@@ -996,7 +1012,7 @@ function AssertionModal({
             {/* Suggested Tab */}
             {activeTab === 'suggested' && (
               <div className='space-y-2'>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-start gap-1.5 bg-blue-100 dark:bg-blue-950/30 rounded px-2 py-1'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-start gap-1.5 bg-blue-100 dark:bg-blue-950/30 rounded px-2 py-2'>
                   <Info className='w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#136fb0]' />
                   Toggle assertions on or off. They will be saved when you
                   close.

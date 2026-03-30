@@ -18,6 +18,7 @@ import {
   FlaskConical,
   Stars,
   Plus,
+  ListChecks,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
@@ -1319,7 +1320,11 @@ const ResponseViewer = ({
   const tabs = useMemo(
     () => [
       { id: 'body', label: 'Body' },
-      { id: 'headers', label: 'Headers' },
+      {
+        id: 'headers',
+        label: 'Headers',
+        count: Object.keys(responseData?.headers || {}).length,
+      },
       { id: 'cookies', label: 'Cookies' },
       {
         id: 'test-results',
@@ -1413,6 +1418,11 @@ const ResponseViewer = ({
                             {executedAssertionCount}
                           </span>
                         )}
+                      {tab.id === 'headers' && (tab.count ?? 0) > 0 && (
+                        <span className='relative -top-1.5 text-[0.7rem] font-semibold text-gray-500 dark:text-gray-400 ml-px'>
+                          {tab.count}
+                        </span>
+                      )}
                       {tab.hasIndicator && (
                         <span className='relative -top-1.5 ml-0.5 inline-block w-1.5 h-1.5 bg-blue-500 rounded-full' />
                       )}
@@ -1510,9 +1520,14 @@ const ResponseViewer = ({
             </button> */}
             <button
               onClick={() => setShowAssertionUI(true)}
-              className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200'
+              disabled={
+                !responseData ||
+                responseData.status < 200 ||
+                responseData.status >= 300
+              }
+              className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-blue-600 dark:disabled:hover:text-blue-400'
             >
-              <FlaskConical className='w-4 h-4' />
+              <ListChecks className='w-4 h-4' />
               <span className='text-xs md:text-sm hidden md:block'>
                 Manage Assertions
               </span>
@@ -1733,40 +1748,101 @@ const ResponseViewer = ({
         {/* Test results tab */}
         {activeTab === 'test-results' &&
           Array.isArray(responseData.assertionLogs) && (
-            <div className='space-y-2'>
+            <div className='space-y-4'>
               {responseData.assertionLogs.length === 0 ? (
                 <div className='text-center py-8 text-gray-500'>
-                  <p>No test results available</p>
+                  <CheckCircle className='w-12 h-12 text-gray-300 mx-auto mb-3' />
+                  <p>No assertions configured for this request</p>
                 </div>
               ) : (
-                responseData.assertionLogs.map(
-                  (assertion: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className={`border rounded-lg p-3 ${
-                        assertion.status === 'passed'
-                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
-                      }`}
-                    >
-                      <div className='flex items-center space-x-2'>
-                        {assertion.status === 'passed' ? (
-                          <CheckCircle className='h-5 w-5 text-green-600 dark:text-green-400' />
-                        ) : (
-                          <X className='h-5 w-5 text-red-600 dark:text-red-400' />
-                        )}
-                        <h4 className='font-medium text-gray-900 dark:text-gray-100'>
-                          {assertion.description}
-                        </h4>
-                      </div>
-                      {assertion.errorMessage && (
-                        <p className='mt-2 text-sm text-red-600 dark:text-red-400'>
-                          {assertion.errorMessage}
-                        </p>
-                      )}
+                <>
+                  {/* ── Summary bar (same as ResponseExplorer) ── */}
+                  <div className='flex items-center space-x-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+                    <div className='flex items-center space-x-2'>
+                      <CheckCircle className='w-5 h-5 text-green-600 dark:text-green-400' />
+                      <span className='font-medium text-gray-900 dark:text-gray-100'>
+                        {
+                          responseData.assertionLogs.filter(
+                            (a: any) => a.status === 'passed',
+                          ).length
+                        }{' '}
+                        Passed
+                      </span>
                     </div>
-                  ),
-                )
+                    {responseData.assertionLogs.filter(
+                      (a: any) => a.status !== 'passed',
+                    ).length > 0 && (
+                      <div className='flex items-center space-x-2'>
+                        <X className='w-5 h-5 text-red-600 dark:text-red-400' />
+                        <span className='font-medium text-gray-900 dark:text-gray-100'>
+                          {
+                            responseData.assertionLogs.filter(
+                              (a: any) => a.status !== 'passed',
+                            ).length
+                          }{' '}
+                          Failed
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* ── Individual assertion rows ── */}
+                  <div className='space-y-2'>
+                    {responseData.assertionLogs.map(
+                      (assertion: any, idx: number) => (
+                        <div
+                          key={idx}
+                          className={`border rounded-lg p-4 ${
+                            assertion.status === 'passed'
+                              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                          }`}
+                        >
+                          <div className='flex items-start space-x-3 flex-1'>
+                            {assertion.status === 'passed' ? (
+                              <CheckCircle className='w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5' />
+                            ) : (
+                              <X className='w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5' />
+                            )}
+                            <div className='flex-1 min-w-0'>
+                              <h4
+                                className={`font-medium ${
+                                  assertion.status === 'passed'
+                                    ? 'text-green-900 dark:text-green-100'
+                                    : 'text-red-900 dark:text-red-100'
+                                }`}
+                              >
+                                {assertion.description}
+                              </h4>
+                              {assertion.errorMessage && (
+                                <p className='mt-2 text-sm text-red-700 dark:text-red-400'>
+                                  {assertion.errorMessage}
+                                </p>
+                              )}
+                              <div className='mt-2 flex flex-wrap gap-2'>
+                                {assertion.expectedValue && (
+                                  <span className='text-xs bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 font-mono overflow-x-auto scrollbar-thin whitespace-nowrap'>
+                                    Expected: {assertion.expectedValue}
+                                  </span>
+                                )}
+                                {assertion.operator && (
+                                  <span className='text-xs bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 font-mono whitespace-nowrap'>
+                                    Operator: {assertion.operator}
+                                  </span>
+                                )}
+                                {assertion.category && (
+                                  <span className='text-xs bg-white dark:bg-gray-900 px-2 py-1 rounded border border-gray-200 dark:border-gray-700 capitalize'>
+                                    {assertion.category}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </>
               )}
             </div>
           )}

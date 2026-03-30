@@ -754,12 +754,33 @@ function AssertionModal({
         isGeneral: true,
         value: data.value,
         comparison: data.comparison,
+        category: [
+          'contains_static',
+          'contains_dynamic',
+          'contains_extracted',
+          'contains_text',
+        ].includes(gType)
+          ? 'body'
+          : gType === 'status_equals'
+            ? 'status'
+            : gType === 'response_time' || gType === 'payload_size'
+              ? 'performance'
+              : 'body',
       };
       if (assertion?.hasComparison) {
         config.operator =
           data.comparison === 'less' ? 'less_than' : 'greater_than';
         if (gType === 'response_time') config.expectedTime = data.value;
         if (gType === 'payload_size') config.expectedSize = data.value;
+      } else if (
+        [
+          'contains_static',
+          'contains_dynamic',
+          'contains_extracted',
+          'contains_text',
+        ].includes(gType)
+      ) {
+        config.operator = 'contains';
       } else {
         config.operator = 'equals';
       }
@@ -930,7 +951,7 @@ function AssertionModal({
             <div className='flex items-start justify-between px-4 pt-2 sm:pt-4 pb-2 gap-2'>
               <div className='min-w-0 flex-1'>
                 <h2 className='text-base font-semibold text-gray-900 dark:text-gray-100 leading-tight'>
-                  Add Assertion
+                  Save Assertion
                 </h2>
                 <div className='flex items-center gap-1.5 mt-1 flex-wrap'>
                   <span
@@ -994,7 +1015,7 @@ function AssertionModal({
             {/* ─── Suggested Tab ─── */}
             {activeTab === 'suggested' && (
               <div className='space-y-2'>
-                <p className='text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-start gap-1.5 bg-blue-100 dark:bg-blue-950/30 rounded px-2 py-1'>
+                <p className='text-xs text-gray-500 dark:text-gray-400 mb-2 flex items-start gap-1.5 bg-blue-100 dark:bg-blue-950/30 rounded px-2 py-2'>
                   <Info className='w-3.5 h-3.5 flex-shrink-0 mt-0.5 text-[#136fb0]' />
                   Toggle assertions on or off. They will be saved when you
                   close.

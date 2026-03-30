@@ -1629,14 +1629,28 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
 
     clearError();
     setLoading(true);
+
     const newUrl = buildFinalUrl();
 
     let substitutedBodyContent = bodyContent;
+
+    const normalizeBody = (input: any) => {
+      if (!input) return null;
+      if (typeof input === 'string') {
+        try {
+          return JSON.parse(input);
+        } catch {
+          return { message: input };
+        }
+      }
+      return input;
+    };
+
     try {
       let effectiveAuthType = authType;
       let effectiveToken = authData.token;
 
-      // Load token from localStorage if pre-request is enabled
+      // 🔐 Pre-request token handling
       if (preRequestEnabled && activeCollection?.id) {
         const possibleTokenKeys = [
           `extracted_var_${activeCollection.id}_E_token`,
@@ -1655,19 +1669,16 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
           const storedData = localStorage.getItem(storageKey);
           if (storedData) {
             try {
-              const parsedData = JSON.parse(storedData);
-              if (parsedData.value) {
-                effectiveToken = parsedData.value;
+              const parsed = JSON.parse(storedData);
+              if (parsed.value) {
+                effectiveToken = parsed.value;
                 effectiveAuthType = 'bearer';
                 break;
               }
-            } catch (error) {
-              console.error('Error parsing stored token:', error);
+            } catch (err) {
+              console.error('Error parsing stored token:', err);
             }
           }
-        }
-        if (effectiveToken === authData.token) {
-          console.warn('⚠️ Pre-request token not found in localStorage');
         }
       }
 
@@ -1683,7 +1694,8 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         effectiveAuthType = 'none';
       }
 
-      if (selectedVariable && selectedVariable.length > 0) {
+      // 🔁 Variable substitution
+      if (selectedVariable?.length) {
         try {
           const parsedBody = JSON.parse(bodyContent);
           selectedVariable.forEach((varItem) => {
@@ -1752,7 +1764,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
 
       const enabledAssertions = Array.isArray(assertions)
         ? assertions
-            .filter((assertion) => assertion.enabled)
+            .filter((a) => a.enabled)
             .map((a) => ({
               ...a,
               expectedValue:
@@ -1791,266 +1803,83 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         abortControllerRef.current?.signal,
       );
 
-      let backendBody;
-      let statusCode;
-      let responseHeaders;
-      let requestCurl;
-      let metrics;
-      let assertionLogs;
-      let schemaValidation;
+      // ✅ FIXED RESPONSE EXTRACTION
+      const firstResponse = backendData?.data?.responses?.[0] ?? null;
 
-      if (
-        backendData?.data?.responses &&
-        Array.isArray(backendData.data.responses)
-      ) {
-        const firstResponse = backendData.data.responses[0];
+      const backendBody =
+        firstResponse?.body ??
+        firstResponse?.data ??
+        backendData?.data?.body ??
+        backendData?.data?.data ??
+        backendData?.data ??
+        null;
 
-        backendBody = firstResponse.body;
-        statusCode = firstResponse.status ?? firstResponse.statusCode;
-        responseHeaders = firstResponse.headers;
-        requestCurl = firstResponse.requestCurl;
-        metrics = firstResponse.metrics;
+      const status =
+        firstResponse?.status ??
+        backendData?.status ??
+        backendData?.data?.status ??
+        200;
 
-        assertionLogs = backendData.data.assertionResults || [];
-        schemaValidation = backendData.data.schemaValidation || null;
-      } else {
-        backendBody = backendData?.data?.body;
-        statusCode = backendData?.data?.statusCode;
-        responseHeaders = backendData?.data?.headers;
-        requestCurl = backendData?.data?.requestCurl;
-        metrics = backendData?.data?.metrics;
-        assertionLogs = backendData?.data?.assertionLogs || [];
-        schemaValidation = backendData?.data?.schemaValidation || null;
-      }
+      const responseHeaders =
+        firstResponse?.headers ??
+        backendData?.data?.headers ??
+        backendData?.headers ??
+        {};
 
-      if (backendBody) {
-        let parsedBody = backendBody;
-        if (typeof backendBody === 'string') {
-          try {
-            parsedBody = JSON.parse(backendBody);
-          } catch {}
-        }
+      const requestCurl =
+        firstResponse?.requestCurl ?? backendData?.data?.requestCurl ?? {};
 
-        const actualRequest = {
-          method,
-          url: newUrl,
-          headers: headers
-            .filter((h) => h.enabled)
-            .reduce(
-              (acc, h) => {
-                if (h.key) acc[h.key] = h.value;
-                return acc;
-              },
-              {} as Record<string, string>,
-            ),
-          body: substitutedBodyContent
-            ? (() => {
-                try {
-                  return JSON.parse(substitutedBodyContent);
-                } catch {
-                  return substitutedBodyContent;
-                }
-              })()
-            : null,
-          authorizationType: effectiveAuthType,
-          authorization:
-            effectiveAuthType === 'bearer'
-              ? { token: resolvedToken }
-              : effectiveAuthType === 'basic'
-                ? { username: authData.username, password: authData.password }
-                : effectiveAuthType === 'apiKey'
-                  ? {
-                      key: authData.key,
-                      value: authData.value,
-                      addTo: authData.addTo,
-                    }
-                  : undefined,
-        };
+      const metrics =
+        firstResponse?.metrics ?? backendData?.data?.metrics ?? {};
 
-        const normalizedResponse = {
-          requestId: activeRequest.id,
-          status: statusCode ?? 200,
-          statusCode: statusCode ?? 200,
-          headers: responseHeaders ?? {},
-          requestCurl: requestCurl ?? {},
-          actualRequest,
-          body: parsedBody,
-          rawBody: backendBody,
-          metrics: metrics ?? {},
-          assertionLogs,
-          schemaValidation,
-        };
+      const assertionLogs =
+        backendData?.data?.assertionResults ??
+        backendData?.data?.assertionLogs ??
+        [];
 
-        setResponseData(normalizedResponse);
+      const schemaValidation = backendData?.data?.schemaValidation ?? null;
 
-        if (
-          existingExtractions &&
-          existingExtractions.length > 0 &&
-          activeCollection?.id
-        ) {
-          const body = normalizedResponse.body;
+      const parsedBody = normalizeBody(backendBody);
 
-          existingExtractions.forEach((extraction) => {
-            const isResponseBody =
-              !extraction.source || extraction.source === 'response_body';
-
-            if (isResponseBody && extraction.path) {
-              try {
-                const extractedValue = getValueByPath(body, extraction.path);
-
-                if (extractedValue !== undefined && onExtractVariable) {
-                  const variableName = extraction.name || 'E_token';
-
-                  onExtractVariable({
-                    variableName: variableName,
-                    name: variableName,
-                    source: 'response_body',
-                    path: extraction.path,
-                    value: String(extractedValue),
-                  });
-
-                  collectionActions.setExtractedVariable(
-                    activeCollection.id,
-                    variableName,
-                    String(extractedValue),
-                  );
-
-                  const storageKey = `extracted_var_${activeCollection.id}_${variableName}`;
-
-                  const isAuthToken =
-                    variableName.toLowerCase().includes('token') ||
-                    variableName.toLowerCase().includes('auth') ||
-                    variableName.toLowerCase().includes('secret');
-
-                  const payload = {
-                    name: variableName,
-                    value: String(extractedValue),
-                    timestamp: Date.now(),
-                    collectionId: activeCollection.id,
-                    source: extraction.source,
-                    path: extraction.path,
-                  };
-
-                  secureStorage.saveEncrypted(storageKey, payload);
-
-                  if (activeRequest?.id) {
-                    collectionActions.setExtractedVariableRequest(
-                      activeRequest.id,
-                      variableName,
-                      String(extractedValue),
-                    );
+      const actualRequest = {
+        method,
+        url: newUrl,
+        headers: headers
+          .filter((h) => h.enabled)
+          .reduce(
+            (acc, h) => {
+              if (h.key) acc[h.key] = h.value;
+              return acc;
+            },
+            {} as Record<string, string>,
+          ),
+        body: normalizeBody(substitutedBodyContent),
+        authorizationType: effectiveAuthType,
+        authorization:
+          effectiveAuthType === 'bearer'
+            ? { token: resolvedToken }
+            : effectiveAuthType === 'basic'
+              ? { username: authData.username, password: authData.password }
+              : effectiveAuthType === 'apiKey'
+                ? {
+                    key: authData.key,
+                    value: authData.value,
+                    addTo: authData.addTo,
                   }
-                }
-              } catch (error) {
-                console.error('Error extracting variable:', error);
-              }
-            }
-          });
-        }
-        if (activeRequest.id) {
-          collectionActions.setRequestResponse(
-            activeRequest.id,
-            normalizedResponse,
-          );
-        }
-
-        const formattedResponse = formatBackendResponse(normalizedResponse);
-        const generatedAssertions = generateAssertions(formattedResponse);
-
-        const assertionsMatch = (a: any, b: any) =>
-          a.description === b.description &&
-          a.category === b.category &&
-          a.type === b.type &&
-          a.operator === b.operator;
-
-        // Use current assertions state (which reflects the last save) as source of truth
-        // for enabled/disabled status — never pull from IDB here
-        const mergedAssertions = generatedAssertions.map((newA) => {
-          const existing = assertions.find((ex) => assertionsMatch(ex, newA));
-          if (existing) {
-            return { ...newA, enabled: existing.enabled ?? false };
-          }
-          return { ...newA, enabled: false };
-        });
-
-        const preservedAssertions = assertions.filter((a) => {
-          // Already represented in mergedAssertions — don't duplicate
-          return !mergedAssertions.some((m) => assertionsMatch(m, a));
-        });
-
-        const finalAssertions = removeDuplicateAssertions([
-          ...mergedAssertions,
-          ...preservedAssertions,
-        ]);
-        setAssertions(finalAssertions);
-
-        // Immediately sync the merged result to IDB so next reload gets this state
-        if (activeRequest?.id) {
-          try {
-            await storageManager.saveAssertions(
-              activeRequest.id,
-              finalAssertions,
-              activeCollection?.id,
-            );
-          } catch (idbErr) {
-            console.warn('[RequestEditor] IDB sync after send failed:', idbErr);
-          }
-        }
-      }
-    } catch (error: any) {
-      if (error.name === 'AbortError' || error.message?.includes('abort')) {
-        toast({
-          title: 'Request Cancelled',
-          description: 'The request was cancelled',
-        });
-        return;
-      }
-
-      const backendErrorMessage =
-        error?.response?.data?.errorDetails ||
-        error?.response?.data?.error ||
-        error?.response?.data?.message ||
-        error?.message ||
-        'An unknown error occurred.';
-      const statusCode =
-        error?.response?.status || error?.response?.data?.statusCode || 500;
-      const responseHeaders = error?.response?.headers || {};
-      const backendBody = error?.response?.data || backendErrorMessage;
+                : undefined,
+      };
 
       const normalizedResponse = {
         requestId: activeRequest.id,
-        status: statusCode,
-        statusCode,
+        status,
         headers: responseHeaders,
-        requestCurl: error?.response?.data?.requestCurl || {},
-        actualRequest: {
-          method,
-          url: newUrl,
-          headers: headers
-            .filter((h) => h.enabled)
-            .reduce(
-              (acc, h) => {
-                if (h.key) acc[h.key] = h.value;
-                return acc;
-              },
-              {} as Record<string, string>,
-            ),
-          body: substitutedBodyContent
-            ? (() => {
-                try {
-                  return JSON.parse(substitutedBodyContent);
-                } catch {
-                  return substitutedBodyContent;
-                }
-              })()
-            : null,
-        },
-
-        body: backendBody,
+        requestCurl,
+        actualRequest,
+        body: parsedBody,
         rawBody: backendBody,
-        metrics: {},
-        assertionLogs: [],
-        schemaValidation: null,
+        metrics,
+        assertionLogs,
+        schemaValidation,
       };
 
       setResponseData(normalizedResponse);
@@ -2061,9 +1890,95 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
           normalizedResponse,
         );
       }
+
+      // 🔥 ASSERTION GENERATION (unchanged logic)
+      const formattedResponse = formatBackendResponse(normalizedResponse);
+      const generatedAssertions = generateAssertions(formattedResponse);
+
+      const assertionsMatch = (a: any, b: any) =>
+        a.description === b.description &&
+        a.category === b.category &&
+        a.type === b.type &&
+        a.operator === b.operator;
+
+      const mergedAssertions = generatedAssertions.map((newA) => {
+        const existing = assertions.find((ex) => assertionsMatch(ex, newA));
+        if (existing) {
+          return { ...newA, enabled: existing.enabled ?? false };
+        }
+        return { ...newA, enabled: false };
+      });
+
+      const preservedAssertions = assertions.filter((a) => {
+        return !mergedAssertions.some((m) => assertionsMatch(m, a));
+      });
+
+      const finalAssertions = removeDuplicateAssertions([
+        ...mergedAssertions,
+        ...preservedAssertions,
+      ]);
+
+      setAssertions(finalAssertions);
+
+      if (activeRequest?.id) {
+        try {
+          await storageManager.saveAssertions(
+            activeRequest.id,
+            finalAssertions,
+            activeCollection?.id,
+          );
+        } catch (idbErr) {
+          console.warn('[RequestEditor] IDB sync failed:', idbErr);
+        }
+      }
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        toast({
+          title: 'Request Cancelled',
+          description: 'The request was cancelled',
+        });
+        return;
+      }
+
+      const backendBody =
+        error?.response?.data?.body ??
+        error?.response?.data?.data ??
+        error?.response?.data ??
+        error?.message ??
+        'Unknown error';
+
+      const parsedBody = normalizeBody(backendBody);
+
+      const normalizedResponse = {
+        requestId: activeRequest?.id,
+        status: error?.response?.status || 500,
+        headers: error?.response?.headers || {},
+        requestCurl: error?.response?.data?.requestCurl || {},
+        actualRequest: {
+          method,
+          url: newUrl,
+          headers: {},
+          body: normalizeBody(substitutedBodyContent),
+        },
+        body: parsedBody,
+        rawBody: backendBody,
+        metrics: {},
+        assertionLogs: [],
+        schemaValidation: null,
+      };
+
+      setResponseData(normalizedResponse);
+
+      if (activeRequest?.id) {
+        collectionActions.setRequestResponse(
+          activeRequest.id,
+          normalizedResponse,
+        );
+      }
+
       toast({
         title: 'Error',
-        description: backendErrorMessage,
+        description: parsedBody?.message || 'Request failed',
       });
     } finally {
       setLoading(false);
@@ -3249,7 +3164,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                         }`}
                       >
                         <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
-                        Auto Auth Sync
+                        Auto Auth
                       </span>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -3305,7 +3220,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                 <option
                   key={m}
                   value={m}
-                  className='bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200'
+                  className='bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200'
                 >
                   {m}
                 </option>
@@ -3321,7 +3236,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
             />
 
             <div className='justify-end flex space-x-2'>
-              {isLoading ? (
+              {isLoading && !isSaving ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -3367,7 +3282,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                       <Button
                         variant='active'
                         onClick={handleSendRequest}
-                        disabled={isLoading}
+                        disabled={isLoading || isSaving}
                         className='disabled:bg-blue-400 text-white px-4 sm:px-6 py-2 rounded-md flex items-center space-x-2 transition-colors whitespace-nowrap'
                         aria-label='Send request'
                       >
@@ -3471,7 +3386,11 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                 { id: 'body', label: 'Body', count: getBodyCount() },
                 { id: 'auth', label: 'Auth', count: getAuthCount() },
                 { id: 'pre-request', label: 'Pre-request', count: 0 },
-                { id: 'post-response', label: 'Post-response', count: 0 },
+                {
+                  id: 'post-response',
+                  label: 'Post-response',
+                  count: assertions.filter((a) => a.enabled).length,
+                },
                 {
                   id: 'schemas',
                   label: 'Schemas',
