@@ -521,7 +521,6 @@ export function RequestChainsList({
               <SelectItem value='created-desc'>Newest First</SelectItem>
               <SelectItem value='created-asc'>Oldest First</SelectItem>
               <SelectItem value='executed-desc'>Recently Executed</SelectItem>
-              <SelectItem value='success-desc'>Highest Success Rate</SelectItem>
             </SelectContent>
           </Select>
         </div>

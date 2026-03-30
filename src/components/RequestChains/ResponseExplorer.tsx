@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Loader2,
   Sparkles,
+  ListChecks,
 } from 'lucide-react';
 import type { DataExtraction } from '@/shared/types/requestChain.model';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
@@ -1371,7 +1372,7 @@ export function ResponseExplorer({
                 onClick={() => setShowAssertionUI(true)}
                 className='flex items-center space-x-2 text-sm font-medium text-blue-600 hover:text-blue-700 px-4 py-2 hover:bg-blue-50 rounded-lg transition-colors'
               >
-                <FlaskConical className='w-4 h-4' />
+                <ListChecks className='w-4 h-4' />
                 <span>Manage Assertions</span>
               </button>
             </div>
@@ -1762,7 +1763,12 @@ export function ResponseExplorer({
                     id: generateUUID(),
                     type: finalType,
                     displayType: gType,
-                    category: 'general',
+                    category:
+                      gType === 'status_equals'
+                        ? 'status'
+                        : gType === 'response_time' || gType === 'payload_size'
+                          ? 'performance'
+                          : 'body',
                     description,
                     enabled: true,
                     isGeneral: true,
@@ -1912,7 +1918,7 @@ export function ResponseExplorer({
               type: finalType,
               displayType: assertionType,
               category: config?.isGeneral
-                ? 'general'
+                ? 'body'
                 : selectedAssertion.path.startsWith('headers.')
                   ? 'headers'
                   : 'body',

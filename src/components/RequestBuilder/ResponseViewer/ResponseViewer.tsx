@@ -18,6 +18,7 @@ import {
   FlaskConical,
   Stars,
   Plus,
+  ListChecks,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
@@ -1512,7 +1513,7 @@ const ResponseViewer = ({
               onClick={() => setShowAssertionUI(true)}
               className='flex items-center space-x-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-gray-900 dark:hover:text-gray-200'
             >
-              <FlaskConical className='w-4 h-4' />
+              <ListChecks className='w-4 h-4' />
               <span className='text-xs md:text-sm hidden md:block'>
                 Manage Assertions
               </span>
