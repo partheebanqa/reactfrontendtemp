@@ -1183,7 +1183,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                 <ChevronRight className='h-4 w-4 text-gray-500' />
               )}
               <Folder className='h-4 w-4 text-orange-500' />
-              <span className='text-sm font-medium text-gray-900 dark:text-white truncate max-w-[140px]'>
+              <span className='text-sm font-medium text-gray-800 dark:text-white truncate max-w-[140px]'>
                 {folder.name}
               </span>
             </div>
@@ -1274,7 +1274,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <span className='text-xs md:text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                              <span className='text-xs md:text-sm text-gray-700 dark:text-white truncate min-w-0 max-w-[150px]'>
                                 {request.name}
                               </span>
                             </TooltipTrigger>
@@ -1345,10 +1345,11 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
         onDragStart={handleDndDragStart}
         onDragEnd={handleDndDragEnd}
       >
-        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-full h-full md:w-64 overflow-auto scrollbar-thin'>
+        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-[85vw] max-w-[320px] md:w-64 overflow-auto scrollbar-thin'>
           <div className='p-1 sm:p-2'>
-            <div className='flex items-center justify-between mb-2 border-b border-gray-200 dark:border-gray-700 pb-2'>
-              <h2 className='text-base sm:text-lg font-semibold text-gray-900 dark:text-white'>
+            <div className='flex items-center justify-between mb-2 pb-2 -mx-1 sm:-mx-2 px-1 sm:px-2 border-b border-gray-200 dark:border-gray-700'>
+              {' '}
+              <h2 className='text-xs font-medium text-gray-500 uppercase dark:text-white'>
                 Collections
               </h2>
               <div className='flex items-center space-x-1'>
@@ -1357,7 +1358,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     onClick={handleCreateCollection}
                     className='hidden md:flex border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
                   >
-                    <FolderPlus className='text-[#136fb0]' size={23} />
+                    <FolderPlus className='text-[#136fb0]' size={16} />
                   </button>
                 </TooltipContainer>
                 <TooltipContainer text='Import collection'>
@@ -1366,7 +1367,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                     className='hidden md:flex border border-gray-300 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800'
                     aria-label='Import collection'
                   >
-                    <Import className='text-[#136fb0]' size={23} />
+                    <Import className='text-[#136fb0]' size={16} />
                   </button>
                 </TooltipContainer>
 
@@ -1401,13 +1402,13 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
               <div className='mx-auto relative'>
                 <Search
                   className='absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400'
-                  size={20}
+                  size={16}
                 />
                 <Input
                   placeholder='Search Collections...'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className='pl-10 text-base'
+                  className='pl-8 text-xs h-8'
                 />
               </div>
             </div>
@@ -1447,7 +1448,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                         }
                         setSelectedMethods(newMethods);
                       }}
-                      className={`px-2 py-0.5 text-[10px] font-semibold rounded border transition-colors ${
+                      className={`px-2 py-0.5 text-[11px] min-w-[36px] font-semibold rounded border transition-colors ${
                         methodColors[method]
                       }`}
                     >
@@ -1527,7 +1528,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <span
-                                        className='text-xs md:text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] inline-block align-bottom'
+                                        className='text-xs md:text-sm font-medium text-gray-800 dark:text-white truncate max-w-[120px] inline-block align-bottom'
                                         style={{
                                           textOverflow: 'ellipsis',
                                           overflow: 'hidden',
@@ -1679,7 +1680,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                                 <TooltipProvider>
                                                   <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                      <span className='text-xs md:text-sm text-gray-900 dark:text-white truncate min-w-0 max-w-[150px]'>
+                                                      <span className='text-xs md:text-sm text-gray-700 dark:text-white truncate min-w-0 max-w-[150px]'>
                                                         {request.name}
                                                       </span>
                                                     </TooltipTrigger>

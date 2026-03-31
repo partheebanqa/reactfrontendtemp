@@ -193,7 +193,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
 
   return (
     <>
-      <div className='flex items-center bg-white border-b border-gray-200 px-4 py-0'>
+      <div className='flex items-center bg-gray-50 border-b border-gray-200 px-4 py-0 overflow-visible'>
         <div className='flex items-center overflow-x-auto scrollbar-thin'>
           {openedRequests.map((request) => {
             const isActive = activeRequest?.id === request.id;
@@ -205,12 +205,12 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                 <button
                   onClick={() => handleTabClick(request)}
                   className={`group relative flex items-center gap-1 px-1 py-1
-              transition-all border-b-2 whitespace-nowrap
-              ${
-                isActive
-                  ? 'border-blue-600 bg-white'
-                  : 'border-transparent hover:bg-gray-50'
-              }`}
+  transition-all border-b-2 whitespace-nowrap
+  ${
+    isActive
+      ? 'border-blue-600 bg-white -mb-px'
+      : 'border-transparent hover:bg-gray-50'
+  }`}
                 >
                   <span
                     className={`text-xs font-semibold ${methodColor(
@@ -231,7 +231,7 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                           className={`text-xs md:text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
                             isActive
                               ? 'text-blue-600 font-medium'
-                              : 'text-gray-700'
+                              : 'text-gray-600'
                           }`}
                         >
                           {request.name
@@ -296,8 +296,8 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
         <AlertDialog open={showConfirmDialog}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle className='text-base font-semibold'>
-                DO YOU WANT TO SAVE?
+              <AlertDialogTitle className='text-base font-medium'>
+                Save Changes?
               </AlertDialogTitle>
               <AlertDialogDescription className='text-sm text-gray-600'>
                 This request <b>{requestToClose.name || 'Untitled'}</b> has

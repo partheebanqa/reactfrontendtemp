@@ -19,6 +19,8 @@ import {
   Stars,
   Plus,
   ListChecks,
+  Minimize2,
+  Maximize2,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
@@ -444,6 +446,7 @@ const ResponseViewer = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
     source: 'response_body' | 'response_header' | 'response_cookie';
@@ -453,11 +456,15 @@ const ResponseViewer = ({
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
 
-  // ---------------------------------------------------------------------------
-  // FIX: Replace the O(n) useEffect expand-all with lazy top-level expansion.
-  // We only expand the immediate children of root when a new response arrives.
-  // The user can explicitly click "Expand All" when they need full expansion.
-  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isFullscreen]);
+
   useEffect(() => {
     if (responseData?.body) {
       setExpandedNodes(collectTopLevelPaths(responseData.body));
@@ -1381,7 +1388,11 @@ const ResponseViewer = ({
   // ---------------------------------------------------------------------------
 
   return (
-    <div className='flex-1 flex flex-col bg-white dark:bg-gray-900 h-full overflow-hidden'>
+    <div
+      className={`flex-1 flex flex-col bg-white dark:bg-gray-900 overflow-hidden ${
+        isFullscreen ? 'fixed inset-0 z-50 h-screen w-screen' : 'h-full'
+      }`}
+    >
       {/* ── Header ── */}
       <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
         {/* Tab bar + status */}
@@ -1585,6 +1596,17 @@ const ResponseViewer = ({
                 </button>
               </div>
             </div>
+            <button
+              onClick={() => setIsFullscreen((f) => !f)}
+              className='p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400'
+              title={isFullscreen ? 'Exit fullscreen (Esc)' : 'View fullscreen'}
+            >
+              {isFullscreen ? (
+                <Minimize2 className='h-4 w-4' />
+              ) : (
+                <Maximize2 className='h-4 w-4' />
+              )}
+            </button>
           </div>
         </div>
 
