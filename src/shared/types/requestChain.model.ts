@@ -210,6 +210,8 @@ export interface ExecutionItem {
 }
 
 export interface ExecutionResponse {
+  headers?: Record<string, string>;
+  status?: number;
   page: number;
   pageSize: number;
   count: number;
@@ -246,6 +248,8 @@ export interface ExecuteRequestPayload {
 
 export interface ExecutionResponse {
   data: {
+    data?: any;
+    status?: number;
     assertionResults?: any;
     requestCurl: any;
     body: any;
@@ -255,10 +259,11 @@ export interface ExecutionResponse {
     headers: {};
     statusCode: number;
     responses: Array<{
+      data?: any;
       requestCurl: any;
-      status: number;
+      status?: number;
       statusCode: number;
-      headers: Record<string, string>;
+      headers?: Record<string, string>;
       body: any;
       metrics: {
         totalTime: number;
