@@ -231,8 +231,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
   const isExtractingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  console.log('activeRequest123:', activeRequest);
-
   const { unsavedChanges } = useCollectionStore();
 
   const { variables, dynamicVariables, environments, activeEnvironment } =
@@ -314,8 +312,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
   //       redirectUri: '',
   //     },
   //   });
-
-  console.log('authDataIneditor:', authData);
 
   const getAuthCount = () => {
     let count = 0;
@@ -2179,8 +2175,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
   const handleUpdateRequest = useCallback(
     async (overrideName?: string) => {
       try {
-        console.log('coming to handle update method');
-
         setIsSaving(true);
         if (!activeRequest || activeRequest.id?.startsWith('temp-')) {
           showError(
@@ -3109,7 +3103,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                 <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
                   {activeCollectionFull?.name}
                 </span>
-                <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
+                <span className='text-xs text-gray-300 dark:text-gray-600 mx-0.5'>
                   /
                 </span>
 
@@ -3121,7 +3115,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                         (activeCollectionFull as any)?.folders || [],
                       )}
                     </span>
-                    <span className='text-xs md:text-sm text-gray-500 dark:text-gray-400'>
+                    <span className='text-xs text-gray-300 dark:text-gray-600 mx-0.5'>
                       /
                     </span>
                   </>
@@ -3163,7 +3157,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                             : ''
                         }`}
                       >
-                        <Key className='w-3.5 h-3.5 inline-block mr-0.5' />
+                        <Key className='w-3.5 h-3.5 inline-block mr-1.5' />
                         Auto Auth
                       </span>
                     </TooltipTrigger>
@@ -3232,7 +3226,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
               value={url}
               onChange={handleUrlChange}
               placeholder='Enter request URL'
-              className='text-xs md:text-md'
+              className='text-xs md:text-sm'
             />
 
             <div className='justify-end flex space-x-2'>
@@ -3403,13 +3397,13 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                     key={tab.id}
                     onClick={() => handleTabClick(tab.id)}
                     className={`
-              pt-4 pb-2 px-2 sm:px-4 border-b-2 font-medium text-xs md:text-sm transition-colors whitespace-nowrap
-              ${
-                activeTab === tab.id
-                  ? 'border-[#136fb0] text-[#136fb0]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }
-            `}
+  pt-4 pb-2 px-2 sm:px-4 border-b-2 text-xs md:text-sm transition-colors whitespace-nowrap
+  ${
+    activeTab === tab.id
+      ? 'border-[#136fb0] text-[#136fb0] font-medium'
+      : 'border-transparent text-gray-500 font-normal hover:text-gray-700 hover:border-gray-300'
+  }
+`}
                   >
                     {tab.label}
 
