@@ -1088,24 +1088,83 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
     }
   };
 
+  const HTTP_METHODS_CHECK = [
+    'GET',
+    'POST',
+    'PUT',
+    'DELETE',
+    'PATCH',
+    'HEAD',
+    'OPTIONS',
+  ];
   const isSearching = searchQuery.trim().length > 0 || selectedMethods.size > 0;
   const isCollectionExpanded = (collectionId: string) =>
     isSearching ? true : expandedCollections.has(collectionId);
 
   const filteredCollections = useMemo(() => {
-    const hasSearchQuery = searchQuery.trim().length > 0;
     const hasMethodFilter = selectedMethods.size > 0;
 
-    if (!hasSearchQuery && !hasMethodFilter) return collections;
+    // Check if the search query exactly matches a method name
+    const queryUpper = searchQuery.trim().toUpperCase();
+    const HTTP_METHODS = [
+      'GET',
+      'POST',
+      'PUT',
+      'DELETE',
+      'PATCH',
+      'HEAD',
+      'OPTIONS',
+    ];
+    const isMethodSearch = HTTP_METHODS.includes(queryUpper);
+
+    // Combine clicked method filters + typed method search
+    const effectiveMethods = new Set(selectedMethods);
+    if (isMethodSearch) effectiveMethods.add(queryUpper);
+
+    const hasSearchQuery = searchQuery.trim().length > 0 && !isMethodSearch;
+    const hasEffectiveMethodFilter = effectiveMethods.size > 0;
+
+    if (!hasSearchQuery && !hasEffectiveMethodFilter) return collections;
 
     const query = searchQuery.toLowerCase();
 
+    const filterFolders = (folders: any[]): any[] => {
+      return folders
+        .map((folder) => {
+          let folderRequests = folder.requests || [];
+
+          if (hasSearchQuery) {
+            folderRequests = folderRequests.filter((req: any) =>
+              req.name?.toLowerCase().includes(query),
+            );
+          }
+          if (hasEffectiveMethodFilter) {
+            folderRequests = folderRequests.filter((req: any) =>
+              effectiveMethods.has(req.method),
+            );
+          }
+
+          const subFolders = filterFolders(folder.folders || []);
+
+          const folderNameMatches =
+            hasSearchQuery && !hasMethodFilter
+              ? folder.name?.toLowerCase().includes(query)
+              : false;
+
+          if (
+            folderRequests.length > 0 ||
+            subFolders.length > 0 ||
+            folderNameMatches
+          ) {
+            return { ...folder, requests: folderRequests, folders: subFolders };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    };
+
     return collections
       .map((collection) => {
-        const collectionMatches = hasSearchQuery
-          ? collection.name.toLowerCase().includes(query)
-          : true;
-
         let matchingRequests = collection.requests;
 
         if (hasSearchQuery) {
@@ -1113,30 +1172,78 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
             req.name?.toLowerCase().includes(query),
           );
         }
-
-        if (hasMethodFilter) {
+        if (hasEffectiveMethodFilter) {
           matchingRequests = matchingRequests.filter((req) =>
-            selectedMethods.has(req.method),
+            effectiveMethods.has(req.method),
           );
         }
 
-        if (collectionMatches || matchingRequests.length > 0) {
-          return {
-            ...collection,
-            requests:
-              collectionMatches && !hasMethodFilter
-                ? hasMethodFilter
-                  ? collection.requests.filter((req) =>
-                      selectedMethods.has(req.method),
-                    )
-                  : collection.requests
-                : matchingRequests,
-          };
-        }
-        return null;
+        const matchingFolders = filterFolders(
+          (collection as any).folders || [],
+        );
+
+        // Collection name match only counts when NOT filtering by method
+        // (a collection named "Auth" showing all methods when you filter GET makes no sense)
+        const collectionNameMatch =
+          hasSearchQuery && !hasEffectiveMethodFilter
+            ? collection.name.toLowerCase().includes(query)
+            : false;
+
+        const hasAnyMatch =
+          collectionNameMatch ||
+          matchingRequests.length > 0 ||
+          matchingFolders.length > 0;
+
+        if (!hasAnyMatch) return null;
+
+        return {
+          ...collection,
+          requests: matchingRequests,
+          folders: matchingFolders,
+        };
       })
       .filter(Boolean) as typeof collections;
   }, [collections, searchQuery, selectedMethods]);
+  const flatSearchResults = useMemo(() => {
+    if (!isSearching) return [];
+
+    const results: Array<{
+      request: CollectionRequest;
+      collection: Collection;
+      folderName?: string;
+    }> = [];
+
+    filteredCollections.forEach((collection) => {
+      // Top-level requests
+      collection.requests
+        .filter((r: any) => !r.folderId)
+        .forEach((request) => {
+          results.push({ request, collection });
+        });
+
+      // Recursively walk folders
+      const walkFolders = (folders: any[], parentLabel?: string) => {
+        folders.forEach((folder) => {
+          const label = parentLabel
+            ? `${parentLabel} / ${folder.name}`
+            : folder.name;
+
+          (folder.requests || []).forEach((request: CollectionRequest) => {
+            results.push({ request, collection, folderName: label });
+          });
+
+          // Recurse into subfolders
+          if (folder.folders?.length) {
+            walkFolders(folder.folders, label);
+          }
+        });
+      };
+
+      walkFolders((collection as any).folders || []);
+    });
+
+    return results;
+  }, [filteredCollections, isSearching]);
 
   const toggleFolder = (id: string) => {
     setExpandedFolders((prev) => {
@@ -1345,7 +1452,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
         onDragStart={handleDndDragStart}
         onDragEnd={handleDndDragEnd}
       >
-        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-[85vw] max-w-[320px] md:w-64 overflow-auto scrollbar-thin'>
+        <div className='dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out w-[85vw] max-w-[320px] md:w-64 h-full overflow-auto scrollbar-thin'>
           <div className='p-1 sm:p-2'>
             <div className='flex items-center justify-between mb-2 pb-2 -mx-1 sm:-mx-2 px-1 sm:px-2 border-b border-gray-200 dark:border-gray-700'>
               {' '}
@@ -1499,21 +1606,18 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                 e.preventDefault();
                                 e.stopPropagation();
                               }}
-                              onClick={async () => {
+                              onClick={() => {
                                 if (isSearching) return;
-
                                 setActiveCollection(collection);
-
                                 const isExpanding = !expandedCollections.has(
                                   collection.id,
                                 );
-
-                                await toggleExpandedCollection(collection.id);
+                                toggleExpandedCollection(collection.id); // instant — React re-renders immediately
                                 if (
                                   isExpanding &&
                                   !collection.hasFetchedRequests
                                 ) {
-                                  await handleCollectionExpand(collection.id);
+                                  handleCollectionExpand(collection.id); // fire-and-forget
                                 }
                               }}
                             >
@@ -1590,10 +1694,20 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                           >
                             {expanded && (
                               <div>
-                                {/* Use VirtualizedRequestList for requests */}
-                                {collection.requests.filter(
-                                  (r: any) => !r.folderId,
-                                ).length > 10 ? (
+                                {!collection.hasFetchedRequests ? (
+                                  // Skeleton loader
+                                  <div className='space-y-1 py-1'>
+                                    {[1, 2, 3].map((i) => (
+                                      <div
+                                        key={i}
+                                        className='h-7 rounded-md bg-gray-100 dark:bg-gray-800 animate-pulse mx-1'
+                                      />
+                                    ))}
+                                  </div>
+                                ) : collection.requests.filter(
+                                    (r: any) => !r.folderId,
+                                  ).length > 10 ? (
+                                  // Virtualized list
                                   <VirtualizedRequestList
                                     requests={collection.requests}
                                     collectionId={collection.id}
@@ -1614,6 +1728,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                     depth={0}
                                   />
                                 ) : (
+                                  // Normal list
                                   <div className='overflow-y-auto scrollbar-thin max-h-[600px]'>
                                     <SortableContext
                                       items={collectionSortableIds}
@@ -1649,10 +1764,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                                     request,
                                                     collection,
                                                   );
-
-                                                  if (isMobile) {
-                                                    toggleSidebar();
-                                                  }
+                                                  if (isMobile) toggleSidebar();
                                                 }}
                                               >
                                                 {isAuthRequest(
@@ -1670,6 +1782,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                                     </Tooltip>
                                                   </TooltipProvider>
                                                 )}
+
                                                 <span
                                                   className={`text-xs font-medium ${getMethodColor(
                                                     request.method,
@@ -1677,6 +1790,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                                 >
                                                   {request.method}
                                                 </span>
+
                                                 <TooltipProvider>
                                                   <Tooltip>
                                                     <TooltipTrigger asChild>
@@ -1690,6 +1804,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                                   </Tooltip>
                                                 </TooltipProvider>
                                               </div>
+
                                               <div className='flex items-center opacity-0 group-hover:opacity-100 transition-opacity relative'>
                                                 <TooltipContainer text='Request Actions'>
                                                   <button
@@ -1702,11 +1817,13 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                                       const rect = (
                                                         e.currentTarget as HTMLButtonElement
                                                       ).getBoundingClientRect();
+
                                                       setMenuPosition({
                                                         top: rect.bottom,
                                                         left: rect.left,
                                                         anchorTop: rect.top,
                                                       });
+
                                                       setSelectedRequest(
                                                         request,
                                                       );
@@ -1746,7 +1863,7 @@ const Sidebar: React.FC<ISidebar> = ({ toggleSidebar }) => {
                                   </div>
                                 )}
 
-                                {/* Render folders separately (outside virtualization) */}
+                                {/* Folders when virtualized */}
                                 {collection.requests.filter(
                                   (r: any) => !r.folderId,
                                 ).length > 10 && (

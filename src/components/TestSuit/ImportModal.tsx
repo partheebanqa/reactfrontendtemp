@@ -14,12 +14,18 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Upload } from 'lucide-react';
+import { Search, Upload, X } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import {
   getCollectionsWithRequests,
   getCollectionRequests,
 } from '@/services/collection.service';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type {
   ExtendedRequest,
   TransformedCollection,
@@ -37,7 +43,7 @@ interface ImportModalProps {
 }
 
 const buildFolderTreeFromRequests = (
-  requests: ExtendedRequest[]
+  requests: ExtendedRequest[],
 ): FolderNode => {
   const root: FolderNode = {
     id: 'root',
@@ -54,7 +60,7 @@ const buildFolderTreeFromRequests = (
 
       folderPath.forEach((folderName) => {
         let existingFolder = currentFolder.folders?.find(
-          (f) => f.name === folderName
+          (f) => f.name === folderName,
         );
 
         if (!existingFolder) {
@@ -110,7 +116,8 @@ const FolderTreeItem: React.FC<{
   allowedDomain,
   isSelectApisMode,
 }) => {
-  const isExpanded = expandedFolders.has(folder.id);
+  const isExpanded =
+    searchQuery.trim().length > 0 || expandedFolders.has(folder.id);
   const hasSubFolders = folder.folders && folder.folders.length > 0;
   const hasRequests = folder.requests && folder.requests.length > 0;
 
@@ -278,7 +285,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     Record<string, boolean>
   >({});
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(
-    new Set()
+    new Set(),
   );
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -286,13 +293,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
   const [expandedCollections, setExpandedCollections] = useState<string[]>([]);
   const [externalRequests, setExternalRequests] = useState<ExtendedRequest[]>(
-    []
+    [],
   );
   const [externalFileError, setExternalFileError] = useState<string | null>(
-    null
+    null,
   );
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(
-    null
+    null,
   );
 
   const [externalFolderTree, setExternalFolderTree] =
@@ -307,7 +314,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     return apiData.collections
       .filter(
         (collection) =>
-          Array.isArray(collection.requests) && collection.requests.length > 0
+          Array.isArray(collection.requests) && collection.requests.length > 0,
       )
       .map((collection) => ({
         id: collection.collectionId,
@@ -366,19 +373,19 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         const allRequestIds = extractAllRequestsFromFolderTree(treeData);
         const availableRequests = allRequestIds.filter(
-          (id) => !isRequestImported(id)
+          (id) => !isRequestImported(id),
         );
         const allAvailableSelected = availableRequests.every((id) =>
-          selectedRequests.includes(id)
+          selectedRequests.includes(id),
         );
 
         if (allAvailableSelected) {
           setSelectedRequests((prev) =>
-            prev.filter((id) => !availableRequests.includes(id))
+            prev.filter((id) => !availableRequests.includes(id)),
           );
         } else {
           const newSelections = availableRequests.filter(
-            (id) => !selectedRequests.includes(id)
+            (id) => !selectedRequests.includes(id),
           );
           setSelectedRequests((prev) => [...prev, ...newSelections]);
         }
@@ -389,22 +396,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       }
     } else {
       const allRequestIds = extractAllRequestsFromFolderTree(
-        folderTreeData[collectionId]
+        folderTreeData[collectionId],
       );
       const availableRequests = allRequestIds.filter(
-        (id) => !isRequestImported(id)
+        (id) => !isRequestImported(id),
       );
       const allAvailableSelected = availableRequests.every((id) =>
-        selectedRequests.includes(id)
+        selectedRequests.includes(id),
       );
 
       if (allAvailableSelected) {
         setSelectedRequests((prev) =>
-          prev.filter((id) => !availableRequests.includes(id))
+          prev.filter((id) => !availableRequests.includes(id)),
         );
       } else {
         const newSelections = availableRequests.filter(
-          (id) => !selectedRequests.includes(id)
+          (id) => !selectedRequests.includes(id),
         );
         setSelectedRequests((prev) => [...prev, ...newSelections]);
       }
@@ -521,7 +528,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const handleSelectRequest = (
     collectionId: string,
     requestId: string,
-    checked: boolean
+    checked: boolean,
   ) => {
     if (isRequestImported(requestId)) return;
 
@@ -583,7 +590,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     setExpandedCollections((prev) =>
       prev.includes(collectionId)
         ? prev.filter((id) => id !== collectionId)
-        : [...prev, collectionId]
+        : [...prev, collectionId],
     );
   };
 
@@ -604,7 +611,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     const allRequests = [...internalRequests, ...externalRequests];
 
     const requestsToImport = allRequests.filter((req) =>
-      selectedRequests.includes(req.id)
+      selectedRequests.includes(req.id),
     );
 
     onImport(requestsToImport);
@@ -617,7 +624,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   const selectedCount = selectedRequests.length;
 
   const handleExternalFileUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
 
@@ -690,11 +697,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 authorization = {
                   username:
                     item.request.auth.basic?.find(
-                      (b: any) => b.key === 'username'
+                      (b: any) => b.key === 'username',
                     )?.value || '',
                   password:
                     item.request.auth.basic?.find(
-                      (b: any) => b.key === 'password'
+                      (b: any) => b.key === 'password',
                     )?.value || '',
                 };
               } else if (authType === 'apikey') {
@@ -811,7 +818,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         <DialogTitle>Import Collections</DialogTitle>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList
-            className={`grid w-full ${
+            className={`grid w-full h-8 ${
               isRequestChainsRoute ? 'grid-cols-2' : 'grid-cols-1'
             }`}
           >
@@ -827,19 +834,37 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
           <TabsContent value='Internal'>
             <div className='flex-1 overflow-hidden flex flex-col'>
-              <div className='mb-4'>
+              <div className='mb-2'>
                 <div className='relative'>
                   <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
                   <Input
                     placeholder='Search requests...'
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className='pl-10'
+                    className='pl-10 pr-8'
                   />
+                  {searchQuery && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => setSearchQuery('')}
+                            className='absolute right-3 top-1/2 -translate-y-1/2 z-10 text-muted-foreground hover:text-foreground transition-colors'
+                            aria-label='Clear search'
+                          >
+                            <X className='w-4 h-4' />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Clear search</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
               </div>
 
-              <div className='flex-1 overflow-y-auto scrollbar-thin space-y-3 max-h-[50vh]'>
+              <div className='flex-1 overflow-y-auto scrollbar-thin space-y-2 max-h-[50vh]'>
                 {filteredCollections.length === 0 ? (
                   <div className='flex flex-col items-center justify-center py-12'>
                     <p className='text-muted-foreground'>
@@ -851,9 +876,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 ) : (
                   filteredCollections.map(
                     (collection: TransformedCollection) => {
-                      const isExpanded = expandedCollections.includes(
-                        collection.id
-                      );
+                      const isExpanded =
+                        searchQuery.trim().length > 0 ||
+                        expandedCollections.includes(collection.id);
                       const isLoadingTree = loadingFolderTree[collection.id];
                       const treeData = folderTreeData[collection.id];
 
@@ -862,7 +887,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                           key={collection.id}
                           className='border rounded-lg overflow-hidden bg-card'
                         >
-                          <div className='flex items-center justify-between p-4 bg-muted/30'>
+                          <div className='flex items-center justify-between p-3 bg-muted/30'>
                             <div className='flex items-center gap-3 flex-1'>
                               <button
                                 onClick={() => toggleCollection(collection.id)}
@@ -886,7 +911,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                       •{' '}
                                       {
                                         collection.requests.filter((req) =>
-                                          isRequestImported(req.id)
+                                          isRequestImported(req.id),
                                         ).length
                                       }{' '}
                                       imported
@@ -960,11 +985,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                           })
                                           .map((request: any) => {
                                             const imported = isRequestImported(
-                                              request.id
+                                              request.id,
                                             );
                                             const selected =
                                               selectedRequests.includes(
-                                                request.id
+                                                request.id,
                                               );
                                             const isLocked =
                                               !!activeCollectionId &&
@@ -974,7 +999,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                             return (
                                               <div
                                                 key={request.id}
-                                                className={`flex items-center gap-3 p-3 rounded-lg transition-all ${
+                                                className={`flex items-center gap-3 p-2 rounded-lg transition-all ${
                                                   imported
                                                     ? 'bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900'
                                                     : 'hover:bg-muted/50 border border-transparent hover:border-border'
@@ -993,12 +1018,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                                         : isLocked
                                                     }
                                                     onCheckedChange={(
-                                                      checked
+                                                      checked,
                                                     ) =>
                                                       handleSelectRequest(
                                                         collection.id,
                                                         request.id,
-                                                        checked as boolean
+                                                        checked as boolean,
                                                       )
                                                     }
                                                     className='flex-shrink-0'
@@ -1052,12 +1077,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                               }
                                               onSelectRequest={(
                                                 requestId,
-                                                checked
+                                                checked,
                                               ) =>
                                                 handleSelectRequest(
                                                   collection.id,
                                                   requestId,
-                                                  checked as boolean
+                                                  checked as boolean,
                                                 )
                                               }
                                               expandedFolders={expandedFolders}
@@ -1090,12 +1115,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                           )}
                         </div>
                       );
-                    }
+                    },
                   )
                 )}
               </div>
 
-              <div className='flex items-center justify-between pt-4 border-t mt-4'>
+              <div className='flex items-center justify-between pt-3 border-t mt-3'>
                 <span className='text-muted-foreground'>
                   {selectedCount} request{selectedCount !== 1 ? 's' : ''}{' '}
                   selected
@@ -1181,14 +1206,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         size='sm'
                         onClick={() => {
                           const available = externalRequests.filter(
-                            (r) => !isRequestImported(r.id)
+                            (r) => !isRequestImported(r.id),
                           );
                           const allSelected = available.every((r) =>
-                            selectedRequests.includes(r.id)
+                            selectedRequests.includes(r.id),
                           );
                           const newSelections = allSelected
                             ? selectedRequests.filter(
-                                (id) => !available.some((r) => r.id === id)
+                                (id) => !available.some((r) => r.id === id),
                               )
                             : [
                                 ...selectedRequests,
@@ -1200,7 +1225,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         className='text-[#136fb0] hover:text-[#136fb0] font-medium'
                       >
                         {externalRequests.every((r) =>
-                          selectedRequests.includes(r.id)
+                          selectedRequests.includes(r.id),
                         )
                           ? 'Deselect All'
                           : 'Select All Available'}
@@ -1215,12 +1240,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                               .filter((req: any) =>
                                 (req.name ?? '')
                                   .toLowerCase()
-                                  .includes(searchQuery.toLowerCase())
+                                  .includes(searchQuery.toLowerCase()),
                               )
                               .map((request: any) => {
                                 const imported = isRequestImported(request.id);
                                 const selected = selectedRequests.includes(
-                                  request.id
+                                  request.id,
                                 );
 
                                 return (
@@ -1242,7 +1267,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                         onCheckedChange={(checked) =>
                                           handleSelectRequest(
                                             request.id,
-                                            checked as boolean
+                                            checked as boolean,
                                           )
                                         }
                                         className='flex-shrink-0'

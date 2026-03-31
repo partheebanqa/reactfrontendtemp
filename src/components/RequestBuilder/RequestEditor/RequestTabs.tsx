@@ -186,34 +186,55 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
   };
 
   if (!openedRequests.length) return null;
-
+  const MAX_FULL_TABS = 10;
+  const isOverflowing = openedRequests.length > MAX_FULL_TABS;
+  const tabWidth = isOverflowing
+    ? `${Math.max(130, Math.floor(800 / openedRequests.length))}px`
+    : 'auto';
   const requestToClose = openedRequests.find(
     (r) => r.id === pendingCloseRequestId,
   );
 
   return (
     <>
-      <div className='flex items-center bg-gray-50 border-b border-gray-200 px-4 py-0 overflow-visible'>
-        <div className='flex items-center overflow-x-auto scrollbar-thin'>
+      <div className='flex items-center bg-gray-50 dark:bg-gray-900 py-0'>
+        {' '}
+        <div
+          className={`flex items-center flex-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+        >
           {openedRequests.map((request) => {
             const isActive = activeRequest?.id === request.id;
             const hasUnsaved = request.id
               ? unsavedChanges.has(request.id)
               : false;
             return (
-              <div key={request.id} className='flex items-center'>
+              <div
+                key={request.id}
+                className='flex items-center flex-shrink-0'
+                style={
+                  isOverflowing
+                    ? {
+                        width: tabWidth,
+                        minWidth: tabWidth,
+                        maxWidth: tabWidth,
+                      }
+                    : {}
+                }
+              >
                 <button
                   onClick={() => handleTabClick(request)}
-                  className={`group relative flex items-center gap-1 px-1 py-1
-  transition-all border-b-2 whitespace-nowrap
-  ${
-    isActive
-      ? 'border-blue-600 bg-white -mb-px'
-      : 'border-transparent hover:bg-gray-50'
-  }`}
+                  className={`group relative flex items-center gap-1 py-2 w-full transition-all border-b-2 ${
+                    isOverflowing
+                      ? 'px-1 min-w-0 overflow-hidden'
+                      : 'px-3 whitespace-nowrap'
+                  } ${
+                    isActive
+                      ? 'border-blue-600 bg-white'
+                      : 'border-transparent hover:bg-gray-50'
+                  }`}
                 >
                   <span
-                    className={`text-xs font-semibold ${methodColor(
+                    className={`text-xs font-semibold flex-shrink-0 ${methodColor(
                       request.method,
                     )}`}
                   >
@@ -224,52 +245,91 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
                     })()}
                   </span>
 
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span
-                          className={`text-xs md:text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
-                            isActive
-                              ? 'text-blue-600 font-medium'
-                              : 'text-gray-600'
-                          }`}
-                        >
-                          {request.name
-                            ? request.name.slice(0, 15)
-                            : 'Untitled'}
-                        </span>
-                      </TooltipTrigger>
-                      {hasUnsaved && (
-                        <span className='w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0 relative -top-1.5'></span>
-                      )}
-                      <TooltipContent side='bottom'>
-                        <p className='text-sm'>{request.name || 'Untitled'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {!isOverflowing && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={`text-xs md:text-sm flex items-center gap-1.5 max-w-[130px] truncate ${
+                              isActive
+                                ? 'text-blue-600 font-medium'
+                                : 'text-gray-500 font-normal'
+                            }`}
+                          >
+                            {request.name
+                              ? request.name.slice(0, 15)
+                              : 'Untitled'}
+                            {hasUnsaved && (
+                              <span className='w-1.5 h-1.5 bg-orange-500 rounded-full'></span>
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side='bottom'>
+                          <p className='text-sm'>
+                            {request.name || 'Untitled'}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+
+                  {isOverflowing && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className={`text-xs truncate min-w-0 flex-1 flex items-center gap-1 ${
+                              isActive
+                                ? 'text-blue-600 font-medium'
+                                : 'text-gray-500 font-normal'
+                            }`}
+                          >
+                            <span className='truncate block min-w-0'>
+                              {request.name || 'Untitled'}
+                            </span>
+                            {hasUnsaved && (
+                              <span className='w-1.5 h-1.5 bg-orange-500 rounded-full flex-shrink-0'></span>
+                            )}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side='bottom'>
+                          <p className='text-sm'>
+                            {request.method} — {request.name || 'Untitled'}
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
 
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           onClick={(e) => handleCloseTab(e, request.id)}
-                          className='relative p-0.5 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors'
+                          className={`hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-colors flex-shrink-0 ${
+                            isOverflowing ? 'p-1.5' : 'p-1.5'
+                          }`}
                         >
-                          <X size={14} className='text-gray-500' />
+                          <X
+                            size={isOverflowing ? 10 : 14}
+                            className='text-gray-500'
+                          />
                         </button>
                       </TooltipTrigger>
-                      <TooltipContent side='bottom'>close</TooltipContent>
+                      <TooltipContent side='bottom'>
+                        <p className='text-xs'>Close</p>
+                      </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </button>
 
-                <div className='h-5 w-px bg-gray-200'></div>
+                <div className='h-5 w-px bg-gray-200 flex-shrink-0'></div>
               </div>
             );
           })}
         </div>
-
-        <div className='flex items-center gap-1 ml-auto sticky right-0 bg-white py-1 px-2'>
+        <div className='flex items-center gap-1 ml-auto sticky right-0 bg-gray-50 dark:bg-gray-900 py-1 px-2'>
+          {' '}
           <button
             onClick={handleCreateNewRequest}
             className='p-2 hover:bg-gray-100 rounded transition-colors'
@@ -281,7 +341,6 @@ const RequestTabs: React.FC<RequestTabsProps> = ({
               className='text-[rgb(19,111,176)]'
             />
           </button>
-
           <button
             onClick={handleCurlImportClick}
             className='p-2 hover:bg-gray-100 rounded transition-colors'

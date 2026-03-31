@@ -18,9 +18,9 @@ import {
   FlaskConical,
   Stars,
   Plus,
-  ListChecks,
-  Minimize2,
   Maximize2,
+  Minimize2,
+  ListChecks,
 } from 'lucide-react';
 import { useRequest } from '@/hooks/useRequest';
 import AssertionModal from './AssertionModal';
@@ -432,6 +432,17 @@ const ResponseViewer = ({
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [showSearch, setShowSearch] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // ESC key to exit fullscreen
+  useEffect(() => {
+    if (!isFullscreen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isFullscreen]);
 
   // FIX: Lazy initial expansion — only expand root-level keys, not entire tree.
   // Previously a useEffect would walk the whole tree (O(n)) on every body change.
@@ -446,7 +457,6 @@ const ResponseViewer = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
   const [showAssertionUI, setShowAssertionUI] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [extractionModal, setExtractionModal] = useState<{
     isOpen: boolean;
     source: 'response_body' | 'response_header' | 'response_cookie';
@@ -456,15 +466,11 @@ const ResponseViewer = ({
   } | null>(null);
   const [variableName, setVariableName] = useState<string>('');
 
-  useEffect(() => {
-    if (!isFullscreen) return;
-    const handleEsc = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsFullscreen(false);
-    };
-    window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
-  }, [isFullscreen]);
-
+  // ---------------------------------------------------------------------------
+  // FIX: Replace the O(n) useEffect expand-all with lazy top-level expansion.
+  // We only expand the immediate children of root when a new response arrives.
+  // The user can explicitly click "Expand All" when they need full expansion.
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     if (responseData?.body) {
       setExpandedNodes(collectTopLevelPaths(responseData.body));
@@ -1332,7 +1338,7 @@ const ResponseViewer = ({
         label: 'Headers',
         count: Object.keys(responseData?.headers || {}).length,
       },
-      { id: 'cookies', label: 'Cookies' },
+
       {
         id: 'test-results',
         label: executedAssertionCount === 1 ? 'Assertion' : 'Assertions',
@@ -1348,6 +1354,7 @@ const ResponseViewer = ({
         label: 'Actual Request',
         hasIndicator: !!responseData?.requestCurl,
       },
+      { id: 'cookies', label: 'Cookies' },
     ],
     [
       responseData?.assertionLogs,
@@ -1396,7 +1403,7 @@ const ResponseViewer = ({
       {/* ── Header ── */}
       <div className='bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 flex-shrink-0'>
         {/* Tab bar + status */}
-        <div className='flex items-center justify-between border-b border-gray-200 dark:border-gray-700'>
+        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-gray-200 dark:border-gray-700'>
           <nav className='flex space-x-6 px-4 whitespace-nowrap overflow-x-auto scrollbar-thin no-scrollbar'>
             <TooltipProvider>
               {tabs.map((tab) => {
@@ -1453,26 +1460,26 @@ const ResponseViewer = ({
           </nav>
 
           {/* Status summary — inline to avoid extra component re-renders */}
-          <div className='px-4 flex items-center space-x-4 text-sm'>
+          <div className='px-4 py-1 flex items-center space-x-4 text-sm'>
             <div className='flex items-center space-x-1'>
               <CheckCircle
                 className={`h-3 md:h-4 w-3 md:w-4 ${getStatusColor(responseData.status)}`}
               />
               <span
-                className={`text-xs md:text-md font-medium ${getStatusColor(responseData.status)}`}
+                className={`text-xs md:text-sm font-medium ${getStatusColor(responseData.status)}`}
               >
                 {responseData.status} {responseData.statusText || ''}
               </span>
             </div>
             <div className='flex items-center space-x-1'>
               <Clock className='h-3 md:h-4 w-3 md:w-4 text-gray-600 dark:text-gray-400' />
-              <span className='text-xs md:text-md font-medium text-gray-900 dark:text-gray-100'>
+              <span className='text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300'>
                 {responseData?.metrics?.responseTime || 0}ms
               </span>
             </div>
             <div className='flex items-center space-x-1'>
               <HardDrive className='h-3 md:h-4 w-3 md:w-4 text-gray-600 dark:text-gray-400' />
-              <span className='text-xs md:text-md font-medium text-gray-900 dark:text-gray-100'>
+              <span className='text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300'>
                 {calculateResponseSize(responseData.body)}
               </span>
             </div>
@@ -1482,14 +1489,14 @@ const ResponseViewer = ({
         {/* Toolbar */}
         <div className='flex items-center justify-between px-4 py-1'>
           <div className='flex items-center space-x-4'>
-            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+            {/* <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
               <Stars className='w-4 h-4' />
               <span className='text-xs md:text-sm'>Pretty</span>
-            </button>
-            <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
+            </button> */}
+            {/* <button className='flex items-center space-x-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'>
               <Code className='w-4 h-4' />
               <span className='text-xs md:text-sm'>Raw</span>
-            </button>
+            </button> */}
             {/* <button
               onClick={handleAutoGenerateAssertions}
               disabled={!responseData || isGenerating}
@@ -1868,7 +1875,6 @@ const ResponseViewer = ({
               )}
             </div>
           )}
-
         {/* Schema tab */}
         {activeTab === 'schema' && (
           <div className='p-4 overflow-auto scrollbar-thin h-full'>

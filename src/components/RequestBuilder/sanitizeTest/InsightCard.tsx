@@ -45,24 +45,26 @@ export function InsightCard({ type, message, severity }: InsightCardProps) {
         type === 'error'
           ? 'red'
           : type === 'warning'
-          ? 'orange'
-          : type === 'info'
-          ? 'blue'
-          : 'green'
+            ? 'orange'
+            : type === 'info'
+              ? 'blue'
+              : 'green'
       }-200 dark:border-${
         type === 'error'
           ? 'red'
           : type === 'warning'
-          ? 'orange'
-          : type === 'info'
-          ? 'blue'
-          : 'green'
+            ? 'orange'
+            : type === 'info'
+              ? 'blue'
+              : 'green'
       }-800`}
     >
       <div className='flex gap-3'>
         <Icon className={`w-5 h-5 ${iconColors[type]} flex-shrink-0 mt-0.5`} />
         <div className='flex-1 space-y-2'>
-          <p className='text-sm text-gray-800 dark:text-gray-200'>{message}</p>
+          <p className='text-sm text-gray-800 dark:text-gray-200 break-words break-all min-w-0'>
+            {message}
+          </p>
           <span
             className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${severityColors[severity]} capitalize`}
           >

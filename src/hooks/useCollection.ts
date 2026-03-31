@@ -58,26 +58,25 @@ export function useCollection() {
   const markSaved = collectionActions.markSaved;
   const replaceRequest = collectionActions.replaceRequest;
 
-  const toggleExpandedCollection = async (collectionId: string) => {
+  const toggleExpandedCollection = (collectionId: string) => {
     if (!collectionId) return;
     collectionActions.toggleExpandedCollection(collectionId);
+  };
 
+  // Separate data fetcher — only called when needed
+  const ensureCollectionLoaded = async (collectionId: string) => {
     const targetCollection = collections?.find(
       (col) => col.id === collectionId,
     );
-    if (targetCollection?.hasFetchedRequests) {
-      return; // already loaded
-    }
-
+    if (targetCollection?.hasFetchedRequests) return;
     await fetchCollectionRequests.mutateAsync(collectionId);
   };
-
   const handleOpenAllCollectionRequests = async (collection: Collection) => {
     if (!collection) return;
 
     // Ensure the collection is expanded and requests are fetched
     if (!expandedCollections.has(collection.id)) {
-      await toggleExpandedCollection(collection.id);
+      toggleExpandedCollection(collection.id);
     }
 
     // Ensure requests are loaded
@@ -251,6 +250,7 @@ export function useCollection() {
     setCollection,
     setIsCreatingCollection,
     toggleExpandedCollection,
+    ensureCollectionLoaded,
     deleteRequest,
     addRequestToCollection,
     openRequest,

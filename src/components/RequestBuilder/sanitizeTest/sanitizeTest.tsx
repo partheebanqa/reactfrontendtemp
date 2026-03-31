@@ -1322,59 +1322,60 @@ Max Response Time: ${
       <PanelGroup direction='horizontal'>
         <Panel defaultSize={65} minSize={30}>
           <div className='h-full flex flex-col'>
-            <div className='border-b border-border p-3 flex items-center justify-between'>
-              <h2 className='text-muted-foreground text-sm flex items-center gap-2'>
-                Quick Test :
-                <span className='text-lg font-semibold text-foreground ml-1'>
-                  {collection.name}
-                </span>
-                <span className='text-xs font-medium text-muted-foreground bg-muted px-2 py-0.5 rounded-full'>
-                  {isRunning
-                    ? `${requests.filter((r) => r.status !== undefined && r.isSelected).length}/${requests.filter((r) => r.isSelected).length} running`
-                    : `${requests.filter((r) => r.isSelected).length}/${requests.length} selected`}
-                </span>
-              </h2>
+            {/* ── Header ── */}
+            <div className='border-b border-border px-3 pt-3 pb-0'>
+              {/* Row 1 — title + run button */}
+              <div className='flex items-center justify-between gap-3 flex-wrap mb-2'>
+                <div className='flex items-center gap-2 min-w-0'>
+                  <span className='text-xs text-muted-foreground whitespace-nowrap'>
+                    Quick test
+                  </span>
+                  <div className='w-px h-3.5 bg-border' />
+                  <span className='text-[15px] font-medium text-foreground truncate max-w-[180px] sm:max-w-xs'>
+                    {collection.name}
+                  </span>
+                  <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground border border-border whitespace-nowrap'>
+                    <CheckCircle className='w-3 h-3' />
+                    {requests.filter((r) => r.isSelected).length} /{' '}
+                    {requests.length} selected
+                  </span>
+                </div>
 
-              <div className='flex items-center gap-3'>
-                {/* Auth Status Badge */}
+                <Button
+                  onClick={handleRunTests}
+                  disabled={
+                    isRunning ||
+                    requests.filter((r) => r.isSelected).length === 0
+                  }
+                  size='sm'
+                >
+                  {isRunning ? 'Running…' : `Run ${collection.name}`}
+                </Button>
+              </div>
+
+              {/* Row 2 — auth + environment */}
+              <div className='flex items-center gap-2 flex-wrap pb-3'>
+                <span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
+                  Auth
+                </span>
+
                 {collection.preRequestId ? (
                   authRequestName ? (
-                    <div className='flex items-center gap-1.5 text-green-600 text-sm font-medium'>
-                      <div className='flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg w-fit mx-auto whitespace-nowrap'>
-                        <Key className='w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0' />
-                        <span className='text-xs font-semibold text-emerald-700 dark:text-emerald-400'>
-                          Auto Auth Enabled -
-                        </span>
-
-                        <span className='text-xs text-gray-500 dark:text-gray-400'>
-                          {authRequestName.length > 15
-                            ? authRequestName.slice(0, 15) + '…'
-                            : authRequestName}
-                        </span>
-                      </div>
+                    <div className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'>
+                      <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0' />
+                      <Key className='w-3 h-3 flex-shrink-0' />
+                      Auto auth enabled
+                      <div className='w-px h-3 bg-emerald-300 dark:bg-emerald-700' />
+                      <span className='text-emerald-600 dark:text-emerald-500 font-normal'>
+                        {authRequestName.length > 18
+                          ? authRequestName.slice(0, 18) + '…'
+                          : authRequestName}
+                      </span>
                     </div>
                   ) : (
-                    <div className='flex items-center gap-1.5 text-blue-500 text-sm font-medium'>
-                      <svg
-                        className='w-4 h-4 animate-spin'
-                        fill='none'
-                        viewBox='0 0 24 24'
-                      >
-                        <circle
-                          className='opacity-25'
-                          cx='12'
-                          cy='12'
-                          r='10'
-                          stroke='currentColor'
-                          strokeWidth='4'
-                        />
-                        <path
-                          className='opacity-75'
-                          fill='currentColor'
-                          d='M4 12a8 8 0 018-8v8z'
-                        />
-                      </svg>
-                      Setting up auth...
+                    <div className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400'>
+                      <Loader2 className='w-3 h-3 animate-spin' />
+                      Setting up auth…
                     </div>
                   )
                 ) : (
@@ -1388,10 +1389,10 @@ Max Response Time: ${
                       });
                       handleClose();
                     }}
-                    className='flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors cursor-pointer whitespace-nowrap'
+                    className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors'
                   >
                     <svg
-                      className='w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0'
+                      className='w-3 h-3 flex-shrink-0'
                       viewBox='0 0 24 24'
                       fill='none'
                       stroke='currentColor'
@@ -1408,56 +1409,60 @@ Max Response Time: ${
                         d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
                       />
                     </svg>
-                    <span className='text-xs font-semibold text-blue-700 dark:text-blue-400'>
-                      Setup Auto Auth
-                    </span>
+                    Setup Auto Auth
                   </button>
                 )}
+
+                <div className='w-px h-4 bg-border' />
+                <span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
+                  Env
+                </span>
+
                 <Select
                   value={
                     selectedEnvironment
                       ? JSON.stringify(selectedEnvironment)
                       : 'No Environment'
                   }
-                  onValueChange={(value) => {
-                    if (value === 'No Environment') {
-                      setSelectedEnvironment(null);
-                    } else {
-                      setSelectedEnvironment(JSON.parse(value));
-                    }
-                  }}
+                  onValueChange={(value) =>
+                    setSelectedEnvironment(
+                      value === 'No Environment' ? null : JSON.parse(value),
+                    )
+                  }
                 >
-                  <SelectTrigger className='w-[160px]'>
+                  <SelectTrigger className='h-7 text-xs w-[150px]'>
                     <SelectValue placeholder='Select environment' />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value='No Environment'>
-                      No Environment
+                      No environment
                     </SelectItem>
-                    {environments &&
-                      environments.length > 0 &&
-                      environments
-                        .filter((env) => env.name !== 'No Environment')
-                        .map((env) => (
-                          <SelectItem key={env.id} value={JSON.stringify(env)}>
-                            {env.name}
-                          </SelectItem>
-                        ))}
+                    {environments
+                      .filter((e) => e.name !== 'No Environment')
+                      .map((env) => (
+                        <SelectItem key={env.id} value={JSON.stringify(env)}>
+                          {env.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {/* ── No auth warning banner ── */}
             {!collection.preRequestId && (
               <div className='p-3 border-b border-border'>
                 <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start'>
                   <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
                   <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
-                    Without authentication, The APIs might return 401 consider
-                    adding authentication API.
+                    Without authentication, the APIs might return 401. Consider
+                    adding an authentication API.
                   </p>
                 </div>
               </div>
             )}
+
+            {/* ── Search ── */}
             <div className='p-3 border-b border-border'>
               <div className='relative'>
                 <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
@@ -1466,11 +1471,21 @@ Max Response Time: ${
                   placeholder='Search requests by name...'
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className='pl-10'
+                  className='pl-10 pr-8'
                 />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className='absolute right-3 top-1/2 -translate-y-1/2 z-10 text-muted-foreground hover:text-foreground transition-colors'
+                    aria-label='Clear search'
+                  >
+                    <X className='w-4 h-4' />
+                  </button>
+                )}
               </div>
             </div>
 
+            {/* ── Request list ── */}
             <div className='flex-1 overflow-auto scrollbar-thin'>
               <div className='p-3'>
                 <DndContext
@@ -1523,6 +1538,7 @@ Max Response Time: ${
               </div>
             </div>
 
+            {/* ── Footer ── */}
             <div className='border-t border-border p-3 flex items-center justify-between'>
               <div className='flex items-center gap-4'>
                 <button
@@ -1545,14 +1561,6 @@ Max Response Time: ${
                   Reset
                 </button>
               </div>
-              <Button
-                onClick={handleRunTests}
-                disabled={
-                  isRunning || requests.filter((r) => r.isSelected).length === 0
-                }
-              >
-                {isRunning ? 'Running...' : `Run ${collection.name}`}
-              </Button>
             </div>
           </div>
         </Panel>

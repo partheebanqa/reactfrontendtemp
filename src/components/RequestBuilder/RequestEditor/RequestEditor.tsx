@@ -3397,7 +3397,7 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
                     key={tab.id}
                     onClick={() => handleTabClick(tab.id)}
                     className={`
-  pt-4 pb-2 px-2 sm:px-4 border-b-2 text-xs md:text-sm transition-colors whitespace-nowrap
+  pt-5 pb-1 px-2 sm:pr-4 border-b-2 text-xs md:text-sm transition-colors whitespace-nowrap
   ${
     activeTab === tab.id
       ? 'border-[#136fb0] text-[#136fb0] font-medium'
