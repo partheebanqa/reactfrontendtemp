@@ -1799,7 +1799,6 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         abortControllerRef.current?.signal,
       );
 
-      // ✅ FIXED RESPONSE EXTRACTION
       const firstResponse = backendData?.data?.responses?.[0] ?? null;
 
       const backendBody =
@@ -1811,9 +1810,10 @@ const RequestEditorContent: React.FC<RequestEditorProps> = ({
         null;
 
       const status =
+        firstResponse?.statusCode ??
         firstResponse?.status ??
-        backendData?.status ??
         backendData?.data?.status ??
+        backendData?.status ??
         200;
 
       const responseHeaders =
