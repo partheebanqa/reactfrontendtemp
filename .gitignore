@@ -9,10 +9,6 @@ dist/
 build/
 
 # Environment variables
-.env
-.env.local
-.env.production
-.env.development
 
 # Database
 *.db
@@ -77,8 +73,6 @@ jspm_packages/
 .yarn-integrity
 
 # dotenv environment variables file
-.env
-.env.test
 
 # parcel-bundler cache (https://parceljs.org/)
 .cache
@@ -125,3 +119,4 @@ temp/
 # Test files
 test-results/
 playwright-report/
+config.bat
