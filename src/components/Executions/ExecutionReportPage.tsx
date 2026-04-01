@@ -138,9 +138,9 @@ const computeOverall = (data: any) => {
   const avgDuration =
     tcs.length > 0
       ? Math.round(
-        tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
-        tcs.length,
-      )
+          tcs.reduce((s: number, t: any) => s + Number(t?.duration || 0), 0) /
+            tcs.length,
+        )
       : Number.isFinite(data?.duration)
         ? Number(data.duration)
         : 0;
@@ -327,7 +327,7 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
     }
   };
 
-  const [, navigate] = useLocation()
+  const [, navigate] = useLocation();
 
   return (
     <div id='report-content'>
@@ -405,24 +405,22 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                 <button
                   onClick={handleDownloadHTML}
                   className='p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors group'
-                  title='Download HTML'
                 >
                   <FileText className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Download HTML Report</TooltipContent>
+              <TooltipContent>Download html Report</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
                   onClick={handleDownloadPDF}
                   className='p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors group'
-                  title='Download PDF'
                 >
                   <Download className='w-5 h-5' />
                 </button>
               </TooltipTrigger>
-              <TooltipContent>Download PDF Summary</TooltipContent>
+              <TooltipContent>Download pdf Report</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -437,8 +435,6 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
               <TooltipContent>Share Report</TooltipContent>
             </Tooltip>
 
-
-
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -446,22 +442,22 @@ const TestSuiteReport: React.FC<TestSuiteReportProps> = ({ data }) => {
                     if (jiraIntegration) {
                       setOpenJiraModal(true);
                     } else {
-                      navigate("/settings/account?tab=external-tools");
+                      navigate('/settings/account?tab=external-tools');
                     }
                   }}
-                  className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1"
+                  className='p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors flex items-center gap-1'
                 >
                   <JiraIcon />
 
                   {!jiraIntegration && (
-                    <span className="text-xs text-red-500">Not Configured</span>
+                    <span className='text-xs text-red-500'>Not Configured</span>
                   )}
                 </button>
               </TooltipTrigger>
               <TooltipContent>Create Jira issue</TooltipContent>
 
               <TooltipContent>
-                {jiraIntegration ? "Create Jira issue" : "Configure Jira"}
+                {jiraIntegration ? 'Create Jira issue' : 'Configure Jira'}
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
