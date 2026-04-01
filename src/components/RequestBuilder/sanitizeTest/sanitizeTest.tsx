@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Loader2,
   X,
@@ -16,11 +16,16 @@ import {
   AlertCircle,
   CheckCircle,
   Key,
+  Eye,
+  Copy,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toast } from '@/hooks/use-toast';
 import { collectionActions } from '@/store/collectionStore';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,6 +68,8 @@ import {
   shouldRefreshExtractedVariables,
 } from '@/lib/request-utils';
 
+// ─── Types ───────────────────────────────────────────────
+
 interface CollectionRequest {
   id?: string;
   name: string;
@@ -85,6 +92,340 @@ interface Collection {
   preRequestId?: string;
 }
 
+interface RequestWithStatus extends CollectionRequest {
+  status?: number;
+  responseTime?: number;
+  requestPayloadSizeKB?: string;
+  responsePayloadSizeKB?: string;
+  isSelected: boolean;
+  isLoading?: boolean;
+}
+
+// Stores the full raw API response for each request id
+interface StoredResponse {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: string;
+  requestCurl?: string;
+  metrics?: { bytesReceived?: number; responseTime?: number };
+  // request details we built before calling
+  requestMethod: string;
+  requestUrl: string;
+  requestHeaders: any[];
+  requestBody?: string;
+}
+
+// ─── RequestResponseDrawer ────────────────────────────────
+
+type DrawerTab = 'request' | 'response' | 'headers' | 'curl';
+
+interface RequestResponseDrawerProps {
+  request: RequestWithStatus;
+  stored: StoredResponse;
+  onClose: () => void;
+  isMobile: boolean;
+}
+
+function RequestResponseDrawer({
+  request,
+  stored,
+  onClose,
+  isMobile,
+}: RequestResponseDrawerProps) {
+  const [activeTab, setActiveTab] = useState<DrawerTab>('response');
+
+  const isSuccess = stored.statusCode >= 200 && stored.statusCode < 300;
+  const isError = stored.statusCode >= 400;
+
+  const statusColor = isSuccess
+    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+    : isError
+      ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+      : 'bg-muted text-muted-foreground';
+
+  const byteSize = stored.metrics?.bytesReceived ?? 0;
+  const sizeLabel =
+    byteSize > 1024 ? `${(byteSize / 1024).toFixed(1)} KB` : `${byteSize} B`;
+
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      toast({ title: `${label} copied`, description: 'Copied to clipboard' });
+    });
+  };
+
+  const prettyBody = (() => {
+    try {
+      return JSON.stringify(JSON.parse(stored.body), null, 2);
+    } catch {
+      return stored.body;
+    }
+  })();
+
+  const tabs: { id: DrawerTab; label: string }[] = [
+    { id: 'response', label: 'Response' },
+    { id: 'request', label: 'Request' },
+    { id: 'headers', label: 'Headers' },
+    { id: 'curl', label: 'Curl' },
+  ];
+
+  const drawerContent = (
+    <div className='flex flex-col h-full'>
+      {/* Drawer header */}
+      <div className='flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/40 flex-shrink-0'>
+        <span
+          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${statusColor}`}
+        >
+          {stored.statusCode}
+        </span>
+        <span className='text-sm font-medium text-foreground flex-1 truncate'>
+          {request.name}
+        </span>
+        <span className='text-xs text-muted-foreground hidden sm:inline'>
+          {request.responseTime}ms · {sizeLabel}
+        </span>
+        <button
+          onClick={onClose}
+          className='p-1 hover:bg-muted rounded transition-colors flex-shrink-0'
+          aria-label='Close'
+        >
+          <X className='w-4 h-4 text-muted-foreground' />
+        </button>
+      </div>
+
+      {/* Mobile metric pills */}
+      {isMobile && (
+        <div className='flex gap-2 px-3 py-2 border-b border-border flex-shrink-0 overflow-x-auto'>
+          <span
+            className={`text-[11px] px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${statusColor}`}
+          >
+            {stored.statusCode} {isSuccess ? 'OK' : isError ? 'Error' : ''}
+          </span>
+          <span className='text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex-shrink-0'>
+            {request.responseTime}ms
+          </span>
+          <span className='text-[11px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground flex-shrink-0'>
+            {sizeLabel}
+          </span>
+        </div>
+      )}
+
+      {/* Tab bar */}
+      <div className='flex border-b border-border flex-shrink-0'>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              activeTab === tab.id
+                ? 'text-foreground border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div className='flex-1 overflow-auto'>
+        {/* ── Response tab ── */}
+        {activeTab === 'response' && (
+          <div>
+            <div className='flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border'>
+              <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                Response body
+              </span>
+              <button
+                onClick={() => copyToClipboard(prettyBody, 'Response body')}
+                className='flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors'
+              >
+                <Copy className='w-3 h-3' />
+                Copy
+              </button>
+            </div>
+            <pre className='p-3 text-[11px] font-mono text-foreground leading-relaxed overflow-x-auto whitespace-pre-wrap break-words'>
+              {prettyBody || '(empty body)'}
+            </pre>
+          </div>
+        )}
+
+        {/* ── Request tab ── */}
+        {activeTab === 'request' && (
+          <div>
+            <div className='px-3 py-1.5 bg-muted/30 border-b border-border'>
+              <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                Request details
+              </span>
+            </div>
+            <KVTable
+              rows={[
+                { key: 'Method', value: stored.requestMethod },
+                { key: 'URL', value: stored.requestUrl },
+              ]}
+            />
+            {stored.requestBody && (
+              <>
+                <div className='flex items-center justify-between px-3 py-1.5 bg-muted/30 border-t border-b border-border'>
+                  <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                    Request body
+                  </span>
+                  <button
+                    onClick={() =>
+                      copyToClipboard(stored.requestBody!, 'Request body')
+                    }
+                    className='flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground'
+                  >
+                    <Copy className='w-3 h-3' />
+                    Copy
+                  </button>
+                </div>
+                <pre className='p-3 text-[11px] font-mono text-foreground leading-relaxed overflow-x-auto whitespace-pre-wrap break-words'>
+                  {(() => {
+                    try {
+                      return JSON.stringify(
+                        JSON.parse(stored.requestBody),
+                        null,
+                        2,
+                      );
+                    } catch {
+                      return stored.requestBody;
+                    }
+                  })()}
+                </pre>
+              </>
+            )}
+            {stored.requestHeaders?.length > 0 && (
+              <>
+                <div className='px-3 py-1.5 bg-muted/30 border-t border-b border-border'>
+                  <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                    Request headers
+                  </span>
+                </div>
+                <KVTable
+                  rows={stored.requestHeaders
+                    .filter((h) => h.enabled !== false && h.key)
+                    .map((h) => ({ key: h.key, value: h.value }))}
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Headers tab ── */}
+        {activeTab === 'headers' && (
+          <div>
+            {Object.keys(stored.headers || {}).length > 0 && (
+              <>
+                <div className='px-3 py-1.5 bg-muted/30 border-b border-border'>
+                  <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                    Response headers
+                  </span>
+                </div>
+                <KVTable
+                  rows={Object.entries(stored.headers).map(([k, v]) => ({
+                    key: k,
+                    value: v,
+                  }))}
+                />
+              </>
+            )}
+            {stored.requestHeaders?.length > 0 && (
+              <>
+                <div className='px-3 py-1.5 bg-muted/30 border-t border-b border-border'>
+                  <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                    Request headers
+                  </span>
+                </div>
+                <KVTable
+                  rows={stored.requestHeaders
+                    .filter((h) => h.enabled !== false && h.key)
+                    .map((h) => ({ key: h.key, value: h.value }))}
+                />
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Curl tab ── */}
+        {activeTab === 'curl' && (
+          <div>
+            <div className='flex items-center justify-between px-3 py-1.5 bg-muted/30 border-b border-border'>
+              <span className='text-[11px] font-medium text-muted-foreground uppercase tracking-wide'>
+                Curl command
+              </span>
+              {stored.requestCurl && (
+                <button
+                  onClick={() =>
+                    copyToClipboard(stored.requestCurl!, 'Curl command')
+                  }
+                  className='flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors'
+                >
+                  <Copy className='w-3 h-3' />
+                  Copy
+                </button>
+              )}
+            </div>
+            {stored.requestCurl ? (
+              <pre className='p-3 text-[11px] font-mono text-foreground leading-relaxed overflow-x-auto whitespace-pre-wrap break-all'>
+                {stored.requestCurl}
+              </pre>
+            ) : (
+              <p className='p-4 text-xs text-muted-foreground'>
+                Curl command not available for this request.
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    // Mobile: bottom sheet rendered as a fixed-height block at the bottom
+    return (
+      <div className='border-t border-border bg-background flex-shrink-0 h-[55vh] flex flex-col'>
+        {/* Drag handle */}
+        <div className='flex justify-center py-1.5 flex-shrink-0'>
+          <div className='w-8 h-1 rounded-full bg-border' />
+        </div>
+        {drawerContent}
+      </div>
+    );
+  }
+
+  // Desktop: inline block below the row
+  return (
+    <div
+      className='border-t border-border bg-background'
+      style={{ height: '320px' }}
+    >
+      {drawerContent}
+    </div>
+  );
+}
+
+// ─── KVTable helper ───────────────────────────────────────
+
+function KVTable({ rows }: { rows: { key: string; value: string }[] }) {
+  if (!rows || rows.length === 0) return null;
+  return (
+    <div>
+      {rows.map((row, i) => (
+        <div key={i} className='flex border-b border-border last:border-b-0'>
+          <div className='w-2/5 px-3 py-2 text-[11px] font-mono text-muted-foreground border-r border-border flex-shrink-0 break-all'>
+            {row.key}
+          </div>
+          <div className='flex-1 px-3 py-2 text-[11px] font-mono text-foreground break-all'>
+            {row.value}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── SortableRequestItem ──────────────────────────────────
+
 interface SortableRequestItemProps {
   request: RequestWithStatus;
   index: number;
@@ -96,6 +437,8 @@ interface SortableRequestItemProps {
     isLoading?: boolean,
   ) => React.ReactNode;
   isAuthRequest?: boolean;
+  isExpanded?: boolean;
+  onEyeClick?: () => void;
 }
 
 const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
@@ -105,6 +448,8 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
   getMethodColor,
   getStatusBadge,
   isAuthRequest = false,
+  isExpanded = false,
+  onEyeClick,
 }) => {
   const {
     attributes,
@@ -113,15 +458,15 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({
-    id: request.id || `request-${index}`,
-  });
+  } = useSortable({ id: request.id || `request-${index}` });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const hasResponse = request.status !== undefined;
 
   return (
     <div
@@ -131,7 +476,7 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
         isAuthRequest
           ? 'bg-emerald-50 dark:bg-emerald-900/10 border-l-2 border-l-emerald-500'
           : ''
-      }`}
+      } ${isExpanded ? 'bg-muted/30' : ''}`}
     >
       <button
         className='cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded transition-colors'
@@ -148,15 +493,14 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
         className='w-4 h-4 rounded border-border'
       />
       <span
-        className={`py-1 text-xs font-semibold rounded ${getMethodColor(
-          request.method,
-        )}`}
+        className={`py-1 text-xs font-semibold rounded ${getMethodColor(request.method)}`}
       >
         {request.method}
       </span>
-      <span className='flex-1 text-sm text-foreground'>{request.name}</span>
+      <span className='flex-1 text-sm text-foreground min-w-0 truncate'>
+        {request.name}
+      </span>
 
-      {/* Token Source badge - shown on the right */}
       {isAuthRequest && (
         <span className='mr-2 inline-flex items-center gap-1 px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded text-[10px] font-bold text-yellow-800 dark:text-yellow-400 whitespace-nowrap uppercase'>
           Token Source
@@ -170,18 +514,26 @@ const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
           request.isLoading,
         )}
       </div>
+
+      {/* Eye button — only shown after execution */}
+      {hasResponse && onEyeClick && (
+        <button
+          onClick={onEyeClick}
+          title='View request & response'
+          className={`p-1 rounded transition-colors flex-shrink-0 ${
+            isExpanded
+              ? 'bg-primary text-primary-foreground'
+              : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Eye className='w-4 h-4' />
+        </button>
+      )}
     </div>
   );
 };
 
-interface RequestWithStatus extends CollectionRequest {
-  status?: number;
-  responseTime?: number;
-  requestPayloadSizeKB?: string;
-  responsePayloadSizeKB?: string;
-  isSelected: boolean;
-  isLoading?: boolean;
-}
+// ─── Interfaces ───────────────────────────────────────────
 
 interface SanitizeTestRunnerProps {
   collection: Collection;
@@ -201,6 +553,8 @@ interface ExportModalProps {
 }
 
 type Format = 'pdf' | 'json' | 'csv';
+
+// ─── ExportModal ──────────────────────────────────────────
 
 function ExportModal({
   isOpen,
@@ -255,15 +609,13 @@ function ExportModal({
           }))
         : undefined,
     };
-
-    const jsonString = JSON.stringify(data, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: 'application/json',
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${collection.name}_test_report_${
-      new Date().toISOString().split('T')[0]
-    }.json`;
+    link.download = `${collection.name}_test_report_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -308,32 +660,25 @@ function ExportModal({
         r.timestamp || '',
       ]),
     ];
-
     const csvContent = rows
       .map((row) =>
         row
           .map((cell) => {
             const cellStr = String(cell);
-            if (
-              cellStr.includes(',') ||
+            return cellStr.includes(',') ||
               cellStr.includes('"') ||
               cellStr.includes('\n')
-            ) {
-              return `"${cellStr.replace(/"/g, '""')}"`;
-            }
-            return cellStr;
+              ? `"${cellStr.replace(/"/g, '""')}"`
+              : cellStr;
           })
           .join(','),
       )
       .join('\n');
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${collection.name}_test_report_${
-      new Date().toISOString().split('T')[0]
-    }.csv`;
+    link.download = `${collection.name}_test_report_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -346,65 +691,44 @@ function ExportModal({
     metrics: TestMetrics,
     elementId: string,
   ) => {
-    try {
-      const element = document.getElementById(elementId);
-      if (!element) throw new Error('Element not found');
-
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-      });
-
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const imgData = canvas.toDataURL('image/png');
-
+    const element = document.getElementById(elementId);
+    if (!element) throw new Error('Element not found');
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#ffffff',
+    });
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgData = canvas.toDataURL('image/png');
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
       pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
       heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      pdf.save(
-        `${collection.name}_test_report_${
-          new Date().toISOString().split('T')[0]
-        }.pdf`,
-      );
-    } catch (error) {
-      console.error('PDF export failed:', error);
-      throw error;
     }
+    pdf.save(
+      `${collection.name}_test_report_${new Date().toISOString().split('T')[0]}.pdf`,
+    );
   };
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      switch (selectedFormat) {
-        case 'pdf':
-          await exportPDF(collection, testResults, metrics, 'summary-content');
-          break;
-        case 'json':
-          exportJSON();
-          break;
-        case 'csv':
-          exportCSV();
-          break;
-      }
+      if (selectedFormat === 'pdf')
+        await exportPDF(collection, testResults, metrics, 'summary-content');
+      else if (selectedFormat === 'json') exportJSON();
+      else exportCSV();
       setTimeout(() => {
         setIsExporting(false);
         onClose();
@@ -427,9 +751,10 @@ function ExportModal({
   if (!isOpen) return null;
 
   return (
-    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4'>
-      <div className='bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full'>
-        <div className='flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700'>
+    <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto'>
+      <div className='bg-white dark:bg-gray-800 rounded-2xl shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto my-auto'>
+        {' '}
+        <div className='flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700'>
           <h2 className='text-xl font-semibold text-gray-900 dark:text-white'>
             Export Test Report
           </h2>
@@ -441,22 +766,17 @@ function ExportModal({
             <X size={20} className='text-gray-500' />
           </button>
         </div>
-
-        <div className='p-6 space-y-6'>
+        <div className='p-6 space-y-4'>
           <div>
-            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-3 block'>
+            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-2 block'>
               Export Format
             </label>
-            <div className='space-y-2'>
+            <div className='space-y-1.5'>
               {formats.map(({ id, label, icon: Icon, description }) => (
                 <button
                   key={id}
                   onClick={() => setSelectedFormat(id)}
-                  className={`w-full px-4 py-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
-                    selectedFormat === id
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                  }`}
+                  className={`w-full px-3 py-2 rounded-lg border-2 transition-all flex items-center gap-3 ${selectedFormat === id ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'}`}
                 >
                   <Icon
                     size={20}
@@ -476,49 +796,46 @@ function ExportModal({
               ))}
             </div>
           </div>
-
           <div>
-            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-3 block'>
+            <label className='text-sm font-semibold text-gray-900 dark:text-white mb-1.5 block'>
               Include in Export
             </label>
-            <div className='space-y-2'>
-              <label className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  checked={includeMetrics}
-                  onChange={(e) => setIncludeMetrics(e.target.checked)}
-                  className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
-                />
-                <span className='text-sm text-gray-700 dark:text-gray-300'>
-                  Performance Metrics
-                </span>
-              </label>
-              <label className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  checked={includeResults}
-                  onChange={(e) => setIncludeResults(e.target.checked)}
-                  className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
-                />
-                <span className='text-sm text-gray-700 dark:text-gray-300'>
-                  Test Results
-                </span>
-              </label>
-              <label className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  checked={includeInsights}
-                  onChange={(e) => setIncludeInsights(e.target.checked)}
-                  className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
-                />
-                <span className='text-sm text-gray-700 dark:text-gray-300'>
-                  Smart Insights
-                </span>
-              </label>
+            <div className='space-y-0.5'>
+              {[
+                {
+                  state: includeMetrics,
+                  setter: setIncludeMetrics,
+                  label: 'Performance Metrics',
+                },
+                {
+                  state: includeResults,
+                  setter: setIncludeResults,
+                  label: 'Test Results',
+                },
+                {
+                  state: includeInsights,
+                  setter: setIncludeInsights,
+                  label: 'Smart Insights',
+                },
+              ].map(({ state, setter, label }) => (
+                <label
+                  key={label}
+                  className='flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer'
+                >
+                  <input
+                    type='checkbox'
+                    checked={state}
+                    onChange={(e) => setter(e.target.checked)}
+                    className='w-4 h-4 rounded border-gray-300 text-blue-500 cursor-pointer'
+                  />
+                  <span className='text-sm text-gray-700 dark:text-gray-300'>
+                    {label}
+                  </span>
+                </label>
+              ))}
             </div>
           </div>
-
-          <div className='flex gap-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
+          <div className='flex gap-3 pt-3 border-t border-gray-200 dark:border-gray-700'>
             <button
               onClick={onClose}
               disabled={isExporting}
@@ -550,6 +867,8 @@ function ExportModal({
   );
 }
 
+// ─── Main Component ───────────────────────────────────────
+
 export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   collection,
   workspaceId,
@@ -558,6 +877,11 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   collections = [],
 }) => {
   const { currentWorkspace } = useWorkspace();
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const [activeTab, setActiveTab] = useState<'requests' | 'summary'>(
+    'requests',
+  );
+
   const [requests, setRequests] = useState<RequestWithStatus[]>([]);
   const [selectedEnvironment, setSelectedEnvironment] = useState<any>(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -574,6 +898,16 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   >(undefined);
   const [isPreRequestLoading, setIsPreRequestLoading] = useState(false);
 
+  // ── New state for request/response viewer ──
+  // Stores the full API response keyed by request id
+  const [storedResponses, setStoredResponses] = useState<
+    Record<string, StoredResponse>
+  >({});
+  // Which request row currently has the drawer open
+  const [expandedRequestId, setExpandedRequestId] = useState<string | null>(
+    null,
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -582,9 +916,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   );
 
   const filteredRequests = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return requests;
-    }
+    if (!searchQuery.trim()) return requests;
     return requests.filter((req) =>
       req.name.toLowerCase().includes(searchQuery.toLowerCase()),
     );
@@ -592,7 +924,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-
     if (over && active.id !== over.id) {
       setRequests((items) => {
         const oldIndex = items.findIndex(
@@ -601,7 +932,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         const newIndex = items.findIndex(
           (item) => (item.id || `request-${items.indexOf(item)}`) === over.id,
         );
-
         return arrayMove(items, oldIndex, newIndex);
       });
     }
@@ -612,23 +942,18 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       requests: CollectionRequest[] = [],
       folders: any[] = [],
     ): CollectionRequest[] => {
-      let allRequests = [...requests];
+      let all = [...requests];
       folders.forEach((folder) => {
-        if (folder.requests) {
-          allRequests = [...allRequests, ...folder.requests];
-        }
-        if (folder.folders) {
-          allRequests = [...allRequests, ...getAllRequests([], folder.folders)];
-        }
+        if (folder.requests) all = [...all, ...folder.requests];
+        if (folder.folders)
+          all = [...all, ...getAllRequests([], folder.folders)];
       });
-      return allRequests;
+      return all;
     };
-
     const allRequests = getAllRequests(
       collection.requests || [],
       (collection as any).folders || [],
     );
-
     setRequests(
       allRequests.map((req) => ({
         ...req,
@@ -640,28 +965,20 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         isLoading: false,
       })),
     );
-
     setSearchQuery('');
+    setStoredResponses({});
+    setExpandedRequestId(null);
   }, [collection.id, collection.requests, collection.folders]);
 
   useEffect(() => {
-    if (collection.preRequestId) {
-      autoRunPreRequest();
-    }
+    if (collection.preRequestId) autoRunPreRequest();
   }, [collection.id, collection.preRequestId]);
 
-  const handleClose = () => {
-    collectionActions.closeSanitizeTestRunner();
-  };
-
-  const handleSelectAll = () => {
+  const handleClose = () => collectionActions.closeSanitizeTestRunner();
+  const handleSelectAll = () =>
     setRequests((prev) => prev.map((req) => ({ ...req, isSelected: true })));
-  };
-
-  const handleDeselectAll = () => {
+  const handleDeselectAll = () =>
     setRequests((prev) => prev.map((req) => ({ ...req, isSelected: false })));
-  };
-
   const handleReset = () => {
     setRequests((prev) =>
       prev.map((req) => ({
@@ -678,11 +995,47 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     setPreRequestStatus(undefined);
     setPreRequestResponseTime(undefined);
     setIsPreRequestLoading(false);
+    setStoredResponses({});
+    setExpandedRequestId(null);
   };
+
+  // Helper to store a full response
+  const storeResponse = useCallback(
+    (
+      reqId: string,
+      apiResponse: any,
+      requestDetails: {
+        method: string;
+        url: string;
+        headers: any[];
+        body?: string;
+      },
+    ) => {
+      const resp = apiResponse?.data?.responses?.[0];
+      if (!resp) return;
+      setStoredResponses((prev) => ({
+        ...prev,
+        [reqId]: {
+          statusCode: resp.statusCode ?? 0,
+          headers: resp.headers ?? {},
+          body:
+            typeof resp.body === 'string'
+              ? resp.body
+              : JSON.stringify(resp.body ?? ''),
+          requestCurl: resp.requestCurl ?? undefined,
+          metrics: resp.metrics ?? {},
+          requestMethod: requestDetails.method,
+          requestUrl: requestDetails.url,
+          requestHeaders: requestDetails.headers,
+          requestBody: requestDetails.body,
+        },
+      }));
+    },
+    [],
+  );
 
   const autoRunPreRequest = async () => {
     if (!collection.preRequestId) return;
-
     const findRequest = (requestId: string): any => {
       const top = (collection.requests || []).find(
         (r: any) => r.id === requestId,
@@ -703,12 +1056,9 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       };
       return searchFolders((collection as any).folders || []);
     };
-
     const preRequest = findRequest(collection.preRequestId);
     if (!preRequest) return;
-
     setAuthRequestName(preRequest.name);
-
     const storageKeys = Object.keys(localStorage).filter((key) =>
       key.startsWith(`extracted_var_${collection.id}_`),
     );
@@ -722,16 +1072,12 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         }
       } catch {}
     }
-
     if (
       hasValidToken &&
       !shouldRefreshExtractedVariables(collection.id, collection.preRequestId)
-    ) {
+    )
       return;
-    }
-
     setIsAuthRunning(true);
-
     try {
       const payload = {
         request: {
@@ -749,15 +1095,12 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         },
         assertions: [],
       };
-
       const response = await executeRequest(payload);
-
       if (preRequest.extractVariables?.length > 0) {
         let rawBody =
           response?.data?.responses?.[0]?.body ||
           response?.data?.body ||
           response?.body;
-
         let responseBody;
         try {
           responseBody =
@@ -766,7 +1109,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           setIsAuthRunning(false);
           return;
         }
-
         const extractedVariables = extractDataFromResponse(
           {
             body: responseBody,
@@ -775,7 +1117,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           },
           preRequest.extractVariables,
         );
-
         Object.entries(extractedVariables).forEach(([varName, value]) => {
           if (value !== undefined && value !== null) {
             const storageKey = `extracted_var_${collection.id}_${varName}`;
@@ -798,7 +1139,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             );
           }
         });
-
         const executionKey = `preRequest_executed_${collection.id}_${collection.preRequestId}`;
         localStorage.setItem(executionKey, Date.now().toString());
       }
@@ -810,13 +1150,14 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   };
 
   const handleRunTests = async () => {
+    if (isMobile) setActiveTab('summary');
     setIsRunning(true);
     setStartTime(new Date());
+    setExpandedRequestId(null);
 
     const selectedRequests = requests.filter(
       (r) => r.isSelected && r.id !== collection.preRequestId,
     );
-
     let freshToken: string | null = null;
 
     if (collection.preRequestId) {
@@ -841,9 +1182,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           };
           return searchFolders((collection as any).folders || []);
         };
-
         const preRequest = findRequest(collection.preRequestId);
-
         if (preRequest) {
           setIsPreRequestLoading(true);
           setPreRequestStatus(undefined);
@@ -865,16 +1204,13 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             },
             assertions: [],
           };
-
           const authResponse = await executeRequest(authPayload);
           const preReqResponseTime = Date.now() - preReqStart;
           const preReqStatus =
             authResponse?.data?.responses?.[0]?.statusCode ?? 0;
-
           setPreRequestStatus(preReqStatus);
           setPreRequestResponseTime(preReqResponseTime);
           setIsPreRequestLoading(false);
-
           setRequests((prev) =>
             prev.map((r) =>
               r.id === collection.preRequestId
@@ -887,12 +1223,19 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                 : r,
             ),
           );
-
+          // Store pre-request response
+          if (collection.preRequestId) {
+            storeResponse(collection.preRequestId, authResponse, {
+              method: preRequest.method,
+              url: preRequest.url,
+              headers: preRequest.headers || [],
+              body: preRequest.bodyRawContent,
+            });
+          }
           let rawBody =
             authResponse?.data?.responses?.[0]?.body ||
             authResponse?.data?.body ||
             authResponse?.body;
-
           let responseBody;
           try {
             responseBody =
@@ -900,7 +1243,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           } catch {
             responseBody = null;
           }
-
           if (responseBody && preRequest.extractVariables?.length > 0) {
             const extractedVariables = extractDataFromResponse(
               {
@@ -910,7 +1252,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
               },
               preRequest.extractVariables,
             );
-
             for (const value of Object.values(extractedVariables)) {
               if (value && isBearerToken(String(value))) {
                 freshToken = String(value);
@@ -923,7 +1264,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         console.error('Failed to fetch fresh token from pre-request:', err);
         setPreRequestStatus(500);
         setIsPreRequestLoading(false);
-
         setRequests((prev) =>
           prev.map((r) =>
             r.id === collection.preRequestId
@@ -939,14 +1279,11 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         setRequests((prev) =>
           prev.map((r) => (r.id === req.id ? { ...r, isLoading: true } : r)),
         );
-
-        const startTime = Date.now();
-
+        const startTimeMs = Date.now();
         const env =
           environments.find((e) => e.id === selectedEnvironment?.id) ??
           activeEnvironment ??
           null;
-
         let finalUrl = req.url;
         if (env?.baseUrl && env.baseUrl.trim() !== '') {
           try {
@@ -959,7 +1296,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             finalUrl = req.url;
           }
         }
-
         let authHeaders = [...(req.headers || [])];
         let authorizationConfig = req.authorization || {
           addTo: 'header',
@@ -970,18 +1306,12 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           value: '',
         };
         let authType = req.authorizationType || 'none';
-
         if (freshToken) {
           authType = 'bearer';
-          authorizationConfig = {
-            ...authorizationConfig,
-            token: freshToken,
-          };
-
+          authorizationConfig = { ...authorizationConfig, token: freshToken };
           const authHeaderExists = authHeaders.some(
             (h) => h.key.toLowerCase() === 'authorization',
           );
-
           if (authHeaderExists) {
             authHeaders = authHeaders.map((h) =>
               h.key.toLowerCase() === 'authorization'
@@ -997,7 +1327,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             });
           }
         }
-
         const payload = {
           request: {
             workspaceId: currentWorkspace?.id,
@@ -1014,24 +1343,19 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
           },
           environmentId: selectedEnvironment?.id ?? null,
         };
-
         const requestPayloadSizeKB = (
           new Blob([JSON.stringify(payload)]).size / 1024
         ).toFixed(2);
-
         try {
           const result = await executeRequest(payload);
           const endTime = Date.now();
-
           const responseStatus = result?.data?.responses?.[0]?.statusCode ?? 0;
-          const responseTime = endTime - startTime;
-
+          const responseTime = endTime - startTimeMs;
           const responsePayloadBytes =
             result?.data?.responses?.[0]?.metrics?.bytesReceived ?? 0;
           const responsePayloadSizeKB = (responsePayloadBytes / 1024).toFixed(
             2,
           );
-
           setRequests((prev) =>
             prev.map((r) =>
               r.id === req.id
@@ -1046,6 +1370,15 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                 : r,
             ),
           );
+          // Store the full response
+          if (req.id) {
+            storeResponse(req.id, result, {
+              method: req.method,
+              url: req.url,
+              headers: authHeaders,
+              body: req.bodyRawContent,
+            });
+          }
         } catch (error) {
           console.error('Error executing request:', req.name, error);
           const endTime = Date.now();
@@ -1055,7 +1388,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
                 ? {
                     ...r,
                     status: 500,
-                    responseTime: endTime - startTime,
+                    responseTime: endTime - startTimeMs,
                     requestPayloadSizeKB: '0',
                     responsePayloadSizeKB: '0',
                     isLoading: false,
@@ -1073,7 +1406,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
   };
 
   const getMethodColor = (method: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       GET: 'text-green-600',
       POST: 'text-blue-600',
       PUT: 'text-orange-600',
@@ -1082,7 +1415,7 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       HEAD: 'text-gray-600',
       OPTIONS: 'text-indigo-600',
     };
-    return colors[method as keyof typeof colors] || 'text-gray-600';
+    return colors[method] || 'text-gray-600';
   };
 
   const getStatusBadge = (
@@ -1100,12 +1433,9 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         </div>
       );
     }
-
     if (!status) return null;
-
     const isSuccess = status >= 200 && status < 300;
     const isError = status >= 400;
-
     return (
       <div className='flex items-center gap-2'>
         {isSuccess && (
@@ -1161,16 +1491,12 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
     const preRequest = collection.preRequestId
       ? requests.find((r) => r.id === collection.preRequestId)
       : null;
-
     const executedRequests = requests.filter(
       (r) => r.status !== undefined && r.id !== collection.preRequestId,
     );
-
     const preRequestExecuted =
       preRequest && preRequest.status !== undefined ? [preRequest] : [];
-
     const allExecutedRequests = [...preRequestExecuted, ...executedRequests];
-
     const testResults: TestResult[] = allExecutedRequests.map((r) => ({
       id: r.id || r.name,
       name: r.name,
@@ -1189,32 +1515,24 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
       requestHeaders: {},
       responseHeaders: {},
     }));
-
     const pass = allExecutedRequests.filter(
       (r) => r.status && r.status >= 200 && r.status < 300,
     ).length;
-
     const fail = allExecutedRequests.filter(
       (r) => r.status && r.status >= 400,
     ).length;
-
     const skipped = requests.filter((r) => !r.isSelected).length;
-
     const authApis = requests.filter(
       (r) => r.authorizationType !== 'none',
     ).length;
-
     const responseTimes = allExecutedRequests
       .map((r) => r.responseTime || 0)
       .filter((t) => t > 0);
-
     const maxResponseTime =
       responseTimes.length > 0 ? Math.max(...responseTimes) : 0;
     const minResponseTime =
       responseTimes.length > 0 ? Math.min(...responseTimes) : 0;
-
     const SLOW_THRESHOLD_MS = 500;
-
     const slowest =
       allExecutedRequests.length > 1
         ? allExecutedRequests.find((r) => r.responseTime === maxResponseTime)
@@ -1222,7 +1540,6 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             allExecutedRequests[0].responseTime >= SLOW_THRESHOLD_MS
           ? allExecutedRequests[0]
           : undefined;
-
     const fastest =
       allExecutedRequests.length > 1
         ? allExecutedRequests.find((r) => r.responseTime === minResponseTime)
@@ -1230,25 +1547,19 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
             allExecutedRequests[0].responseTime < SLOW_THRESHOLD_MS
           ? allExecutedRequests[0]
           : undefined;
-
     const failedRequests = allExecutedRequests.filter(
       (r) => r.status && r.status >= 400,
     );
-
     const statusCodeCounts = failedRequests.reduce(
       (acc, r) => {
-        if (r.status) {
-          acc[r.status] = (acc[r.status] || 0) + 1;
-        }
+        if (r.status) acc[r.status] = (acc[r.status] || 0) + 1;
         return acc;
       },
       {} as Record<number, number>,
     );
-
     const mostFailedEntry = Object.entries(statusCodeCounts).sort(
       ([, a], [, b]) => b - a,
     )[0];
-
     const metrics: TestMetrics = {
       total: requests.length,
       passed: pass,
@@ -1264,12 +1575,10 @@ export const SanitizeTestRunner: React.FC<SanitizeTestRunnerProps> = ({
         ? { code: parseInt(mostFailedEntry[0]), count: mostFailedEntry[1] }
         : undefined,
     };
-
     const insights =
       testResults.length > 0
         ? insightsService.generateInsights(testResults, metrics)
         : [];
-
     return { metrics, testResults, insights };
   }, [requests, collection.preRequestId]);
 
@@ -1283,11 +1592,8 @@ Passed: ${metrics.passed}
 Failed: ${metrics.failed}
 Skipped: ${metrics.skipped}
 Auth APIs: ${metrics.authAPIs}
-Max Response Time: ${
-      metrics.maxResponseTime > 0 ? `${metrics.maxResponseTime}ms` : 'N/A'
-    }
+Max Response Time: ${metrics.maxResponseTime > 0 ? `${metrics.maxResponseTime}ms` : 'N/A'}
     `.trim();
-
     if (navigator.share) {
       try {
         await navigator.share({
@@ -1295,9 +1601,8 @@ Max Response Time: ${
           text: summaryText,
         });
       } catch (error) {
-        if ((error as Error).name !== 'AbortError') {
+        if ((error as Error).name !== 'AbortError')
           console.error('Error sharing:', error);
-        }
       }
     } else {
       try {
@@ -1307,7 +1612,6 @@ Max Response Time: ${
           description: 'Test summary has been copied to your clipboard.',
         });
       } catch (error) {
-        console.error('Error copying to clipboard:', error);
         toast({
           title: 'Error',
           description: 'Failed to copy summary to clipboard.',
@@ -1317,416 +1621,500 @@ Max Response Time: ${
     }
   };
 
-  return (
-    <div className='h-full bg-background'>
-      <PanelGroup direction='horizontal'>
-        <Panel defaultSize={65} minSize={30}>
-          <div className='h-full flex flex-col'>
-            {/* ── Header ── */}
-            <div className='border-b border-border px-3 pt-3 pb-0'>
-              {/* Row 1 — title + run button */}
-              <div className='flex items-center justify-between gap-3 flex-wrap mb-2'>
-                <div className='flex items-center gap-2 min-w-0'>
-                  <span className='text-xs text-muted-foreground whitespace-nowrap'>
-                    Quick test
-                  </span>
-                  <div className='w-px h-3.5 bg-border' />
-                  <span className='text-[15px] font-medium text-foreground truncate max-w-[180px] sm:max-w-xs'>
-                    {collection.name}
-                  </span>
-                  <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground border border-border whitespace-nowrap'>
-                    <CheckCircle className='w-3 h-3' />
-                    {requests.filter((r) => r.isSelected).length} /{' '}
-                    {requests.length} selected
-                  </span>
-                </div>
+  // ── Shared requests panel ─────────────────────────────
 
-                <Button
-                  onClick={handleRunTests}
-                  disabled={
-                    isRunning ||
-                    requests.filter((r) => r.isSelected).length === 0
-                  }
-                  size='sm'
-                >
-                  {isRunning ? 'Running…' : `Run ${collection.name}`}
-                </Button>
+  const requestsPanelContent = (
+    <div className='h-full flex flex-col'>
+      {/* Header */}
+      <div className='border-b border-border px-3 pt-3 pb-0'>
+        <div className='flex items-center justify-between gap-3 flex-wrap mb-2'>
+          <div className='flex items-center gap-2 min-w-0'>
+            <span className='text-xs text-muted-foreground whitespace-nowrap'>
+              Quick test
+            </span>
+            <div className='w-px h-3.5 bg-border' />
+            <span className='text-[15px] font-medium text-foreground truncate max-w-[120px] sm:max-w-xs'>
+              {collection.name}
+            </span>
+            <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted text-muted-foreground border border-border whitespace-nowrap'>
+              <CheckCircle className='w-3 h-3' />
+              {requests.filter((r) => r.isSelected).length} / {requests.length}{' '}
+              selected
+            </span>
+          </div>
+          {!isMobile && (
+            <Button
+              onClick={handleRunTests}
+              disabled={
+                isRunning || requests.filter((r) => r.isSelected).length === 0
+              }
+              size='sm'
+            >
+              {isRunning ? 'Running…' : `Run ${collection.name}`}
+            </Button>
+          )}
+        </div>
+
+        {/* Auth + env row */}
+        <div className='flex items-center gap-2 flex-wrap pb-3'>
+          <span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
+            Auth
+          </span>
+          {collection.preRequestId ? (
+            authRequestName ? (
+              <div className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'>
+                <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0' />
+                <Key className='w-3 h-3 flex-shrink-0' />
+                Auto auth enabled
+                <div className='w-px h-3 bg-emerald-300 dark:bg-emerald-700' />
+                <span className='text-emerald-600 dark:text-emerald-500 font-normal'>
+                  {authRequestName.length > 18
+                    ? authRequestName.slice(0, 18) + '…'
+                    : authRequestName}
+                </span>
               </div>
+            ) : (
+              <div className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400'>
+                <Loader2 className='w-3 h-3 animate-spin' />
+                Setting up auth…
+              </div>
+            )
+          ) : (
+            <button
+              onClick={() => {
+                toast({
+                  title: 'No Auto-Auth Request',
+                  description:
+                    'Please create an Auto-Auth request in your collection',
+                  variant: 'destructive',
+                });
+                handleClose();
+              }}
+              className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors'
+            >
+              <svg
+                className='w-3 h-3 flex-shrink-0'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth={1.5}
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  d='M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z'
+                />
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
+                />
+              </svg>
+              Setup Auto Auth
+            </button>
+          )}
+          <div className='w-px h-4 bg-border' />
+          <span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
+            Env
+          </span>
+          <Select
+            value={
+              selectedEnvironment
+                ? JSON.stringify(selectedEnvironment)
+                : 'No Environment'
+            }
+            onValueChange={(value) =>
+              setSelectedEnvironment(
+                value === 'No Environment' ? null : JSON.parse(value),
+              )
+            }
+          >
+            <SelectTrigger className='h-7 text-xs w-full max-w-[150px]'>
+              <SelectValue placeholder='Select environment' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='No Environment'>No environment</SelectItem>
+              {environments
+                .filter((e) => e.name !== 'No Environment')
+                .map((env) => (
+                  <SelectItem key={env.id} value={JSON.stringify(env)}>
+                    {env.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-              {/* Row 2 — auth + environment */}
-              <div className='flex items-center gap-2 flex-wrap pb-3'>
-                <span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
-                  Auth
-                </span>
+      {/* No auth warning */}
+      {!collection.preRequestId && (
+        <div className='p-3 border-b border-border'>
+          <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start'>
+            <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
+            <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
+              Without authentication, the APIs might return 401. Consider adding
+              an authentication API.
+            </p>
+          </div>
+        </div>
+      )}
 
-                {collection.preRequestId ? (
-                  authRequestName ? (
-                    <div className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'>
-                      <span className='w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0' />
-                      <Key className='w-3 h-3 flex-shrink-0' />
-                      Auto auth enabled
-                      <div className='w-px h-3 bg-emerald-300 dark:bg-emerald-700' />
-                      <span className='text-emerald-600 dark:text-emerald-500 font-normal'>
-                        {authRequestName.length > 18
-                          ? authRequestName.slice(0, 18) + '…'
-                          : authRequestName}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium text-blue-600 dark:text-blue-400'>
-                      <Loader2 className='w-3 h-3 animate-spin' />
-                      Setting up auth…
-                    </div>
-                  )
-                ) : (
-                  <button
-                    onClick={() => {
-                      toast({
-                        title: 'No Auto-Auth Request',
-                        description:
-                          'Please create an Auto-Auth request in your collection',
-                        variant: 'destructive',
-                      });
-                      handleClose();
-                    }}
-                    className='inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors'
-                  >
-                    <svg
-                      className='w-3 h-3 flex-shrink-0'
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth={1.5}
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        d='M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z'
+      {/* Search */}
+      <div className='p-3 border-b border-border'>
+        <div className='relative'>
+          <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
+          <Input
+            type='text'
+            placeholder='Search requests by name...'
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className='pl-10 pr-8'
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className='absolute right-3 top-1/2 -translate-y-1/2 z-10 text-muted-foreground hover:text-foreground transition-colors'
+              aria-label='Clear search'
+            >
+              <X className='w-4 h-4' />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Request list */}
+      <div className='flex-1 overflow-auto scrollbar-thin'>
+        <div className='p-3'>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={requests.map((r, i) => r.id || `request-${i}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              {filteredRequests.map((request, index) => {
+                const displayIndex = index;
+                const isAuth =
+                  !!collection.preRequestId &&
+                  request.id === collection.preRequestId;
+                const requestId = request.id || '';
+                const isExpanded = expandedRequestId === requestId;
+                const storedResp = requestId
+                  ? storedResponses[requestId]
+                  : undefined;
+
+                const requestWithAuthStatus: RequestWithStatus = isAuth
+                  ? {
+                      ...request,
+                      status: preRequestStatus,
+                      responseTime: preRequestResponseTime,
+                      isLoading: isPreRequestLoading,
+                    }
+                  : request;
+
+                return (
+                  <div key={request.id || `request-${displayIndex}`}>
+                    <SortableRequestItem
+                      request={requestWithAuthStatus}
+                      index={displayIndex}
+                      onToggle={() => {
+                        setRequests((prev) =>
+                          prev.map((r, i) =>
+                            r.id === request.id ||
+                            (!r.id && !request.id && i === displayIndex)
+                              ? { ...r, isSelected: !r.isSelected }
+                              : r,
+                          ),
+                        );
+                      }}
+                      getMethodColor={getMethodColor}
+                      getStatusBadge={getStatusBadge}
+                      isAuthRequest={isAuth}
+                      isExpanded={isExpanded}
+                      onEyeClick={
+                        storedResp
+                          ? () => {
+                              setExpandedRequestId(
+                                isExpanded ? null : requestId,
+                              );
+                              // On mobile, switch to requests tab to show the bottom sheet
+                              if (isMobile) setActiveTab('requests');
+                            }
+                          : undefined
+                      }
+                    />
+
+                    {/* Desktop inline drawer */}
+                    {!isMobile && isExpanded && storedResp && (
+                      <RequestResponseDrawer
+                        request={requestWithAuthStatus}
+                        stored={storedResp}
+                        onClose={() => setExpandedRequestId(null)}
+                        isMobile={false}
                       />
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        d='M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z'
-                      />
-                    </svg>
-                    Setup Auto Auth
-                  </button>
-                )}
+                    )}
+                  </div>
+                );
+              })}
+            </SortableContext>
+          </DndContext>
+        </div>
+      </div>
 
-                <div className='w-px h-4 bg-border' />
-                <span className='text-[10px] uppercase tracking-wide text-muted-foreground'>
-                  Env
+      {/* Footer */}
+      <div className='border-t border-border p-3 flex items-center justify-between'>
+        <div className='flex items-center gap-2'>
+          <button
+            onClick={handleDeselectAll}
+            className='text-sm text-muted-foreground hover:text-foreground min-h-[44px] px-3'
+          >
+            Deselect All
+          </button>
+          <button
+            onClick={handleSelectAll}
+            className='text-sm text-muted-foreground hover:text-foreground min-h-[44px] px-3'
+          >
+            Select All
+          </button>
+          <button
+            onClick={handleReset}
+            className='text-sm text-muted-foreground hover:text-foreground min-h-[44px] px-3'
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Shared summary panel ───────────────────────────────
+
+  const summaryPanelContent = (
+    <div className='h-full bg-muted/30 overflow-auto scrollbar-thin relative'>
+      <div className='sticky top-0 bg-background border-b border-border p-4 z-10'>
+        <div className='flex items-start justify-between mb-3'>
+          <div className='flex-1'>
+            <h3 className='text-lg font-semibold text-foreground'>
+              Test Summary
+            </h3>
+            <p className='text-sm font-medium text-foreground mt-1'>
+              {collection.name}
+            </p>
+            <div className='flex items-center gap-3 mt-2 text-xs text-muted-foreground'>
+              <div className='flex items-center gap-1'>
+                <Globe className='w-3 h-3' />
+                <span>{selectedEnvironment?.name || 'No Environment'}</span>
+              </div>
+              <div className='flex items-center gap-1'>
+                <Clock className='w-3 h-3' />
+                <span>
+                  {startTime
+                    ? startTime.toLocaleString()
+                    : new Date().toLocaleString()}
                 </span>
-
-                <Select
-                  value={
-                    selectedEnvironment
-                      ? JSON.stringify(selectedEnvironment)
-                      : 'No Environment'
-                  }
-                  onValueChange={(value) =>
-                    setSelectedEnvironment(
-                      value === 'No Environment' ? null : JSON.parse(value),
-                    )
-                  }
-                >
-                  <SelectTrigger className='h-7 text-xs w-[150px]'>
-                    <SelectValue placeholder='Select environment' />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='No Environment'>
-                      No environment
-                    </SelectItem>
-                    {environments
-                      .filter((e) => e.name !== 'No Environment')
-                      .map((env) => (
-                        <SelectItem key={env.id} value={JSON.stringify(env)}>
-                          {env.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
+          </div>
+          <button
+            onClick={handleClose}
+            className='p-2 hover:bg-muted rounded-md'
+          >
+            <X className='w-5 h-5' />
+          </button>
+        </div>
+        <div className='flex items-center gap-2'>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={() => setIsExportModalOpen(true)}
+            disabled={metrics.passed === 0 && metrics.failed === 0}
+            className='flex items-center gap-2'
+          >
+            <Download className='w-4 h-4' />
+            Export
+          </Button>
+          <Button
+            variant='outline'
+            size='sm'
+            onClick={handleShare}
+            disabled={metrics.passed === 0 && metrics.failed === 0}
+            className='flex items-center gap-2'
+          >
+            <Share2 className='w-4 h-4' />
+            Share
+          </Button>
+        </div>
+      </div>
+      <div id='summary-content' className='p-4 space-y-6'>
+        <div className='grid grid-cols-2 gap-3'>
+          <MetricBadge
+            label='Total Executed'
+            value={metrics.passed + metrics.failed}
+          />
+          <MetricBadge label='Passed' value={metrics.passed} color='green' />
+          <MetricBadge label='Failed' value={metrics.failed} color='red' />
+          <MetricBadge label='Skipped' value={metrics.skipped} color='gray' />
+        </div>
+        {(metrics.passed > 0 || metrics.failed > 0) && (
+          <div>
+            <h3 className='text-sm font-semibold text-foreground mb-3'>
+              Test Distribution
+            </h3>
+            <StatusChart metrics={metrics} />
+          </div>
+        )}
+        {(metrics.passed > 0 || metrics.failed > 0) && (
+          <div>
+            <h3 className='text-sm font-semibold text-foreground mb-3'>
+              Performance Insights
+            </h3>
+            <div className='grid grid-cols-1 gap-3'>
+              {metrics.fastestAPI && (
+                <PerformanceCard
+                  title='Fastest API'
+                  value={metrics.fastestAPI}
+                  subtitle={`${metrics.minResponseTime}ms`}
+                  variant='fastest'
+                />
+              )}
+              {metrics.slowestAPI && (
+                <PerformanceCard
+                  title='Slowest API'
+                  value={metrics.slowestAPI}
+                  subtitle={`${metrics.maxResponseTime}ms`}
+                  variant='slowest'
+                />
+              )}
+              {metrics.mostFailedStatusCode && (
+                <PerformanceCard
+                  title='Most Failed Status'
+                  value={metrics.mostFailedStatusCode.code.toString()}
+                  subtitle={`${metrics.mostFailedStatusCode.count} APIs`}
+                  variant='failed'
+                />
+              )}
+              <PerformanceCard
+                title='Total Execution Time'
+                value={`${metrics.totalExecutionTime}ms`}
+                variant='time'
+              />
+            </div>
+          </div>
+        )}
+        {insights.length > 0 && (
+          <div>
+            <h3 className='text-sm font-semibold text-foreground mb-3'>
+              Smart Insights
+            </h3>
+            <div className='space-y-3'>
+              {insights.map((insight, index) => (
+                <InsightCard
+                  key={index}
+                  type={insight.type}
+                  message={insight.message}
+                  severity={insight.severity}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
-            {/* ── No auth warning banner ── */}
-            {!collection.preRequestId && (
-              <div className='p-3 border-b border-border'>
-                <div className='p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg flex gap-3 items-start'>
-                  <AlertCircle className='w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5' />
-                  <p className='text-gray-700 dark:text-gray-300 text-sm text-left'>
-                    Without authentication, the APIs might return 401. Consider
-                    adding an authentication API.
-                  </p>
+  // ── Render ────────────────────────────────────────────
+
+  // The expanded request for mobile bottom sheet
+  const expandedRequest = expandedRequestId
+    ? requests.find((r) => r.id === expandedRequestId)
+    : null;
+  const expandedStoredResp = expandedRequestId
+    ? storedResponses[expandedRequestId]
+    : undefined;
+
+  return (
+    <div className='h-full bg-background flex flex-col'>
+      {isMobile ? (
+        <>
+          {/* Mobile tab bar */}
+          <div className='flex border-b border-border flex-shrink-0'>
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activeTab === 'requests' ? 'text-foreground border-b-2 border-primary' : 'text-muted-foreground'}`}
+            >
+              Requests
+            </button>
+            <button
+              onClick={() => setActiveTab('summary')}
+              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${activeTab === 'summary' ? 'text-foreground border-b-2 border-primary' : 'text-muted-foreground'}`}
+            >
+              Summary
+              {metrics.passed + metrics.failed > 0 && (
+                <span className='ml-1.5 text-xs text-muted-foreground'>
+                  ({metrics.passed + metrics.failed})
+                </span>
+              )}
+            </button>
+          </div>
+
+          <div className='flex-1 overflow-hidden flex flex-col'>
+            {activeTab === 'requests' ? (
+              <>
+                {/* Requests list — shrinks when bottom sheet is open */}
+                <div
+                  className={`overflow-hidden flex flex-col ${expandedRequest && expandedStoredResp ? 'flex-[0_0_45%]' : 'flex-1'}`}
+                >
+                  {requestsPanelContent}
                 </div>
+
+                {/* Mobile bottom sheet drawer */}
+                {expandedRequest && expandedStoredResp && (
+                  <RequestResponseDrawer
+                    request={expandedRequest}
+                    stored={expandedStoredResp}
+                    onClose={() => setExpandedRequestId(null)}
+                    isMobile={true}
+                  />
+                )}
+
+                {/* Sticky Run button */}
+                {!(expandedRequest && expandedStoredResp) && (
+                  <div className='flex-shrink-0 border-t border-border p-3 bg-background'>
+                    <Button
+                      onClick={handleRunTests}
+                      disabled={
+                        isRunning ||
+                        requests.filter((r) => r.isSelected).length === 0
+                      }
+                      className='w-full'
+                    >
+                      {isRunning ? 'Running…' : `Run ${collection.name}`}
+                    </Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className='flex-1 overflow-hidden'>
+                {summaryPanelContent}
               </div>
             )}
-
-            {/* ── Search ── */}
-            <div className='p-3 border-b border-border'>
-              <div className='relative'>
-                <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
-                <Input
-                  type='text'
-                  placeholder='Search requests by name...'
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className='pl-10 pr-8'
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className='absolute right-3 top-1/2 -translate-y-1/2 z-10 text-muted-foreground hover:text-foreground transition-colors'
-                    aria-label='Clear search'
-                  >
-                    <X className='w-4 h-4' />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* ── Request list ── */}
-            <div className='flex-1 overflow-auto scrollbar-thin'>
-              <div className='p-3'>
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={requests.map((r, i) => r.id || `request-${i}`)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {filteredRequests.map((request, index) => {
-                      const displayIndex = index;
-                      const isAuth =
-                        !!collection.preRequestId &&
-                        request.id === collection.preRequestId;
-
-                      const requestWithAuthStatus: RequestWithStatus = isAuth
-                        ? {
-                            ...request,
-                            status: preRequestStatus,
-                            responseTime: preRequestResponseTime,
-                            isLoading: isPreRequestLoading,
-                          }
-                        : request;
-
-                      return (
-                        <SortableRequestItem
-                          key={request.id || `request-${displayIndex}`}
-                          request={requestWithAuthStatus}
-                          index={displayIndex}
-                          onToggle={() => {
-                            setRequests((prev) =>
-                              prev.map((r, i) =>
-                                r.id === request.id ||
-                                (!r.id && !request.id && i === displayIndex)
-                                  ? { ...r, isSelected: !r.isSelected }
-                                  : r,
-                              ),
-                            );
-                          }}
-                          getMethodColor={getMethodColor}
-                          getStatusBadge={getStatusBadge}
-                          isAuthRequest={isAuth}
-                        />
-                      );
-                    })}
-                  </SortableContext>
-                </DndContext>
-              </div>
-            </div>
-
-            {/* ── Footer ── */}
-            <div className='border-t border-border p-3 flex items-center justify-between'>
-              <div className='flex items-center gap-4'>
-                <button
-                  onClick={handleDeselectAll}
-                  className='text-sm text-muted-foreground hover:text-foreground'
-                >
-                  Deselect All
-                </button>
-                <button
-                  onClick={handleSelectAll}
-                  className='text-sm text-muted-foreground hover:text-foreground'
-                >
-                  Select All
-                </button>
-                <span className='text-muted-foreground'>|</span>
-                <button
-                  onClick={handleReset}
-                  className='text-sm text-muted-foreground hover:text-foreground'
-                >
-                  Reset
-                </button>
-              </div>
-            </div>
           </div>
-        </Panel>
-        <PanelResizeHandle className='w-1 bg-border hover:bg-primary transition-colors cursor-col-resize' />
-        <Panel defaultSize={35} minSize={20}>
-          <div className='h-full bg-muted/30 overflow-auto scrollbar-thin relative'>
-            <div className='sticky top-0 bg-background border-b border-border p-4 z-10'>
-              <div className='flex items-start justify-between mb-3'>
-                <div className='flex-1'>
-                  <h3 className='text-lg font-semibold text-foreground'>
-                    Test Summary
-                  </h3>
-                  <p className='text-sm font-medium text-foreground mt-1'>
-                    {collection.name}
-                  </p>
-                  <div className='flex items-center gap-3 mt-2 text-xs text-muted-foreground'>
-                    <div className='flex items-center gap-1'>
-                      <Globe className='w-3 h-3' />
-                      <span>
-                        {selectedEnvironment?.name || 'No Environment'}
-                      </span>
-                    </div>
-                    <div className='flex items-center gap-1'>
-                      <Clock className='w-3 h-3' />
-                      <span>
-                        {startTime
-                          ? startTime.toLocaleString()
-                          : new Date().toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleClose}
-                  className='p-2 hover:bg-muted rounded-md'
-                >
-                  <X className='w-5 h-5' />
-                </button>
-              </div>
+        </>
+      ) : (
+        /* Desktop side-by-side panels */
+        <PanelGroup direction='horizontal' className='flex-1'>
+          <Panel defaultSize={65} minSize={30}>
+            {requestsPanelContent}
+          </Panel>
+          <PanelResizeHandle className='w-1 bg-border hover:bg-primary transition-colors cursor-col-resize' />
+          <Panel defaultSize={35} minSize={20}>
+            {summaryPanelContent}
+          </Panel>
+        </PanelGroup>
+      )}
 
-              <div className='flex items-center gap-2'>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={() => setIsExportModalOpen(true)}
-                  disabled={metrics.passed === 0 && metrics.failed === 0}
-                  className='flex items-center gap-2'
-                >
-                  <Download className='w-4 h-4' />
-                  Export
-                </Button>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={handleShare}
-                  disabled={metrics.passed === 0 && metrics.failed === 0}
-                  className='flex items-center gap-2'
-                >
-                  <Share2 className='w-4 h-4' />
-                  Share
-                </Button>
-              </div>
-            </div>
-
-            <div id='summary-content' className='p-4 space-y-6'>
-              {/* Stats Cards */}
-              <div className='grid grid-cols-2 gap-3'>
-                <MetricBadge
-                  label='Total Executed'
-                  value={metrics.passed + metrics.failed}
-                />
-                <MetricBadge
-                  label='Passed'
-                  value={metrics.passed}
-                  color='green'
-                />
-                <MetricBadge
-                  label='Failed'
-                  value={metrics.failed}
-                  color='red'
-                />
-                <MetricBadge
-                  label='Skipped'
-                  value={metrics.skipped}
-                  color='gray'
-                />
-              </div>
-
-              {/* Test Distribution */}
-              {(metrics.passed > 0 || metrics.failed > 0) && (
-                <div>
-                  <h3 className='text-sm font-semibold text-foreground mb-3'>
-                    Test Distribution
-                  </h3>
-                  <StatusChart metrics={metrics} />
-                </div>
-              )}
-
-              {/* Performance Insights */}
-              {(metrics.passed > 0 || metrics.failed > 0) && (
-                <div>
-                  <h3 className='text-sm font-semibold text-foreground mb-3'>
-                    Performance Insights
-                  </h3>
-                  <div className='grid grid-cols-1 gap-3'>
-                    {metrics.fastestAPI && (
-                      <PerformanceCard
-                        title='Fastest API'
-                        value={metrics.fastestAPI}
-                        subtitle={`${metrics.minResponseTime}ms`}
-                        variant='fastest'
-                      />
-                    )}
-                    {metrics.slowestAPI && (
-                      <PerformanceCard
-                        title='Slowest API'
-                        value={metrics.slowestAPI}
-                        subtitle={`${metrics.maxResponseTime}ms`}
-                        variant='slowest'
-                      />
-                    )}
-                    {metrics.mostFailedStatusCode && (
-                      <PerformanceCard
-                        title='Most Failed Status'
-                        value={metrics.mostFailedStatusCode.code.toString()}
-                        subtitle={`${metrics.mostFailedStatusCode.count} APIs`}
-                        variant='failed'
-                      />
-                    )}
-                    <PerformanceCard
-                      title='Total Execution Time'
-                      value={`${metrics.totalExecutionTime}ms`}
-                      variant='time'
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Smart Insights */}
-              {insights.length > 0 && (
-                <div>
-                  <h3 className='text-sm font-semibold text-foreground mb-3'>
-                    Smart Insights
-                  </h3>
-                  <div className='space-y-3'>
-                    {insights.map((insight, index) => (
-                      <InsightCard
-                        key={index}
-                        type={insight.type}
-                        message={insight.message}
-                        severity={insight.severity}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* <div className='pt-4 text-xs text-muted-foreground text-center border-t border-border'>
-                Exported on {new Date().toLocaleString()}
-              </div> */}
-            </div>
-          </div>
-        </Panel>
-      </PanelGroup>
-
-      {/* Export Modal */}
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
@@ -1737,6 +2125,8 @@ Max Response Time: ${
     </div>
   );
 };
+
+// ─── MetricBadge ─────────────────────────────────────────
 
 function MetricBadge({
   label,
@@ -1753,7 +2143,6 @@ function MetricBadge({
       'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300',
     red: 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300',
   };
-
   return (
     <div className={`${colors[color]} rounded-lg p-4 border text-center`}>
       <div className='text-xs font-medium opacity-75 mb-1'>{label}</div>
@@ -1762,11 +2151,12 @@ function MetricBadge({
   );
 }
 
+// ─── StatusChart ──────────────────────────────────────────
+
 function StatusChart({ metrics }: { metrics: TestMetrics }) {
   const total = metrics.passed + metrics.failed || 1;
   const passPercent = (metrics.passed / total) * 100;
   const failPercent = (metrics.failed / total) * 100;
-
   return (
     <div className='space-y-3'>
       <div className='flex gap-1 h-10 rounded-lg overflow-hidden'>
@@ -1787,7 +2177,6 @@ function StatusChart({ metrics }: { metrics: TestMetrics }) {
           </div>
         )}
       </div>
-
       <div className='flex items-center justify-center gap-4 text-xs'>
         <div className='flex items-center gap-1.5'>
           <div className='w-3 h-3 rounded-sm bg-green-500'></div>
