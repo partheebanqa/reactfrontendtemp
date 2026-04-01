@@ -42,7 +42,9 @@ const TestSuites: React.FC = () => {
   const { currentWorkspace } = useWorkspace();
   const queryClient = useQueryClient();
   const [location, setLocation] = useLocation();
-  const [testSuitListData, setTestSuitListData] = useState<TestSuite[] | undefined>(undefined);
+  const [testSuitListData, setTestSuitListData] = useState<
+    TestSuite[] | undefined
+  >(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All statuses');
   const [environmentFilter, setEnvironmentFilter] = useState<string>('all');
@@ -64,7 +66,6 @@ const TestSuites: React.FC = () => {
 
   const {
     data: apiData,
-    isLoading,
     error,
     isFetching, // optional: for button spinner
     refetch,
@@ -77,6 +78,11 @@ const TestSuites: React.FC = () => {
   useEffect(() => {
     if (error) {
       console.error('Error fetching test suites:', error);
+      toast({
+        title: 'Failed to load test suites',
+        description: 'Please refresh and try again.',
+        variant: 'destructive',
+      });
     }
     if (apiData) {
       setTestSuitListData(apiData);
@@ -146,7 +152,7 @@ const TestSuites: React.FC = () => {
   const handleDeleteSuite = (id: string) => {
     deleteSuiteMutation.mutate(id);
   };
-  const handleClonseSuite = (id: string) => {
+  const handleCloneSuite = (id: string) => {
     cloneSuiteMutation.mutate(id);
   };
 
@@ -371,9 +377,13 @@ const TestSuites: React.FC = () => {
         }
       />
 
+      <div className='text-xs text-muted-foreground'>
+        Showing {filteredAndSortedSuites.length} of{' '}
+        {testSuitListData?.length ?? 0} test suites
+      </div>
       <div className='flex flex-col lg:flex-row gap-2'>
         <div className='relative flex-1 lg:max-w-md'>
-          <Search className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400' />
+          <Search className='w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground' />
           <Input
             placeholder='Search test suites...'
             className='pl-10'
@@ -381,9 +391,12 @@ const TestSuites: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <div className="grid grid-cols-2 lg:flex gap-2 lg:gap-3">
-          <Select value={environmentFilter} onValueChange={setEnvironmentFilter}>
-            <SelectTrigger className='w-48'>
+        <div className='grid grid-cols-2 sm:grid-cols-4 lg:flex gap-2 lg:gap-3'>
+          <Select
+            value={environmentFilter}
+            onValueChange={setEnvironmentFilter}
+          >
+            <SelectTrigger className='w-full lg:w-48'>
               <SelectValue placeholder='All environments' />
             </SelectTrigger>
             <SelectContent>
@@ -401,11 +414,8 @@ const TestSuites: React.FC = () => {
             </SelectContent>
           </Select>
 
-
-
-
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className='w-full sm:w-[180px]'>
+            <SelectTrigger className='w-full lg:w-44'>
               {/* <Filter className='w-4 h-4 mr-2' /> */}
               <SelectValue />
             </SelectTrigger>
@@ -417,7 +427,7 @@ const TestSuites: React.FC = () => {
           </Select>
 
           <Select value={tagsFilter} onValueChange={setTagsFilter}>
-            <SelectTrigger className='w-48'>
+            <SelectTrigger className='w-full lg:w-48'>
               <SelectValue placeholder='All tags' />
             </SelectTrigger>
             <SelectContent>
@@ -443,7 +453,7 @@ const TestSuites: React.FC = () => {
               setSortOrder(order as typeof sortOrder);
             }}
           >
-            <SelectTrigger className='w-full sm:w-[180px]'>
+            <SelectTrigger className='w-full lg:w-44'>
               <SelectValue placeholder='Sort by' />
             </SelectTrigger>
             <SelectContent>
@@ -456,8 +466,8 @@ const TestSuites: React.FC = () => {
         </div>
 
         <Button
-          variant='default'
-          className='hover-scale'
+          variant='outline'
+          className='w-full lg:w-auto gap-2'
           onClick={() => refetch()}
           disabled={isFetching}
         >
@@ -471,16 +481,26 @@ const TestSuites: React.FC = () => {
 
       <div className=''>
         {isFetching ? (
-          <>
-            <Loader message='Loading Test Suites' />
-          </>
+          <Loader message='Loading Test Suites' />
         ) : paginatedSuites.length === 0 ? (
-          <div className='text-center py-12'>
-            <p className='text-gray-500'>No test suites found</p>
+          <div className='text-center py-12 px-4'>
+            <Layers className='w-12 h-12 text-muted-foreground mx-auto mb-4' />
+            <h3 className='text-base font-medium text-foreground mb-2'>
+              No test suites found
+            </h3>
+            <p className='text-sm text-muted-foreground mb-6'>
+              {searchQuery || statusFilter !== 'All statuses'
+                ? 'Try adjusting your search or filter criteria.'
+                : 'Create your first test suite to get started.'}
+            </p>
+            <Button onClick={handleCreateSuite} className='gap-2'>
+              <Plus className='w-4 h-4' />
+              Create test suite
+            </Button>
           </div>
         ) : (
           <>
-            <div className=''>
+            <div className='space-y-3'>
               {paginatedSuites.map((suite) => (
                 <TestSuiteCard
                   key={suite.id}
@@ -488,7 +508,7 @@ const TestSuites: React.FC = () => {
                   onEdit={handleEditSuite}
                   onDelete={handleDeleteSuite}
                   onExecute={handleExecuteSuite}
-                  onClone={handleClonseSuite}
+                  onClone={handleCloneSuite}
                   onRefresh={() => refetch()}
                   refreshing={isFetching}
                 />

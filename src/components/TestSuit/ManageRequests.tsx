@@ -85,7 +85,7 @@ interface ManageRequestsProps {
   onRefreshRequests?: () => Promise<void> | void;
   onSaveExtractVariables?: (
     requestId: string,
-    extractedData: ExtractedVariable[]
+    extractedData: ExtractedVariable[],
   ) => void;
   variables?: Array<{ name: string; initialValue: string }>;
   environments?: any[];
@@ -129,8 +129,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
   filterMethod,
   showAuthCapture,
 }) => {
-  const [showCategories, setShowCategories] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
+  const toggleCard = (id: string) =>
+    setExpandedCards((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [isTestCaseModalOpen, setIsTestCaseModalOpen] = useState(false);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
@@ -143,7 +149,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
     if (filterMethod) {
       list = list.filter(
-        (r) => r.method?.toUpperCase() === filterMethod.toUpperCase()
+        (r) => r.method?.toUpperCase() === filterMethod.toUpperCase(),
       );
     }
 
@@ -191,7 +197,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
       ([category, count]) => ({
         category,
         count,
-      })
+      }),
     );
 
     return {
@@ -295,7 +301,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
   const handleSaveExtractVariables = (
     requestId: string,
-    extractVariables: ExtractedVariable[]
+    extractVariables: ExtractedVariable[],
   ) => {
     if (onSaveExtractVariables) {
       onSaveExtractVariables(requestId, extractVariables);
@@ -420,9 +426,8 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         const totalFromLocal = r.testCases?.total ?? 0;
         return (totalFromMeta || totalFromLocal) > 0;
       }),
-    [requests]
+    [requests],
   );
-
 
   const totalGeneratedTests = useMemo(() => {
     return requests.reduce((sum, r) => {
@@ -440,7 +445,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
         const fromLocal = r.selectedTestCases?.length ?? 0;
         return (fromMeta || fromLocal) > 0;
       }),
-    [requests, preRequestId]
+    [requests, preRequestId],
   );
 
   const showTestcaseHint =
@@ -457,32 +462,39 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
           {shouldHidePreRequest ? (
             <CardTitle>
               <div className='flex items-center gap-4'>
-                <p className='text-sm md:text-md'>Requests ({headerRequestsCount})</p>
+                <p className='text-sm md:text-md'>
+                  Requests ({headerRequestsCount})
+                </p>
 
                 {showTestcaseHint && (
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg">
-                    <div className="flex items-start gap-2 sm:gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs sm:text-xs text-blue-900">
-                          <span className="font-semibold flex items-center gap-1 flex-wrap">
-                            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-                            <span className="text-xs sm:text-xs text-blue-900">{totalGeneratedTests} test cases generated successfully</span>
+                  <div className='bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 mb-4 sm:mb-6 rounded-r-lg'>
+                    <div className='flex items-start gap-2 sm:gap-3'>
+                      <div className='flex-1 min-w-0'>
+                        <p className='text-xs sm:text-xs text-blue-900'>
+                          <span className='font-semibold flex items-center gap-1 flex-wrap'>
+                            <CheckCircle className='w-3 h-3 sm:w-4 sm:h-4' />
+                            <span className='text-xs sm:text-xs text-blue-900'>
+                              {totalGeneratedTests} test cases generated
+                              successfully
+                            </span>
                           </span>
                         </p>
-                        <p className="text-xs sm:text-xs text-blue-800 mt-1">
-                          Review the requests below and select test cases you want to run.
+                        <p className='text-xs sm:text-xs text-blue-800 mt-1'>
+                          Review the requests below and select test cases you
+                          want to run.
                         </p>
                       </div>
                     </div>
                   </div>
                 )}
-
               </div>
             </CardTitle>
           ) : (
             <CardTitle>
               <div className='flex items-center gap-4'>
-                <p className='text-sm md:text-md'>Requests ({headerRequestsCount})</p>
+                <p className='text-sm md:text-md'>
+                  Requests ({headerRequestsCount})
+                </p>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className='w-4 h-4 text-gray-500 cursor-pointer' />
@@ -555,6 +567,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
             }
             const MAX_CHAR = 95;
             const finalUrl = buildFinalUrl(request.url);
+            const displayName =
+              request.name.length > 40
+                ? request.name.substring(0, 40) + '...'
+                : request.name;
+
             const displayUrl =
               finalUrl.length > MAX_CHAR
                 ? finalUrl.substring(0, MAX_CHAR) + '...'
@@ -577,8 +594,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                     </Badge>
                     <div className='flex-1 min-w-0'>
                       <div className='flex items-center gap-2'>
-                        <h4 className='text-[12px] md:text-md font-medium'>
-                          {request.name}
+                        <h4
+                          className='text-[12px] md:text-md font-medium truncate max-w-[200px] md:max-w-xs'
+                          title={request.name}
+                        >
+                          {displayName}
                         </h4>
                         {preRequestId === request.id && (
                           <>
@@ -588,18 +608,24 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                             >
                               Pre-request
                             </Badge>
-                            <CircleCheckBig color='#16a34a' className='w-3 h-3 md:w-4 md:h-4' />
-                            <p className='text-[10px] md:text-md'>Auth : {extractVariables[0]?.path}</p>
+                            <CircleCheckBig
+                              color='#16a34a'
+                              className='w-3 h-3 md:w-4 md:h-4'
+                            />
+                            <p className='text-[10px] md:text-md'>
+                              Auth : {extractVariables[0]?.path}
+                            </p>
                           </>
                         )}
                       </div>
-                      <p className='mb-1 text-xs md:text-md text-muted-foreground mt-1 break-all'>
+                      <p
+                        className='mb-1 text-xs md:text-md text-muted-foreground mt-1 truncate'
+                        title={buildFinalUrl(request.url)}
+                      >
                         {displayUrl}
                       </p>
                     </div>
                   </div>
-
-
 
                   <div className='flex items-center justify-end space-x-2'>
                     {showAuthCapture && request.method === 'POST' && (
@@ -617,15 +643,14 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                       isSelectTestsRoute && (
                         <Button
                           onClick={() => handleConfigureTestCases(request)}
+                          variant={selectedTests > 0 ? 'outline' : 'default'}
+                          className='w-full md:w-auto mt-3 md:mt-0'
                         >
-                          Select testcases
+                          {selectedTests > 0
+                            ? 'Edit selection'
+                            : 'Choose test cases'}
                         </Button>
                       )}
-
-
-
-
-
 
                     <AlertDialog>
                       <Tooltip>
@@ -672,29 +697,33 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                   </div>
                 </div>
                 {totalTests === 0 ? (
-                  <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-3 sm:p-4 mt-4">
-                    <div className="flex items-center justify-center gap-2 text-gray-500 text-center">
-                      <CheckSquare className="w-4 h-4" />
-                      <p className="text-xs sm:text-sm">
-                        <span className="font-medium">No test cases generated</span>
+                  <div className='bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-3 sm:p-4 mt-4'>
+                    <div className='flex items-center justify-center gap-2 text-gray-500 text-center'>
+                      <CheckSquare className='w-4 h-4' />
+                      <p className='text-xs sm:text-sm'>
+                        <span className='font-medium'>
+                          No test cases generated
+                        </span>
                       </p>
                     </div>
                   </div>
                 ) : selectedTests === 0 ? (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
-                    <div className="flex items-center justify-center gap-2 text-center">
-                      <CheckSquare className="w-4 h-4 text-yellow-600" />
-                      <p className="text-xs text-yellow-800">
-                        <span className="font-semibold">{totalTests}</span> test cases available • Click to select
+                  <div className='bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4'>
+                    <div className='flex items-center justify-center gap-2 text-center'>
+                      <CheckSquare className='w-4 h-4 text-yellow-600' />
+                      <p className='text-xs text-yellow-800'>
+                        <span className='font-semibold'>{totalTests}</span> test
+                        cases available
                       </p>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-4">
-                    <div className="flex items-center justify-center gap-2 text-center">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                      <p className="text-xs text-green-800">
-                        <span className="font-semibold">{selectedTests}</span> of {totalTests} test cases selected
+                  <div className='bg-green-50 border border-green-200 rounded-lg p-3 mt-4'>
+                    <div className='flex items-center justify-center gap-2 text-center'>
+                      <CheckCircle className='w-4 h-4 text-green-600' />
+                      <p className='text-xs text-green-800'>
+                        <span className='font-semibold'>{selectedTests}</span>{' '}
+                        of {totalTests} test cases selected
                       </p>
                     </div>
                   </div>
@@ -716,10 +745,10 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                               Test Cases
                             </span>
                             <button
-                              onClick={() => setShowCategories(!showCategories)}
+                              onClick={() => toggleCard(request.id)}
                               className='flex items-center text-xs font-medium text-primary hover:underline'
                             >
-                              {showCategories ? (
+                              {expandedCards.has(request.id) ? (
                                 <>
                                   <ChevronDown className='w-4 h-4 mr-1' /> Hide
                                 </>
@@ -733,10 +762,11 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
 
                           {/* collapsible category list */}
                           <div
-                            className={`overflow-hidden transition-all duration-300 ${showCategories
-                              ? 'max-h-[1000px] opacity-100'
-                              : 'max-h-0 opacity-0'
-                              }`}
+                            className={`overflow-hidden transition-all duration-300 ${
+                              expandedCards.has(request.id)
+                                ? 'max-h-[1000px] opacity-100'
+                                : 'max-h-0 opacity-0'
+                            }`}
                           >
                             <div className='space-y-2'>
                               {selectedByCategory.map((categoryData) => (
@@ -754,7 +784,7 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                                   </div>
                                   <span
                                     className={`px-2 py-0.5 rounded-full font-medium ${getCategoryColor(
-                                      categoryData.category
+                                      categoryData.category,
                                     )}`}
                                   >
                                     {categoryData.count}
@@ -766,16 +796,19 @@ export const ManageRequests: React.FC<ManageRequestsProps> = ({
                         </div>
                       )}
 
-                      <div className='pt-1 border-t border-gray-200 dark:border-gray-700'>
-                        <div className='flex items-center justify-between text-xs font-medium'>
-                          <span className='text-gray-700 dark:text-gray-300'>
-                            Selected:
-                          </span>
-                          <span className='text-gray-900 dark:text-gray-100'>
-                            {selectedTests ?? 0} / {totalTests ?? 0} test cases
-                          </span>
+                      {selectedTests === 0 && (
+                        <div className='pt-1 border-t border-gray-200 dark:border-gray-700'>
+                          <div className='flex items-center justify-between text-xs font-medium'>
+                            <span className='text-gray-700 dark:text-gray-300'>
+                              Selected:
+                            </span>
+                            <span className='text-gray-900 dark:text-gray-100'>
+                              {selectedTests ?? 0} / {totalTests ?? 0} test
+                              cases
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
               </div>

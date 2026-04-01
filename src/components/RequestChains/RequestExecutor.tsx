@@ -679,7 +679,7 @@ export function RequestExecutor({
       <div className='flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4'>
         <div className='space-y-2'>
           <div>
-            <h3 className='text-lg font-semibold text-foreground'>
+            <h3 className='text-medium font-semibold text-foreground'>
               Request Execution
             </h3>
             <p className='text-sm text-muted-foreground'>

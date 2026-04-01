@@ -13,7 +13,6 @@ export const TestSuitePagination = ({
 
   return (
     <div className='flex flex-col items-center justify-between px-6 py-4 border-t overflow-auto'>
-
       <div className='mb-1 text-sm text-slate-500'>
         Showing {startIndex + 1} to {endIndex} of {totalItems} test suites
       </div>
@@ -95,7 +94,6 @@ export const TestSuitePagination = ({
           disabled={currentPage === totalPages}
           className='flex md:hidden'
         >
-
           <ChevronRight size={16} />
         </Button>
       </div>

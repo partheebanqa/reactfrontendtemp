@@ -19,27 +19,27 @@ export default function QuickActions() {
 
   return (
     <Card>
-      <CardHeader className='p-3 md:p-6'>
-        <CardTitle className='text-lg font-semibold text-slate-900'>
+      <CardHeader className='pb-2'>
+        <CardTitle className='text-sm font-medium text-foreground'>
           Quick Links
         </CardTitle>
       </CardHeader>
-      <CardContent className='p-3 md:p-6'>
+      <CardContent className='pt-0'>
         <div className='space-y-3'>
           <Button
             onClick={() => setLocation('/request-builder')}
             variant='ghost'
-            className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors '
+            className='w-full justify-start h-auto px-3 py-2.5 border border-border hover:bg-muted transition-colors rounded-lg '
           >
-            <div className='flex items-center space-x-3'>
-              <div className='w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center'>
-                <Settings className='text-blue-600' size={14} />
+            <div className='flex items-start gap-3 w-full'>
+              <div className='w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0'>
+                <Settings className='text-blue-600' size={16} />
               </div>
               <div className='text-left'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>
+                <p className='text-sm font-medium text-foreground'>
                   Request Builder
                 </p>
-                <p className='text-[10px] md:text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground leading-relaxed'>
                   Start building your first API request with variables and
                   assertions.
                 </p>
@@ -50,20 +50,20 @@ export default function QuickActions() {
           <Button
             onClick={() => setLocation('/test-suites/create')}
             variant='ghost'
-            className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
+            className='w-full justify-start h-auto px-3 py-2.5 border border-border hover:bg-muted transition-colors rounded-lg'
           >
             <div className='flex items-start gap-3 w-full'>
               {/* ICON */}
               <div className='w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center shrink-0'>
-                <Layers className='text-blue-600' size={14} />
+                <Layers className='text-blue-600' size={16} />
               </div>
 
               {/* TEXT */}
               <div className='text-left min-w-0 flex-1'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>
+                <p className='text-sm font-medium text-foreground'>
                   Create Test Suite
                 </p>
-                <p className='text-[10px] md:text-xs text-slate-500 break-words'>
+                <p className='text-xs text-muted-foreground leading-relaxed break-words'>
                   Group your tests together for better organization and reuse.
                 </p>
               </div>
@@ -73,17 +73,17 @@ export default function QuickActions() {
           <Button
             onClick={() => setLocation('/request-chains/create')}
             variant='ghost'
-            className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
+            className='w-full justify-start h-auto px-3 py-2.5 border border-border hover:bg-muted transition-colors rounded-lg'
           >
-            <div className='flex items-center space-x-3'>
+            <div className='flex items-start gap-3 w-full'>
               <div className='w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center'>
-                <Link2 className='text-purple-600' size={14} />
+                <Link2 className='text-purple-600' size={16} />
               </div>
               <div className='text-left'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>
+                <p className='text-sm font-medium text-foreground'>
                   Create Request Chain
                 </p>
-                <p className='text-[10px] md:text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground leading-relaxed'>
                   Connect multiple API calls to simulate end‑to‑end workflows.
                 </p>
               </div>
@@ -93,18 +93,15 @@ export default function QuickActions() {
           <Button
             onClick={() => setLocation('/scheduler')}
             variant='ghost'
-            className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
+            className='w-full justify-start h-auto px-3 py-2.5 border border-border hover:bg-muted transition-colors rounded-lg'
           >
-            <div className='flex items-center space-x-3'>
+            <div className='flex items-start gap-3 w-full'>
               <div className='w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center'>
-                <CalendarClock className='text-green-600' size={14} />
+                <CalendarClock className='text-green-600' size={16} />
               </div>
               <div className='text-left'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>
-                  Schedule
-                </p>
-                <p className='text-[10px] md:text-xs text-slate-500'>
-                  {' '}
+                <p className='text-sm font-medium text-foreground'>Schedule</p>
+                <p className='text-xs text-muted-foreground leading-relaxed'>
                   Automate test runs by setting up recurring execution jobs.
                 </p>
               </div>
@@ -115,15 +112,15 @@ export default function QuickActions() {
             variant='ghost'
             className='w-full justify-start h-auto p-4 border border-slate-200 hover:bg-slate-50 transition-colors'
           >
-            <div className='flex items-center space-x-3'>
+            <div className='flex items-start gap-3 w-full'>
               <div className='w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center'>
-                <CirclePlay className='text-green-600' size={14} />
+                <CirclePlay className='text-green-600' size={16} />
               </div>
               <div className='text-left'>
-                <p className='text-xs md:text-sm font-medium text-slate-900'>
+                <p className='text-sm font-medium text-foreground'>
                   Executions
                 </p>
-                <p className='text-[10px] md:text-xs text-slate-500'>
+                <p className='text-xs text-muted-foreground leading-relaxed'>
                   Check how your tests performed and see what's next.
                 </p>
               </div>

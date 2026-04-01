@@ -540,7 +540,7 @@ export function RequestChainsList({
       </div>
 
       {/* Results Summary */}
-      <div className='text-sm text-muted-foreground px-1'>
+      <div className='text-xs text-muted-foreground'>
         Showing {filteredAndSortedChains.length} of {chains.length} chains
       </div>
 
@@ -557,9 +557,9 @@ export function RequestChainsList({
             {paginatedChains.map((chain) => (
               <Card
                 key={chain.id}
-                className='shadow-none hover:shadow-md hover:transition-shadow'
+                className='shadow-none transition-shadow hover:shadow-sm'
               >
-                <CardContent className='p-2 md:p-6 overflow-auto'>
+                <CardContent className='p-4 md:p-5'>
                   <div className='flex flex-col md:flex-row md:items-center md:justify-between gap-4'>
                     {/* Left section - Icon, Name, and Details */}
                     <div className='flex items-start md:items-center space-x-3 md:space-x-4 flex-1 min-w-0'>
@@ -568,7 +568,7 @@ export function RequestChainsList({
                       </div>
                       <div className='flex-1 min-w-0'>
                         <div className='flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2'>
-                          <h3 className='text-base md:text-lg font-[600] truncate'>
+                          <h3 className='text-sm font-medium text-foreground truncate'>
                             {chain.name}
                           </h3>
                           <div className='flex flex-wrap items-center gap-2'>
@@ -693,7 +693,7 @@ export function RequestChainsList({
                           </div>
                         )}
 
-                        <div className='text-xs md:text-[13px] text-muted-foreground mt-2'>
+                        <div className='text-xs text-muted-foreground mt-2'>
                           <div className='flex flex-col sm:flex-row sm:items-center gap-1'>
                             <span>
                               Created:{' '}
@@ -805,34 +805,29 @@ export function RequestChainsList({
                             <DropdownMenuContent
                               align='end'
                               className='
-        bg-white dark:bg-gray-900
-        border border-gray-200 dark:border-gray-700
-        shadow-lg
-        rounded-lg
-        min-w-[180px]
-        py-1
+        bg-background border border-border shadow-md rounded-lg min-w-[180px] py-1
       '
                             >
                               <DropdownMenuItem
                                 onClick={() => onCloneChain(chain.id)}
-                                className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
+                                className='flex items-center px-4 py-2 text-sm hover:bg-muted cursor-pointer'
                               >
                                 <CopyPlus className='w-4 h-4 mr-2' />
                                 Duplicate
                               </DropdownMenuItem>
 
-                              <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                              <div className='border-t border-border my-1' />
 
                               {/* Reports */}
                               <DropdownMenuItem
                                 onClick={() => handleClickReport(chain.id)}
-                                className='flex items-center px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700'
+                                className='flex items-center px-4 py-2 text-sm hover:bg-muted cursor-pointer'
                               >
                                 <ChartNoAxesCombined className='w-4 h-4 mr-2' />
                                 Reports
                               </DropdownMenuItem>
 
-                              <div className='border-t border-gray-200 dark:border-gray-700 my-1' />
+                              <div className='border-t border-border my-1' />
 
                               {/* Delete with AlertDialog */}
                               <AlertDialog>
@@ -883,23 +878,23 @@ export function RequestChainsList({
             {paginatedChains.map((chain) => (
               <div
                 key={chain.id}
-                className='bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow'
+                className='bg-card rounded-xl border border-border overflow-hidden transition-shadow hover:shadow-sm'
               >
                 {/* Card Header */}
-                <div className='p-4 border-b border-slate-100 bg-gradient-to-r from-purple-50 to-transparent'>
+                <div className='p-4 border-b border-border'>
                   <div className='flex items-start justify-between gap-3'>
                     <div className='flex items-start gap-3 flex-1 min-w-0'>
-                      <div className='w-12 h-12 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 flex-shrink-0'>
+                      <div className='w-10 h-10 bg-[#f9e3fc] rounded-lg flex items-center justify-center flex-shrink-0'>
                         <Link2 className='w-6 h-6 text-white' />
                       </div>
 
                       <div className='flex-1 min-w-0'>
-                        <h3 className='font-bold text-slate-900 truncate'>
+                        <h3 className='text-sm font-medium text-foreground truncate'>
                           {chain.name}
                         </h3>
 
                         <div className='flex flex-wrap items-center gap-2 mt-1'>
-                          <span className='text-xs text-slate-600 bg-slate-100 px-2 py-0.5 rounded'>
+                          <span className='text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded'>
                             {chain.environment?.name || 'No Environment'}
                           </span>
 
@@ -930,10 +925,10 @@ export function RequestChainsList({
                             className='fixed inset-0 z-10'
                             onClick={() => setOpenMenuId(null)}
                           />
-                          <div className='absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-20'>
+                          <div className='absolute right-0 mt-2 w-48 bg-background rounded-lg shadow-md border border-border py-1 z-20'>
                             <button
                               onClick={() => onCloneChain(chain.id)}
-                              className='w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3'
+                              className='w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3'
                             >
                               <Copy className='w-4 h-4' />
                               Duplicate
@@ -941,7 +936,7 @@ export function RequestChainsList({
 
                             <button
                               onClick={() => handleClickReport(chain.id)}
-                              className='w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3'
+                              className='w-full px-4 py-2 text-left text-sm text-foreground hover:bg-muted flex items-center gap-3'
                             >
                               <BarChart3 className='w-4 h-4' />
                               Reports
@@ -989,9 +984,10 @@ export function RequestChainsList({
 
                 {/* Card Body */}
                 <div className='p-4 space-y-3'>
-                  <p className='text-sm text-slate-600'>{chain.description}</p>
-
-                  <div className='bg-slate-50 rounded-lg p-3 border border-slate-200'>
+                  <p className='text-sm text-muted-foreground'>
+                    {chain.description}
+                  </p>
+                  <div className='bg-muted/50 rounded-lg p-3 border border-border'>
                     <div className='flex items-center flex-wrap gap-1.5 text-xs'>
                       {chain?.chainRequests &&
                         chain.chainRequests.length > 0 && (
@@ -1007,7 +1003,7 @@ export function RequestChainsList({
                                   <React.Fragment
                                     key={`${chain.id}-flowm-${idx}`}
                                   >
-                                    <span className='px-2 py-1 bg-white text-slate-700 rounded font-medium border border-slate-200'>
+                                    <span className='px-2 py-1 bg-background text-foreground rounded text-xs border border-border'>
                                       {step.name.slice(0, 60)}
                                     </span>
 
@@ -1036,7 +1032,7 @@ export function RequestChainsList({
                       {chain?.tags?.map((tag, idx) => (
                         <span
                           key={`${chain.id}-tagm-${idx}`}
-                          className='px-2.5 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-medium'
+                          className='px-2.5 py-1 rounded-md text-xs font-medium border ${getTagColor(tag)}'
                         >
                           {tag}
                         </span>
@@ -1044,8 +1040,8 @@ export function RequestChainsList({
                     </div>
                   )}
 
-                  <div className='flex items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100'>
-                    <span className='font-mono bg-slate-50 px-2 py-1 rounded border border-slate-200'>
+                  <div className='flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t border-border'>
+                    <span className='font-mono bg-muted px-2 py-1 rounded border border-border'>
                       ID: {chain.id.slice(0, 21)}...
                     </span>
                     <span>•</span>
@@ -1057,7 +1053,7 @@ export function RequestChainsList({
                   <div className='grid grid-cols-3 gap-2 pt-2'>
                     <button
                       onClick={() => onToggleChain(chain?.id)}
-                      className='flex items-center justify-center gap-1.5 px-3 py-2.5 bg-gradient-to-r from-teal-600 to-teal-700 text-white rounded-lg font-medium hover:shadow-lg hover:shadow-teal-600/30 transition-all duration-200'
+                      className='flex items-center justify-center gap-1.5 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity'
                     >
                       <Play className='w-4 h-4' />
                       <span className='text-xs'>Execute</span>
@@ -1068,7 +1064,7 @@ export function RequestChainsList({
                         setPreviewChain(chain);
                         setPreviewOpen(true);
                       }}
-                      className='flex items-center justify-center gap-1.5 px-3 py-2.5 bg-slate-100 text-slate-700 rounded-lg font-medium hover:bg-slate-200 transition-colors border border-slate-200'
+                      className='flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-foreground rounded-lg text-xs font-medium hover:bg-muted/80 transition-colors border border-border'
                     >
                       <Eye className='w-4 h-4' />
                       <span className='text-xs'>View</span>
@@ -1076,7 +1072,7 @@ export function RequestChainsList({
 
                     <button
                       onClick={() => onEditChain(chain)}
-                      className='flex items-center justify-center gap-1.5 px-3 py-2.5 bg-blue-50 text-blue-700 rounded-lg font-medium hover:bg-blue-100 transition-colors border border-blue-200'
+                      className='flex items-center justify-center gap-1.5 px-3 py-2 bg-muted text-foreground rounded-lg text-xs font-medium hover:bg-muted/80 transition-colors border border-border'
                     >
                       <Edit2 className='w-4 h-4' />
                       <span className='text-xs'>Edit</span>

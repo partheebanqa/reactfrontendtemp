@@ -99,7 +99,7 @@ const TestSuiteForm: React.FC<TestSuiteFormProps> = ({
               <span className='text-blue-700'>
                 {mockRequests.reduce(
                   (total, req) => total + req.testCases.total,
-                  0
+                  0,
                 )}{' '}
                 test cases selected
               </span>
@@ -182,7 +182,7 @@ const TestSuiteForm: React.FC<TestSuiteFormProps> = ({
                 <strong>
                   {mockRequests.reduce(
                     (total, req) => total + req.testCases.total,
-                    0
+                    0,
                   )}
                 </strong>
               </span>

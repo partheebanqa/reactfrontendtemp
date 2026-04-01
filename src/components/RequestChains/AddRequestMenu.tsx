@@ -15,7 +15,7 @@ export const AddRequestMenu: React.FC<AddRequestMenuProps> = ({
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState<'top' | 'bottom'>(
-    'bottom'
+    'bottom',
   );
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);

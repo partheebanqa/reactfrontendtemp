@@ -1676,7 +1676,6 @@ export function RequestEditor({
       label: 'Post-response',
       count: assertions.filter((a) => a.enabled).length,
     },
-
     { id: 'settings', label: 'Settings' },
   ];
   const formatResponseBody = (body: string, contentType?: string) => {
@@ -3158,7 +3157,7 @@ export function RequestEditor({
       )}
       <div className='border-b border-gray-200'>
         <div className='flex items-center justify-between px-6 relative overflow-auto'>
-          <nav className='flex space-x-6 '>
+          <nav className='flex overflow-x-auto scrollbar-none gap-0 border-b-0 '>
             {tabs.map((tab) => {
               const count = tab.count ?? 0;
               const showBlueDot =
@@ -3170,7 +3169,7 @@ export function RequestEditor({
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`pt-4 pb-2 px-1 border-b-2 font-medium text-sm transition-colors overflow-auto flex items-center space-x-2 ${
+                  className={`pt-3 pb-2 px-3 border-b-2 font-medium text-sm transition-colors overflow-auto flex items-center space-x-2 ${
                     activeTab === tab.id
                       ? 'border-blue-500 text-[#136fb0]'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -3255,7 +3254,7 @@ export function RequestEditor({
         {activeTab === 'params' && (
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
-              <h3 className='text-xs md:text-md font-medium text-gray-900'>
+              <h3 className='text-xs md:text-sm font-medium text-foreground'>
                 Query Parameters
               </h3>
               <button
@@ -3337,7 +3336,7 @@ export function RequestEditor({
         {activeTab === 'headers' && (
           <div className='space-y-4'>
             <div className='flex items-center justify-between'>
-              <h3 className='text-xs md:text-md font-medium text-gray-900'>
+              <h3 className='text-xs md:text-sm font-medium text-foreground'>
                 Headers
               </h3>
               <button
@@ -3469,7 +3468,7 @@ export function RequestEditor({
             </h3>
             <div className='space-y-4'>
               <div>
-                <label className='block text-xs md:text-md font-medium text-gray-700 mb-2'>
+                <label className='text-sm font-normal text-muted-foreground'>
                   Auth Type
                 </label>
                 <select
@@ -3483,7 +3482,7 @@ export function RequestEditor({
               </div>
 
               <div>
-                <label className='block text-xs md:text-md font-medium text-gray-700 mb-2'>
+                <label className='text-sm font-normal text-muted-foreground'>
                   Bearer Token
                 </label>
                 <div className='relative flex items-center group'>
@@ -3879,7 +3878,7 @@ export function RequestEditor({
       </Card>
 
       <Tabs defaultValue='params' className='w-full'>
-        <TabsList className='grid w-full grid-cols-7'>
+        <TabsList className='flex w-full overflow-x-auto gap-1 p-1 h-auto flex-nowrap'>
           <TabsTrigger value='params' className='gap-2'>
             <Globe className='w-4 h-4' />
             Params

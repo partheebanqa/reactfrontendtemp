@@ -94,8 +94,9 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
         <Card
           // ref={setNodeRef}
           // style={style}
-          className={`hidden md:block hover:shadow-sm transition-shadow group ${currentRequestIndex === requestIndex ? 'ring-2 ring-primary' : ''
-            } ${!isSelected ? 'opacity-50' : ''}`}
+          className={`hidden md:block hover:shadow-sm transition-shadow group ${
+            currentRequestIndex === requestIndex ? 'ring-2 ring-primary' : ''
+          } ${!isSelected ? 'opacity-50' : ''}`}
         >
           <CardContent className='p-2'>
             <div className='flex items-center'>
@@ -130,16 +131,19 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                       />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>{isSelected ? 'Deselect request' : 'Select request'}</p>
+                      <p>
+                        {isSelected ? 'Deselect request' : 'Select request'}
+                      </p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
 
                 <div
-                  className={`w-8 h-8 ${currentRequestIndex === requestIndex
-                    ? 'bg-primary text-primary-foreground animate-pulse'
-                    : 'bg-blue-100 text-blue-600'
-                    } rounded-full flex items-center justify-center text-sm font-medium`}
+                  className={`w-8 h-8 ${
+                    currentRequestIndex === requestIndex
+                      ? 'bg-primary text-primary-foreground animate-pulse'
+                      : 'bg-blue-100 text-blue-600'
+                  } rounded-full flex items-center justify-center text-sm font-medium`}
                 >
                   {currentRequestIndex === requestIndex ? (
                     <Loader2 className='w-4 h-4 animate-spin' />
@@ -347,10 +351,11 @@ export const SortableRequestItem: React.FC<SortableRequestItemProps> = ({
                 {/* Step Circle */}
                 <div
                   className={`w-7 h-7 flex items-center justify-center rounded-full text-xs font-medium
-            ${currentRequestIndex === requestIndex
-                      ? 'bg-primary text-primary-foreground animate-pulse'
-                      : 'bg-blue-100 text-blue-600'
-                    }
+            ${
+              currentRequestIndex === requestIndex
+                ? 'bg-primary text-primary-foreground animate-pulse'
+                : 'bg-blue-100 text-blue-600'
+            }
           `}
                 >
                   {currentRequestIndex === requestIndex ? (

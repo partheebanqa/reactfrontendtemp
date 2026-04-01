@@ -48,10 +48,15 @@ import {
   AccordionTrigger,
 } from '../ui/accordion';
 import EditTestCaseModal from './EditTestCaseModal';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
 
 type TestCase = {
-  id?: string;
+  id: string;
   testSuiteId?: string;
   requestId?: string;
   name: string;
@@ -143,7 +148,7 @@ const generateTags = (testCase: ApiTestCase): string[] => {
 
 // Transform API response to UI format
 const transformTestCases = (
-  apiTestCases: ApiTestCase[]
+  apiTestCases: ApiTestCase[],
 ): { categories: TestCaseCategory[]; selectedIds: string[] } => {
   const categoriesMap: { [key: string]: TestCase[] } = {};
   const selectedIds: string[] = [];
@@ -213,7 +218,13 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const [activeTab, setActiveTab] = useState('request');
+  const [activeTabMap, setActiveTabMap] = useState<Record<string, string>>({});
+  const getActiveTab = (id: string | undefined) =>
+    activeTabMap[id ?? ''] ?? 'request';
+  const setActiveTab = (id: string | undefined, tab: string) => {
+    if (!id) return;
+    setActiveTabMap((prev) => ({ ...prev, [id]: tab }));
+  };
 
   const {
     data: testCasesData,
@@ -239,7 +250,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
         testSuiteId,
         requestId,
         selectedTestCaseIds,
-        allTestCaseIds
+        allTestCaseIds,
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['testCases'] });
@@ -266,7 +277,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   useEffect(() => {
     if (testCasesData?.testCases) {
       const { categories, selectedIds } = transformTestCases(
-        testCasesData.testCases
+        testCasesData.testCases,
       );
       setTestCaseCategories(categories);
       setSelectedTestCases(selectedIds);
@@ -288,12 +299,12 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   const handleCategoryToggle = (category: TestCaseCategory) => {
     const testIds = category.tests.map((test) => test.id);
     const allSelected = testIds.every((id?: string) =>
-      selectedTestCases.includes(id || '')
+      selectedTestCases.includes(id || ''),
     );
 
     if (allSelected) {
       setSelectedTestCases((prev) =>
-        prev.filter((id) => !testIds.includes(id))
+        prev.filter((id) => !testIds.includes(id)),
       );
     } else {
       setSelectedTestCases((prev) => {
@@ -307,7 +318,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     setExpandedCategories((prev) =>
       prev.includes(categoryName)
         ? prev.filter((name) => name !== categoryName)
-        : [...prev, categoryName]
+        : [...prev, categoryName],
     );
   };
 
@@ -320,7 +331,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
     // Get all test case IDs from current data
     const allTestCaseIds = testCaseCategories.flatMap((category) =>
-      category.tests.map((test) => test.id)
+      category.tests.map((test) => test.id),
     );
 
     saveTestCasesMutation.mutate({
@@ -368,7 +379,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           (t) =>
             t.name.toLowerCase().includes(searchLower) ||
             t.description.toLowerCase().includes(searchLower) ||
-            t.tags.some((tag) => tag.toLowerCase().includes(searchLower))
+            t.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
         );
       })
       .map((category) => {
@@ -377,14 +388,14 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           (t) =>
             t.name.toLowerCase().includes(searchLower) ||
             t.description.toLowerCase().includes(searchLower) ||
-            t.tags.some((tag) => tag.toLowerCase().includes(searchLower))
+            t.tags.some((tag) => tag.toLowerCase().includes(searchLower)),
         );
         return { ...category, tests };
       });
   }, [testCaseCategories, categoryFilter, searchTerm]);
   const totalAvailableTests = testCaseCategories.reduce(
     (sum, cat) => sum + cat.tests.length,
-    0
+    0,
   );
 
   if (!request) return null;
@@ -392,10 +403,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'Positive':
-        return '✅';
-      case 'Negative':
-        return '❌';
       case 'Functional':
         return '🔧';
       case 'Semantic':
@@ -426,7 +433,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
   const [expandedTestId, setExpandedTestId] = useState<string | null>(null);
 
   const [expandedSubCategory, setExpandedSubCategory] = useState<string | null>(
-    null
+    null,
   );
 
   const [subcatFilter, setSubcatFilter] = useState<string>('All');
@@ -470,21 +477,19 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     return chips.concat(rest);
   }, [filteredCategoriesPreSubcat]);
 
-
   const SUBCATEGORY_ORDER = [
-    "all",
-    "positive",
-    "negative",
-    "http methods",
-    "token",
-    "status code",
-    "missing fields",
-    "security",
-    "version compatibility",
-    "invalid value",
-    "boundary",
+    'all',
+    'positive',
+    'negative',
+    'http methods',
+    'token',
+    'status code',
+    'missing fields',
+    'security',
+    'version compatibility',
+    'invalid value',
+    'boundary',
   ];
-
 
   const sortedSubcatChips = React.useMemo(() => {
     return [...subcatChips].sort((a, b) => {
@@ -505,7 +510,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     });
   }, [subcatChips]);
 
-
   const subCategoryTestMap = React.useMemo(() => {
     const map: Record<string, string[]> = {};
 
@@ -524,7 +528,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     return map;
   }, [filteredCategories]);
 
-
   const subCategoryCategoryMap = React.useMemo(() => {
     const map: Record<string, Set<string>> = {};
 
@@ -540,11 +543,8 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
     return map;
   }, [filteredCategoriesPreSubcat]);
 
-
   const [editingTest, setEditingTest] = useState<TestCase | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-
-
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -616,7 +616,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
               const subCategoryTestIds = subCategoryTestMap[chip.name] ?? [];
 
               const selectedInSubCategory = subCategoryTestIds.filter((id) =>
-                selectedTestCases.includes(id)
+                selectedTestCases.includes(id),
               ).length;
 
               const hasSelection = selectedInSubCategory > 0;
@@ -638,13 +638,13 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                       setExpandedCategories(Array.from(cats));
                     }
                   }}
-
                   className={`
         relative inline-flex items-center rounded-md border px-2 py-1 text-xs
-        ${active
-                      ? 'bg-[#136fb0] text-white border-[#136fb0]'
-                      : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
-                    }
+        ${
+          active
+            ? 'bg-[#136fb0] text-white border-[#136fb0]'
+            : 'bg-transparent text-foreground border-muted-foreground/30 hover:bg-muted/40'
+        }
       `}
                   title={chip.name}
                 >
@@ -667,8 +667,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                   {/* optional x/y */}
                   {hasSelection && (
                     <span
-                      className={`ml-1 text-[10px] font-medium ${active ? 'text-white/90' : 'text-[#136fb0]'
-                        }`}
+                      className={`ml-1 text-[10px] font-medium ${
+                        active ? 'text-white/90' : 'text-[#136fb0]'
+                      }`}
                     >
                       {selectedInSubCategory}/{subCategoryTestIds.length}
                     </span>
@@ -686,7 +687,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
             <div className='p-4'>
               <div className='flex items-center justify-between mb-4'>
                 <h3 className='font-medium'>
-                  Available testcases ({totalAvailableTests})
+                  Available test cases ({totalAvailableTests})
                 </h3>
                 <span className='text-sm text-muted-foreground'>
                   {selectedTestCases.length} selected
@@ -725,11 +726,11 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                 <div className='space-y-2'>
                   {filteredCategories.map((category) => {
                     const isExpanded = expandedCategories.includes(
-                      category.category
+                      category.category,
                     );
                     const categoryTests = category.tests;
                     const selectedInCategory = categoryTests.filter((test) =>
-                      selectedTestCases.includes(test?.id || '')
+                      selectedTestCases.includes(test?.id || ''),
                     ).length;
 
                     const isAllSelected =
@@ -759,7 +760,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             </span>
                             <span className='font-medium'>
                               {category.category}
-                              { }
+                              {}
                             </span>
                             <Badge variant='outline'>
                               {categoryTests.length}
@@ -789,18 +790,18 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                             {categoryTests.map((test) => {
                               return (
                                 <div
-                                  key={test.id}
+                                  key={test.id ?? test.testcase_id}
                                   className='flex flex-col p-3 rounded border hover:bg-muted/30'
                                 >
                                   <div className='flex items-start space-x-3'>
                                     <Checkbox
                                       checked={selectedTestCases.includes(
-                                        test?.id
+                                        test?.id,
                                       )}
                                       onCheckedChange={(checked) =>
                                         handleTestCaseToggle(
                                           test?.id,
-                                          checked as boolean
+                                          checked as boolean,
                                         )
                                       }
                                       style={{ accentColor: '#136fb0' }}
@@ -808,20 +809,20 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                     <div
                                       style={{ cursor: 'pointer' }}
                                       className='flex-1 min-w-0'
-                                    // onClick={() =>
-                                    //   setExpandedTestId(
-                                    //     expandedTestId === test?.id
-                                    //       ? null
-                                    //       : test.id
-                                    //   )
-                                    // }
+                                      // onClick={() =>
+                                      //   setExpandedTestId(
+                                      //     expandedTestId === test?.id
+                                      //       ? null
+                                      //       : test.id
+                                      //   )
+                                      // }
                                     >
                                       <div className='flex items-center justify-between space-x-2'>
                                         <h4 className='font-medium text-sm'>
                                           {test?.subCategory}:: {test.name}
                                         </h4>
                                         <div className='flex items-center space-x-4'>
-                                          <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                          <span className='text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded'>
                                             {test?.expectedResponse?.status}
                                           </span>
                                           <TooltipProvider>
@@ -829,15 +830,22 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                               <TooltipTrigger asChild>
                                                 <button
                                                   onClick={() => {
-                                                    setEditingTest(test?.id ? test : null);
+                                                    setEditingTest(
+                                                      test?.id ? test : null,
+                                                    );
                                                     setIsEditModalOpen(true);
                                                   }}
-                                                  className="p-1 hover:bg-blue-50 rounded"
+                                                  className='p-1 hover:bg-blue-50 rounded'
                                                 >
-                                                  <Edit2 size={16} color="#136fb0" />
+                                                  <Edit2
+                                                    size={16}
+                                                    color='#136fb0'
+                                                  />
                                                 </button>
                                               </TooltipTrigger>
-                                              <TooltipContent side='top'>Edit Testcase</TooltipContent>
+                                              <TooltipContent side='top'>
+                                                Edit Testcase
+                                              </TooltipContent>
                                             </Tooltip>
                                           </TooltipProvider>
                                           <button
@@ -845,7 +853,7 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                               setExpandedTestId(
                                                 expandedTestId === test?.id
                                                   ? null
-                                                  : test?.id
+                                                  : test?.id,
                                               )
                                             }
                                             className='flex items-center text-xs text-blue-500 space-x-1'
@@ -876,25 +884,20 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                               </>
                                             )}
                                           </button>
-
-
                                         </div>
                                       </div>
                                     </div>
-
                                   </div>
 
+                                  {expandedTestId === test.id && (
+                                    <div className='mt-2 px-6 space-y-2'>
+                                      {test.description && (
+                                        <p className='text-xs text-muted-foreground'>
+                                          {test.description}
+                                        </p>
+                                      )}
 
-                                  {
-                                    expandedTestId === test.id && (
-                                      <div className='mt-2 px-6 space-y-2'>
-                                        {test.description && (
-                                          <p className='text-xs text-muted-foreground'>
-                                            {test.description}
-                                          </p>
-                                        )}
-
-                                        {/* {test.tags?.length > 0 && (
+                                      {/* {test.tags?.length > 0 && (
                                         <div className="flex space-x-1">
                                           {test.tags.map((tag) => {
                                             const bgColorClass =
@@ -912,70 +915,67 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                                         </div>
                                       )} */}
 
-                                        <div className='space-y-4 mt-4'>
-                                          <Tabs
-                                            value={activeTab}
-                                            onValueChange={setActiveTab}
-                                          >
-                                            <TabsList className='grid w-full grid-cols-2 mt-4'>
-                                              <TabsTrigger value='request'>
-                                                Request
-                                              </TabsTrigger>
-                                              <TabsTrigger value='assertions'>
-                                                Assertions
-                                              </TabsTrigger>
-                                            </TabsList>
+                                      <div className='space-y-4 mt-4'>
+                                        <Tabs
+                                          value={getActiveTab(test.id)}
+                                          onValueChange={(v) =>
+                                            test.id && setActiveTab(test.id, v)
+                                          }
+                                        >
+                                          <TabsList className='grid w-full grid-cols-2 mt-4'>
+                                            <TabsTrigger value='request'>
+                                              Request
+                                            </TabsTrigger>
+                                            <TabsTrigger value='assertions'>
+                                              Assertions
+                                            </TabsTrigger>
+                                          </TabsList>
 
-                                            <TabsContent value='request'>
-                                              {test && (
-                                                <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                                          <TabsContent value='request'>
+                                            {test && (
+                                              <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                                                <JsonView
+                                                  dark
+                                                  enableClipboard
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
+                                                  src={test}
+                                                  theme='default'
+                                                />
+                                              </div>
+                                            )}
+                                          </TabsContent>
 
-                                                  <JsonView
-                                                    dark
-                                                    enableClipboard
-                                                    onAdd={() => { }}
-                                                    onDelete={() => { }}
-                                                    onEdit={() => { }}
-                                                    src={test}
-                                                    theme='default'
-                                                  />
-                                                </div>
-                                              )}
-                                            </TabsContent>
-
-                                            <TabsContent value='assertions'>
-                                              {test && (
-                                                <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
-
-                                                  <JsonView
-                                                    dark
-                                                    enableClipboard
-                                                    onAdd={() => { }}
-                                                    onDelete={() => { }}
-                                                    onEdit={() => { }}
-                                                    src={test}
-                                                    theme='default'
-                                                  />
-                                                </div>
-                                              )}
-                                            </TabsContent>
-                                          </Tabs>
-                                        </div>
+                                          <TabsContent value='assertions'>
+                                            {test && (
+                                              <div className='mt-4 p-3 bg-gray-900 rounded max-h-96 overflow-auto text-xs text-white'>
+                                                <JsonView
+                                                  dark
+                                                  enableClipboard
+                                                  onAdd={() => {}}
+                                                  onDelete={() => {}}
+                                                  onEdit={() => {}}
+                                                  src={test}
+                                                  theme='default'
+                                                />
+                                              </div>
+                                            )}
+                                          </TabsContent>
+                                        </Tabs>
                                       </div>
-                                    )
-                                  }
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
                           </div>
-                        )
-                        }
+                        )}
                       </div>
                     );
                   })}
                 </div>
-              )
-              }
+              )}
             </div>
           </div>
         </div>
@@ -999,7 +999,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           />
         )} */}
 
-
         {editingTest && (
           <EditTestCaseModal
             testCase={editingTest}
@@ -1022,30 +1021,30 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
                   tests: category.tests.map((test) =>
                     test.id === id
                       ? {
-                        ...test,
-                        name,
-                        expectedResponse: {
-                          ...test.expectedResponse,
-                          status: expectedResponseCode,
-                        },
-                      }
-                      : test
+                          ...test,
+                          name,
+                          expectedResponse: {
+                            ...test.expectedResponse,
+                            status: expectedResponseCode,
+                          },
+                        }
+                      : test,
                   ),
-                }))
+                })),
               );
 
               // ✅ also update currently editing test
               setEditingTest((prev) =>
                 prev
                   ? {
-                    ...prev,
-                    name,
-                    expectedResponse: {
-                      ...prev.expectedResponse,
-                      status: expectedResponseCode,
-                    },
-                  }
-                  : prev
+                      ...prev,
+                      name,
+                      expectedResponse: {
+                        ...prev.expectedResponse,
+                        status: expectedResponseCode,
+                      },
+                    }
+                  : prev,
               );
 
               // ✅ close modal
@@ -1057,7 +1056,9 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
 
         <div className='flex items-center justify-between p-6 border-t bg-muted/20'>
           <span className='text-sm text-muted-foreground'>
-            {selectedTestCases.length} test cases selected
+            {selectedTestCases.length === 0
+              ? 'No test cases selected'
+              : `${selectedTestCases.length} of ${totalAvailableTests} selected`}
           </span>
           <div className='flex space-x-3'>
             <Button variant='outline' onClick={handleCancel}>
@@ -1083,6 +1084,6 @@ export const TestCaseSelectionModal: React.FC<TestCaseSelectionModalProps> = ({
           </div>
         </div>
       </DialogContent>
-    </Dialog >
+    </Dialog>
   );
 };

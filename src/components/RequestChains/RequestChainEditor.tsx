@@ -2562,15 +2562,21 @@ export function RequestChainEditor({
         <div className='p-3 md:p-6 space-y-3 md:space-y-6'>
           <Card>
             <CardHeader>
-              <CardTitle className='text-md md:text-lg'>
+              <CardTitle className='text-sm md:text-base font-medium text-foreground'>
                 Basic Information
               </CardTitle>
             </CardHeader>
-            <CardContent className='space-y-4'>
+            <CardContent className='space-y-3'>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                <div className='space-y-2'>
-                  <Label htmlFor='chainName'>
-                    Chain Name <span className='text-destructive'>*</span>
+                <div className='space-y-1.5'>
+                  <Label
+                    htmlFor='chainName'
+                    className='text-sm font-normal text-muted-foreground'
+                  >
+                    Chain name
+                    <span className='text-destructive text-[10px] align-super ml-0.5'>
+                      *
+                    </span>
                   </Label>
                   <Input
                     id='chainName'
@@ -2581,8 +2587,13 @@ export function RequestChainEditor({
                     placeholder='Enter chain name'
                   />
                 </div>
-                <div className='space-y-2'>
-                  <Label htmlFor='status'>Important</Label>
+                <div className='space-y-1.5'>
+                  <Label
+                    htmlFor='status'
+                    className='text-sm font-normal text-muted-foreground'
+                  >
+                    Status
+                  </Label>
                   <Select
                     value={formData.enabled ? 'enabled' : 'disabled'}
                     onValueChange={(value) =>
@@ -2600,7 +2611,15 @@ export function RequestChainEditor({
                 </div>
               </div>
               <div className='space-y-2'>
-                <Label htmlFor='description'>Description (optional)</Label>
+                <Label
+                  htmlFor='description'
+                  className='text-sm font-normal text-muted-foreground'
+                >
+                  Description{' '}
+                  <span className='text-xs text-muted-foreground/60 font-normal'>
+                    (optional)
+                  </span>
+                </Label>
                 <Textarea
                   id='description'
                   value={formData.description}
@@ -2615,9 +2634,12 @@ export function RequestChainEditor({
                 <div className=' space-y-2'>
                   <label
                     htmlFor='environment-select'
-                    className='block text-sm font-medium'
+                    className='block text-sm font-normal text-muted-foreground'
                   >
-                    Environment <span className='text-destructive'>*</span>
+                    Environment{' '}
+                    <span className='text-destructive text-[10px] align-super ml-0.5'>
+                      *
+                    </span>
                   </label>
                   <Select
                     value={selectedEnvironment}
@@ -2653,7 +2675,7 @@ export function RequestChainEditor({
 
           <Card>
             <CardHeader>
-              <CardTitle className='text-md md:text-lg'>
+              <CardTitle className='text-sm md:text-base font-medium text-foreground'>
                 Requests and Extracted Variables
               </CardTitle>
             </CardHeader>
@@ -2664,14 +2686,20 @@ export function RequestChainEditor({
                 className='w-full'
               >
                 <TabsList className='grid w-full grid-cols-2'>
-                  <TabsTrigger value='requests' className='gap-2'>
+                  <TabsTrigger
+                    value='requests'
+                    className='gap-2 text-sm font-normal data-[state=active]:font-medium'
+                  >
                     <Code className='w-4 h-4' />
-                    Requests ({formData.chainRequests?.length || 0})
+                    Requests
+                    <span className='ml-1 text-[11px] px-1.5 py-0.5 rounded-full bg-muted border border-border text-muted-foreground leading-none'>
+                      {formData.chainRequests?.length || 0}
+                    </span>
                   </TabsTrigger>
 
                   <TabsTrigger
                     value='variables-table'
-                    className='gap-2 flex items-center'
+                    className='gap-2 text-sm font-normal data-[state=active]:font-medium'
                   >
                     <Database className='w-4 h-4' />
                     Extracted Variables
@@ -3138,12 +3166,12 @@ export function RequestChainEditor({
                       ) : (
                         <div className='text-center py-12'>
                           <div className='w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4'>
-                            <Code className='w-8 h-8 text-gray-400' />
+                            <Code className='w-8 h-8 text-muted-foreground' />
                           </div>
-                          <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                          <h3 className='text-base font-medium text-foreground mb-2'>
                             No requests in this chain
                           </h3>
-                          <p className='text-sm text-gray-500 mb-6'>
+                          <p className='text-sm text-muted-foreground mb-6'>
                             Get started by adding your first request or
                             importing from a collection
                           </p>
@@ -3209,7 +3237,7 @@ export function RequestChainEditor({
 
           <Card>
             <CardHeader>
-              <CardTitle className='text-md md:text-lg'>
+              <CardTitle className='text-sm md:text-base font-medium text-foreground'>
                 {chain?.id ? 'Update & Execute Chain' : 'Save & Execute Chain'}
               </CardTitle>
             </CardHeader>

@@ -66,7 +66,7 @@ interface RequestTestDialogProps {
   request?: Request;
   onSaveExtractVariables?: (
     request: { id: string; name: string; method: string; url: string },
-    extractVariables: ExtractedVariable[]
+    extractVariables: ExtractedVariable[],
   ) => void;
   existingExtractedVariables?: ExtractedVariable[];
 }
@@ -89,7 +89,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
         : [{ key: '', value: '', enabled: true }];
 
     const hasContentType = existingHeaders.some(
-      (h) => h.key.toLowerCase() === 'content-type'
+      (h) => h.key.toLowerCase() === 'content-type',
     );
 
     if (!hasContentType) {
@@ -104,13 +104,13 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const [params, setParams] = useState<RequestParam[]>(
     request?.params?.length
       ? request.params
-      : [{ key: '', value: '', enabled: true }]
+      : [{ key: '', value: '', enabled: true }],
   );
   const [body, setBody] = useState(request?.bodyRawContent);
   const [bodyType, setBodyType] = useState(request?.bodyType);
   const [authType, setAuthType] = useState(request?.authorizationType);
   const [authToken, setAuthToken] = useState(
-    request?.authorization?.token || ''
+    request?.authorization?.token || '',
   );
 
   // response state can hold either string or object
@@ -140,7 +140,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
         : [{ key: '', value: '', enabled: true }];
 
     const hasContentType = existingHeaders.some(
-      (h) => h.key.toLowerCase() === 'content-type'
+      (h) => h.key.toLowerCase() === 'content-type',
     );
 
     setHeaders(
@@ -149,13 +149,13 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
         : [
             { key: 'Content-Type', value: 'application/json', enabled: true },
             ...existingHeaders,
-          ]
+          ],
     );
 
     setParams(
       request.params?.length
         ? request.params
-        : [{ key: '', value: '', enabled: true }]
+        : [{ key: '', value: '', enabled: true }],
     );
 
     // Reset response & extracted fields on open
@@ -176,7 +176,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const updateHeader = (
     index: number,
     field: 'key' | 'value' | 'enabled',
-    value: string | boolean
+    value: string | boolean,
   ) => {
     const updatedHeaders = [...headers];
     updatedHeaders[index] = { ...updatedHeaders[index], [field]: value };
@@ -194,7 +194,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const updateParam = (
     index: number,
     field: 'key' | 'value' | 'enabled',
-    value: string | boolean
+    value: string | boolean,
   ) => {
     const updatedParams = [...params];
     updatedParams[index] = { ...updatedParams[index], [field]: value };
@@ -231,7 +231,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
   const extractField = (
     path: string,
     value: any,
-    source: 'response_body' | 'response_header'
+    source: 'response_body' | 'response_header',
   ) => {
     // Extract just the final property name from the path
     const pathParts = path.split(/[\.\[\]]+/).filter(Boolean);
@@ -247,7 +247,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
 
     // Check if already extracted
     const isAlreadyExtracted = extractedFields.some(
-      (field) => field.path === path && field.source === source
+      (field) => field.path === path && field.source === source,
     );
     if (!isAlreadyExtracted) {
       setExtractedFields((prev) => [...prev, newExtraction]);
@@ -256,10 +256,10 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
 
   const isFieldExtracted = (
     path: string,
-    source: 'response_body' | 'response_header'
+    source: 'response_body' | 'response_header',
   ) => {
     return extractedFields.some(
-      (field) => field.path === path && field.source === source
+      (field) => field.path === path && field.source === source,
     );
   };
 
@@ -289,7 +289,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
     value: any,
     path = '',
     source: 'response_body' | 'response_header' = 'response_body',
-    depth = 0
+    depth = 0,
   ): React.ReactNode => {
     const isArrayIndex = typeof key === 'number';
     const currentPath = path
@@ -347,7 +347,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           {isExpanded && (
             <div className='border-l-2 border-gray-200 ml-4'>
               {value.map((item: any, index: number) =>
-                renderJsonField(index, item, currentPath, source, depth + 1)
+                renderJsonField(index, item, currentPath, source, depth + 1),
               )}
             </div>
           )}
@@ -403,8 +403,8 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   subValue,
                   currentPath,
                   source,
-                  depth + 1
-                )
+                  depth + 1,
+                ),
               )}
             </div>
           )}
@@ -487,14 +487,14 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                   Array[{parsed.length}]
                 </div>
                 {parsed.map((item, index) =>
-                  renderJsonField(index, item, '', 'response_body', 0)
+                  renderJsonField(index, item, '', 'response_body', 0),
                 )}
               </div>
             ) : (
               <div>
                 <div className='text-blue-600 font-medium mb-2'>Object</div>
                 {Object.entries(parsed).map(([key, value]) =>
-                  renderJsonField(key, value, '', 'response_body', 0)
+                  renderJsonField(key, value, '', 'response_body', 0),
                 )}
               </div>
             )}
@@ -606,19 +606,19 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
           typeof field.value === 'string'
             ? 'string'
             : typeof field.value === 'number'
-            ? 'number'
-            : typeof field.value === 'boolean'
-            ? 'boolean'
-            : Array.isArray(field.value)
-            ? 'array'
-            : typeof field.value === 'object'
-            ? 'object'
-            : 'string',
+              ? 'number'
+              : typeof field.value === 'boolean'
+                ? 'boolean'
+                : Array.isArray(field.value)
+                  ? 'array'
+                  : typeof field.value === 'object'
+                    ? 'object'
+                    : 'string',
         sampleValue:
           typeof field.value === 'string'
             ? field.value
             : JSON.stringify(field.value),
-      })
+      }),
     );
 
     const reqInfo = {
@@ -992,8 +992,8 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                                         item,
                                         '',
                                         'response_body',
-                                        0
-                                      )
+                                        0,
+                                      ),
                                     )}
                                   </div>
                                 ) : (
@@ -1008,8 +1008,8 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                                           value,
                                           '',
                                           'response_body',
-                                          0
-                                        )
+                                          0,
+                                        ),
                                     )}
                                   </div>
                                 )}
@@ -1022,7 +1022,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                               {renderTextWithExtractButtons(
                                 typeof response === 'string'
                                   ? response
-                                  : JSON.stringify(response, null, 2)
+                                  : JSON.stringify(response, null, 2),
                               )}
                             </div>
                           );
@@ -1038,7 +1038,7 @@ export const RequestTestDialog: React.FC<RequestTestDialogProps> = ({
                     <div className='rounded-md border p-2 bg-muted max-h-64 overflow-auto'>
                       <div className='text-sm space-y-1 overflow-x-auto'>
                         {Object.entries(responseHeaders).map(([key, value]) =>
-                          renderHeaderField(key, value)
+                          renderHeaderField(key, value),
                         )}
                       </div>
                     </div>

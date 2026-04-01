@@ -29,8 +29,8 @@ export function WorkflowStepper({
   const currentIndex = steps.findIndex((s) => s.id === currentStep);
 
   return (
-    <div className="w-full py-2">
-      <div className="flex items-center w-full">
+    <div className='w-full py-2 px-2 sm:px-0'>
+      <div className='flex items-center w-full'>
         {steps.map((step, index) => {
           const isCompleted = completedSteps.includes(step.id);
           const isCurrent = index === currentIndex;
@@ -39,26 +39,24 @@ export function WorkflowStepper({
           return (
             <React.Fragment key={step.id}>
               {/* STEP DOT + LABEL */}
-              <div className="flex flex-col items-center">
+              <div className='flex flex-col items-center'>
                 <div
                   className={[
-                    'w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-200',
-                    isCompleted &&
-                    'bg-green-600 text-white',
+                    'w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-sm',
+                    isCompleted && 'bg-green-600 text-white',
                     isCurrent &&
-                    'bg-[#136fb0] text-white ring-4 ring-blue-200',
-                    !isCompleted && !isCurrent &&
-                    'bg-gray-200 text-gray-500',
+                      'bg-[#136fb0] text-white shadow-[0_0_0_3px_#bfdbfe]',
+                    !isCompleted && !isCurrent && 'bg-gray-200 text-gray-500',
                   ]
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  {isCompleted ? <Check className="w-5 h-5" /> : step.number}
+                  {isCompleted ? <Check className='w-5 h-5' /> : step.number}
                 </div>
 
                 <div
                   className={[
-                    'mt-2 text-xs font-medium text-center',
+                    'mt-1.5 text-[10px] sm:text-xs font-medium text-center leading-tight break-words max-w-[48px] sm:max-w-none',
                     isCurrent && 'text-[#136fb0]',
                     isCompleted && 'text-green-600',
                     isUpcoming && !isCompleted && !isCurrent && 'text-gray-400',
@@ -72,14 +70,16 @@ export function WorkflowStepper({
 
               {/* CONNECTOR LINE (between steps) */}
               {index < steps.length - 1 && (
-                <div
-                  className={[
-                    'h-0.5 flex-1 mx-2 transition-all duration-200',
-                    index < currentIndex ? 'bg-green-600' : 'bg-gray-200',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                />
+                <div className='flex-1 flex items-start pt-4 mx-1 sm:mx-2'>
+                  <div
+                    className={[
+                      'h-0.5 w-full transition-all duration-200',
+                      index < currentIndex ? 'bg-green-600' : 'bg-gray-200',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  />
+                </div>
               )}
             </React.Fragment>
           );
